@@ -25,25 +25,4 @@ enum ClientDocumentType: string
             self::Other => 'Other',
         };
     }
-
-    /**
-     * Whether onboarding cannot be signed off without this document.
-     */
-    public function isRequired(): bool
-    {
-        return in_array($this, [self::BusinessRegistration, self::TaxCertificate], true);
-    }
-
-    /**
-     * The document types that must be verified before activation.
-     *
-     * @return list<self>
-     */
-    public static function required(): array
-    {
-        return array_values(array_filter(
-            self::cases(),
-            fn (self $type): bool => $type->isRequired(),
-        ));
-    }
 }

@@ -24,6 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property int|null $client_id
  * @property string $name
  * @property string $email
+ * @property string|null $phone
  * @property string|null $job_title
  * @property bool $is_active
  * @property Carbon|null $suspended_at
@@ -31,6 +32,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $last_login_at
  * @property string|null $last_login_ip
  * @property Carbon|null $email_verified_at
+ * @property Carbon|null $phone_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -39,7 +41,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'client_id', 'job_title', 'is_active'])]
+#[Fillable(['name', 'email', 'phone', 'password', 'client_id', 'job_title', 'is_active'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
@@ -55,6 +57,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',

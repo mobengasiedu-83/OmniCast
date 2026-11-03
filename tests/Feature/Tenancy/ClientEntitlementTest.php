@@ -4,6 +4,10 @@ use App\Enums\Channel;
 use App\Enums\ClientService;
 use App\Models\Campaign;
 use App\Models\ClientEntitlement;
+use App\Models\Contact;
+use App\Models\ContactList;
+use App\Services\CampaignService;
+use Illuminate\Validation\ValidationException;
 use Spatie\Activitylog\Models\Activity;
 
 it('updates the entitlement grid of a tenant', function (): void {
@@ -92,4 +96,34 @@ it('only lets the platform team change entitlements', function (): void {
         ->assertForbidden();
 
     expect(ClientEntitlement::query()->where('client_id', $client->id)->count())->toBe(0);
+});
+
+it('rejects campaign submissions that exceed a configured recipient quota', function (): void {
+    [$client, , $user] = clientWithWallet();
+    ClientEntitlement::factory()->for($client)->create([
+        'service' => ClientService::Sms,
+        'is_enabled' => true,
+        'daily_quota' => 5,
+    ]);
+    $list = ContactList::factory()->forClient($client)->create();
+    $contacts = Contact::factory()->count(4)->forClient($client)->create();
+    $list->contacts()->attach($contacts->pluck('id'), ['added_at' => now()]);
+    $campaigns = app(CampaignService::class);
+    $attributes = [
+        'client_id' => $client->id,
+        'name' => 'Quota check',
+        'channel' => Channel::Sms,
+        'contact_list_id' => $list->id,
+        'sms_message' => 'Quota controlled message',
+        'schedule_type' => 'now',
+    ];
+    $first = $campaigns->create($attributes, $user);
+    $campaigns->submit($first, $user);
+    $second = $campaigns->create([...$attributes, 'name' => 'Over quota'], $user);
+
+    expect(fn () => $campaigns->submit($second, $user))
+        ->toThrow(ValidationException::class);
+
+    expect($second->refresh()->status->value)->toBe('draft');
+    expect($second->reservations()->exists())->toBeFalse();
 });

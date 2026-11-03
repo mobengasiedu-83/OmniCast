@@ -4,7 +4,7 @@
  * ASSET_URL) in the .env file -- `vite.config.ts` imports it to rewrite the
  * root-relative route URLs that Wayfinder generates.
  */
-export const appBasePath = '/gwosevo-unified-app/public';
+export const appBasePath = '/gwosevo-omnicast/public';
 
 /**
  * Prefix a root-relative application path with the deployment base path.

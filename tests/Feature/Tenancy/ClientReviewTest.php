@@ -57,6 +57,15 @@ it('forbids platform users without the approve permission', function (): void {
         ->assertForbidden();
 });
 
+it('lets a compliance reviewer reach the review queue without user administration rights', function (): void {
+    expect($this->reviewer->can('users.manage'))->toBeFalse();
+
+    $this->actingAs($this->reviewer)
+        ->get(route('admin.client-registrations.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('admin/clients/registrations'));
+});
+
 it('approves an application into a pending tenant and invites the applicant', function (): void {
     $this->actingAs($this->reviewer)
         ->post(route('admin.client-registrations.approve', $this->registration))

@@ -1,12 +1,15 @@
 <?php
 
 use App\Enums\Channel;
+use App\Enums\ClientDocumentType;
 use App\Enums\Role as RoleEnum;
-use App\Models\Campaign;
+use App\Models\ClientDocument;
 use App\Models\Contact;
 use App\Models\SenderId;
 use App\Models\UserInvitation;
 use App\Services\CampaignService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function (): void {
@@ -87,11 +90,12 @@ it('refuses to read or edit another tenant contact', function (): void {
 
 it('keeps the wallet ledger on the signed-in tenant', function (): void {
     $this->actingAs($this->userA)
+        ->withoutVite()
         ->get(route('wallet.index', ['client_id' => $this->clientB->id]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('wallet.id', $this->walletA->id)
-            ->where('wallet.balance', 120.0));
+            ->where('wallet.balance', 120));
 });
 
 it('does not leak another tenant invitation into the team screen', function (): void {
@@ -128,6 +132,45 @@ it('lets the platform team see every tenant', function (): void {
             ->where('stats.total', 2));
 });
 
+it('keeps organisation documents and profile updates inside the signed-in tenant', function (): void {
+    Storage::fake('local');
+    $otherDocument = ClientDocument::factory()->for($this->clientB)->create(['title' => 'Tenant B private document']);
+    $this->actingAs($this->userA)
+        ->post(route('organisation-settings.documents.store'), [
+            'type' => ClientDocumentType::BusinessRegistration->value,
+            'document' => UploadedFile::fake()->create('registration.pdf', 100, 'application/pdf'),
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $document = ClientDocument::query()->where('client_id', $this->clientA->id)->sole();
+    expect($document->client_id)->toBe($this->clientA->id);
+    Storage::disk('local')->assertExists($document->path);
+
+    $this->actingAs($this->userA)
+        ->put(route('organisation-settings.update'), [
+            'client_id' => $this->clientB->id,
+            'name' => 'Tenant A Updated',
+            'email' => 'a@example.test',
+            'phone' => '+233200000003',
+            'timezone' => 'Africa/Accra',
+            'locale' => 'en',
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($this->clientA->refresh()->name)->toBe('Tenant A Updated')
+        ->and($this->clientB->refresh()->name)->not->toBe('Tenant A Updated');
+
+    $this->actingAs($this->userA)
+        ->get(route('organisation-settings.edit'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('documents', 1)
+            ->where('documents.0.title', 'Business registration')
+            ->where('organisation.name', 'Tenant A Updated'));
+});
+
 it('refuses to approve another tenant sender id', function (): void {
     $this->actingAs($this->userA)
         ->post(route('sender-ids.approve', $this->senderB))
@@ -136,6 +179,7 @@ it('refuses to approve another tenant sender id', function (): void {
     expect($this->senderB->refresh()->status->value)->toBe('pending');
 
     $this->actingAs($this->userA)
+        ->withoutVite()
         ->get(route('sender-ids.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->has('senderIds', 0));

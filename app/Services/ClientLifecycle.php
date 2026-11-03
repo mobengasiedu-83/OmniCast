@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Enums\ClientStatus;
 use App\Exceptions\InvalidClientTransition;
+use App\Mail\ClientActivated;
 use App\Models\Client;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Moves a client tenant through its lifecycle and records why it moved.
@@ -52,7 +54,13 @@ class ClientLifecycle
                 ->log('changed client status');
         });
 
-        return $client->refresh();
+        $client->refresh();
+
+        if ($target === ClientStatus::Active && $from !== ClientStatus::Active && filled($client->email)) {
+            Mail::to($client->email)->queue(new ClientActivated($client));
+        }
+
+        return $client;
     }
 
     /**

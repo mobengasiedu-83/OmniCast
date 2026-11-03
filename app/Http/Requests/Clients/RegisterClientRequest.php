@@ -2,8 +2,12 @@
 
 namespace App\Http\Requests\Clients;
 
+use App\Enums\ClientAccountType;
 use App\Enums\ClientRegistrationStatus;
 use App\Enums\ClientService;
+use App\Services\CountryCatalog;
+use App\Services\PhoneNumber;
+use App\Services\PlatformConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,6 +37,21 @@ class RegisterClientRequest extends FormRequest
         if (is_string($email)) {
             $this->merge(['email' => mb_strtolower(trim($email))]);
         }
+
+        $phone = $this->input('phone');
+        if (is_string($phone)) {
+            $this->merge(['phone' => app(PhoneNumber::class)->normalize($phone)]);
+        }
+
+        $country = $this->input('country');
+        if (is_string($country)) {
+            $this->merge(['country' => strtoupper(trim($country))]);
+        }
+
+        $accountType = $this->input('account_type');
+        if (is_string($accountType)) {
+            $this->merge(['account_type' => strtolower(trim($accountType))]);
+        }
     }
 
     /**
@@ -42,20 +61,40 @@ class RegisterClientRequest extends FormRequest
      */
     public function rules(): array
     {
+        $accountType = ClientAccountType::tryFrom((string) $this->input('account_type'));
+        $maximumUploadKilobytes = max(1, (int) app(PlatformConfiguration::class)->resolve('storage', 'max_upload_kb', 5120));
+
         return [
-            'company_name' => ['required', 'string', 'max:150'],
+            'account_type' => ['required', Rule::enum(ClientAccountType::class)],
+            'company_name' => [Rule::when($accountType === ClientAccountType::Business, ['required', 'string', 'max:150'], ['nullable', 'string', 'max:150'])],
             'contact_name' => ['required', 'string', 'max:120'],
             'email' => [
                 'required',
                 'string',
                 'email',
                 'max:255',
+                Rule::unique('users', 'email'),
                 Rule::unique('client_registrations', 'email')
                     ->where('status', ClientRegistrationStatus::Pending->value),
             ],
-            'phone' => ['required', 'string', 'max:32', 'regex:/^\+?[0-9\s\-()]{7,20}$/'],
-            'country' => ['nullable', 'string', 'max:64'],
-            'timezone' => ['required', 'string', 'timezone'],
+            'phone' => [
+                'required', 'string', 'max:32', 'regex:/^\+[1-9]\d{7,14}$/',
+                Rule::unique('users', 'phone'),
+                Rule::unique('client_registrations', 'phone')
+                    ->where('status', ClientRegistrationStatus::Pending->value),
+            ],
+            'country' => ['required', 'string', Rule::in(array_column(app(CountryCatalog::class)->all(), 'code'))],
+            'timezone' => [
+                'required', 'string', Rule::in(app(CountryCatalog::class)->timezones((string) $this->input('country'))),
+            ],
+            'otp_channel' => ['required', Rule::in(['email', 'sms'])],
+            'identification_type' => [
+                'required', 'string', Rule::in(array_map(
+                    fn ($type): string => $type->value,
+                    $accountType?->identificationTypes() ?? [],
+                )),
+            ],
+            'identification_document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:'.$maximumUploadKilobytes],
             'website' => ['nullable', 'string', 'url', 'max:255'],
             'services' => ['required', 'array', 'min:1'],
             'services.*' => ['required', 'string', Rule::enum(ClientService::class)],
@@ -87,7 +126,10 @@ class RegisterClientRequest extends FormRequest
         $validated = $this->validated();
 
         return [
-            'company_name' => $validated['company_name'],
+            'account_type' => $validated['account_type'],
+            'company_name' => $validated['account_type'] === ClientAccountType::Business->value
+                ? ($validated['company_name'] ?? null)
+                : null,
             'contact_name' => $validated['contact_name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],

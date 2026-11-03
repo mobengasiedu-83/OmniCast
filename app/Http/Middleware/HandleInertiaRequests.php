@@ -3,7 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\PlatformConfiguration;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -38,10 +40,18 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
         $account = $user instanceof User ? $user : null;
+        $clientSettings = $account?->client?->settings ?? [];
+        $locale = $clientSettings['locale'] ?? config('app.locale');
+        App::setLocale(in_array($locale, config('app.supported_locales', ['en']), true) ? $locale : config('app.locale'));
+        $configuration = app(PlatformConfiguration::class);
 
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+            'name' => $configuration->resolve('company', 'name', config('app.name')),
+            'clientBranding' => [
+                'name' => $clientSettings['branding']['name'] ?? null,
+                'primaryColor' => $clientSettings['branding']['primary_color'] ?? null,
+            ],
             'auth' => [
                 'user' => $account,
                 'roles' => fn (): array => $account?->getRoleNames()->values()->all() ?? [],

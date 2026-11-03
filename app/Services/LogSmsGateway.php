@@ -17,12 +17,19 @@ class LogSmsGateway implements SmsGateway
      */
     public function send(string $to, string $from, string $body): bool
     {
-        Log::info('SMS dispatched', [
-            'to' => $to,
-            'from' => $from,
-            'body' => $body,
+        Log::channel('sms')->info('SMS accepted by the development transport.', [
+            'recipient' => $this->maskedNumber($to),
+            'sender_id' => $from,
+            'message_length' => mb_strlen($body),
         ]);
 
         return true;
+    }
+
+    private function maskedNumber(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+        return strlen($digits) > 4 ? '***'.substr($digits, -4) : '***';
     }
 }

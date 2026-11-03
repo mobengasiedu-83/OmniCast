@@ -5,8 +5,13 @@ import {
     MailPlus,
     Megaphone,
     MonitorSmartphone,
+    FileText,
+    ClipboardCheck,
     ScrollText,
+    Settings,
     ShieldCheck,
+    PackagePlus,
+    Layers3,
     UserRoundCog,
     Users,
     UsersRound,
@@ -24,6 +29,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { urls } from '@/lib/urls';
+import clients from '@/routes/admin/clients';
+import registrations from '@/routes/admin/client-registrations';
 import type { Auth, NavItem } from '@/types';
 
 const platformNavItems: NavItem[] = [
@@ -48,6 +55,21 @@ const messagingNavItems: NavItem[] = [
 ];
 
 const identityNavItems: NavItem[] = [
+    {
+        title: 'Global settings',
+        href: urls.admin.settings.index,
+        icon: Settings,
+    },
+    {
+        title: 'Client plans',
+        href: urls.admin.settings.plans,
+        icon: Layers3,
+    },
+    {
+        title: 'Resource requests',
+        href: urls.admin.resourceRequests.index,
+        icon: PackagePlus,
+    },
     {
         title: 'All users',
         href: urls.admin.users.index,
@@ -86,9 +108,25 @@ export function AppSidebar() {
     const isPlatformUser = auth?.isPlatformUser ?? false;
     const permissions = auth?.permissions ?? [];
     const canManageUsers = permissions.includes('users.manage');
+    const canManageClients = permissions.includes('clients.manage');
+    const canReviewClients = permissions.includes('clients.approve');
     const isClientUser = !isPlatformUser && (auth?.clientId ?? null) !== null;
 
     const accountNavItems: NavItem[] = [
+        ...(isClientUser
+            ? [
+                  {
+                      title: 'Organisation settings',
+                      href: urls.account.organisation.index,
+                      icon: Settings,
+                  },
+                  {
+                      title: 'Resource requests',
+                      href: urls.account.resourceRequests.index,
+                      icon: PackagePlus,
+                  },
+              ]
+            : []),
         ...(isClientUser && canManageUsers
             ? [
                   {
@@ -131,6 +169,23 @@ export function AppSidebar() {
             <SidebarContent className="gap-2">
                 <NavMain items={platformNavItems} label="Platform" />
                 <NavMain items={messagingNavItems} label="Messaging" />
+                {isPlatformUser && (canManageClients || canReviewClients) && (
+                    <NavMain
+                        items={[
+                            ...(canManageClients ? [{ title: 'Clients', href: clients.index.url(), icon: Users }] : []),
+                            ...(canReviewClients ? [{ title: 'Registrations', href: registrations.index.url(), icon: UserRoundCog }] : []),
+                            ...(canManageClients ? [
+                                { title: 'Pending', href: clients.index.url({ query: { status: 'pending' } }), icon: ClipboardCheck },
+                                { title: 'Active', href: clients.index.url({ query: { status: 'active' } }), icon: Users },
+                                { title: 'Suspended', href: clients.index.url({ query: { status: 'suspended' } }), icon: ShieldCheck },
+                                { title: 'Documents', href: clients.index.url({ query: { view: 'documents' } }), icon: FileText },
+                                { title: 'Users', href: urls.admin.users.index, icon: UsersRound },
+                                { title: 'Service entitlements', href: clients.index.url({ query: { view: 'services' } }), icon: PackagePlus },
+                            ] : []),
+                        ]}
+                        label="Clients"
+                    />
+                )}
                 {isPlatformUser && canManageUsers && (
                     <NavMain items={identityNavItems} label="Users" />
                 )}

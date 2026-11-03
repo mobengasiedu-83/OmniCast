@@ -52,6 +52,32 @@ export const urls = {
         index: path('/reports'),
     },
     admin: {
+        settings: {
+            index: path('/admin/settings'),
+            plans: path('/admin/settings/plans'),
+            assignPlan: (client: number) => path(`/admin/settings/plans/${client}`),
+        },
+        clients: {
+            index: path('/admin/clients'),
+            show: (client: number) => path(`/admin/clients/${client}`),
+            update: (client: number) => path(`/admin/clients/${client}`),
+            activate: (client: number) => path(`/admin/clients/${client}/activate`),
+            suspend: (client: number) => path(`/admin/clients/${client}/suspend`),
+            reactivate: (client: number) => path(`/admin/clients/${client}/reactivate`),
+            archive: (client: number) => path(`/admin/clients/${client}/archive`),
+            documents: (client: number) => path(`/admin/clients/${client}/documents`),
+            reviewDocument: (client: number, document: number) => path(`/admin/clients/${client}/documents/${document}/review`),
+            deleteDocument: (client: number, document: number) => path(`/admin/clients/${client}/documents/${document}`),
+            entitlements: (client: number) => path(`/admin/clients/${client}/entitlements`),
+        },
+        clientRegistrations: {
+            index: path('/admin/client-registrations'),
+            approve: (registration: number) => path(`/admin/client-registrations/${registration}/approve`),
+            reject: (registration: number) => path(`/admin/client-registrations/${registration}/reject`),
+        },
+        resourceRequests: {
+            index: path('/admin/resource-requests'),
+        },
         users: {
             index: path('/admin/users'),
             store: path('/admin/users'),
@@ -87,6 +113,15 @@ export const urls = {
         },
     },
     account: {
+        organisation: {
+            index: path('/settings/organisation'),
+            update: path('/settings/organisation'),
+            uploadDocument: path('/settings/organisation/documents'),
+        },
+        resourceRequests: {
+            index: path('/settings/resource-requests'),
+            store: path('/settings/resource-requests'),
+        },
         sessions: {
             index: path('/settings/sessions'),
             destroy: (session: string) => path(`/settings/sessions/${session}`),

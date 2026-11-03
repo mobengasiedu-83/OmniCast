@@ -67,6 +67,24 @@ it('verifies an uploaded document', function (): void {
         ->and($document->reviewed_at)->not->toBeNull();
 });
 
+it('opens a private identification document inline for an authorised reviewer', function (): void {
+    $document = ClientDocument::factory()->for($this->client)->create([
+        'path' => 'client-documents/'.$this->client->id.'/identity.pdf',
+        'original_name' => 'identity.pdf',
+    ]);
+    Storage::disk('local')->put($document->path, 'private identity document');
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.clients.documents.view', [$this->client, $document]))
+        ->assertOk()
+        ->assertHeader('content-disposition', 'inline; filename=identity.pdf')
+        ->assertHeader('x-content-type-options', 'nosniff');
+
+    $this->actingAs(platformUser(RoleEnum::ClientOperator))
+        ->get(route('admin.clients.documents.view', [$this->client, $document]))
+        ->assertForbidden();
+});
+
 it('rejects a document with a reason', function (): void {
     $document = ClientDocument::factory()->for($this->client)->create();
 

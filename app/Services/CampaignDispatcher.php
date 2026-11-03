@@ -24,6 +24,7 @@ class CampaignDispatcher
         protected CampaignCostEstimator $costs,
         protected SmsSegmenter $segmenter,
         protected WalletService $wallet,
+        protected PlatformConfiguration $configuration,
     ) {}
 
     /**
@@ -33,6 +34,25 @@ class CampaignDispatcher
      */
     public function run(Campaign $campaign): bool
     {
+        $campaign->loadMissing('client');
+        $disabledChannels = array_filter(
+            $campaign->channel->deliveryChannels(),
+            fn (Channel $channel): bool => ! $this->configuration->channelEnabled($channel->value, $campaign->client),
+        );
+        if ($disabledChannels !== []) {
+            $campaign->campaignContacts()
+                ->whereIn('status', [CampaignContactStatus::Pending->value, CampaignContactStatus::Queued->value])
+                ->update([
+                    'status' => CampaignContactStatus::Failed->value,
+                    'failed_at' => now(),
+                    'error_message' => 'Delivery was disabled by platform settings.',
+                ]);
+            $spend = (float) $campaign->campaignContacts()->sum('cost');
+            $this->finalize($campaign, $spend);
+
+            return false;
+        }
+
         $campaign->forceFill([
             'status' => CampaignStatus::Running,
             'launched_at' => $campaign->launched_at ?? now(),

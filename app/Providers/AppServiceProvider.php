@@ -4,15 +4,20 @@ namespace App\Providers;
 
 use App\Contracts\SmsGateway;
 use App\Contracts\VoiceGateway;
+use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Services\LogSmsGateway;
 use App\Services\LogVoiceGateway;
+use App\Services\PlatformConfiguration;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -36,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureIdentity();
+        $this->configureCommunicationLogging();
     }
 
     /**
@@ -44,6 +50,14 @@ class AppServiceProvider extends ServiceProvider
     protected function configureIdentity(): void
     {
         Gate::policy(RoleModel::class, RolePolicy::class);
+
+        Gate::before(static function (User $user, string $ability, array $arguments): ?bool {
+            if ($ability === 'update' && ($arguments[0] ?? null) instanceof RoleModel) {
+                return null;
+            }
+
+            return $user->isPlatformUser() && $user->isSuperAdmin() ? true : null;
+        });
 
         RateLimiter::for('invitations', function (Request $request): Limit {
             $user = $request->user();
@@ -54,7 +68,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('client-registrations', function (Request $request): Limit {
-            return Limit::perMinute(3)->by('ip:'.$request->ip());
+            $perMinute = app(PlatformConfiguration::class)->resolve('rate_limits', 'client_registrations_per_minute', 3);
+
+            return Limit::perMinute(max(1, (int) $perMinute))->by('ip:'.$request->ip());
         });
 
         RateLimiter::for('api', function (Request $request): Limit {
@@ -63,6 +79,18 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by(
                 $user !== null ? 'user:'.$user->id : 'ip:'.$request->ip(),
             );
+        });
+    }
+
+    /** Log successful outgoing email transport events without message contents or recipient addresses. */
+    protected function configureCommunicationLogging(): void
+    {
+        Event::listen(MessageSent::class, static function (MessageSent $event): void {
+            Log::channel('email')->info('Email accepted by the configured transport.', [
+                'recipient_count' => count($event->message->getTo() ?? [])
+                    + count($event->message->getCc() ?? [])
+                    + count($event->message->getBcc() ?? []),
+            ]);
         });
     }
 

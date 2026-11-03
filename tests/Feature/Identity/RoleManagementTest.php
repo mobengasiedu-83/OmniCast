@@ -75,6 +75,26 @@ it('leaves the super admin role locked', function () {
     expect($role->getPermissionNames())->toHaveCount(count(Permission::cases()));
 });
 
+it('allows platform super admins every permission even when role permissions are changed', function () {
+    $admin = platformUser();
+    $adminRole = Role::findByName(RoleEnum::SuperAdmin->value);
+    $adminRole->syncPermissions([]);
+
+    foreach (Permission::cases() as $permission) {
+        expect($admin->can($permission->value))->toBeTrue();
+    }
+});
+
+it('keeps platform routes closed to client scoped users with the super admin role', function () {
+    $client = Client::factory()->create();
+    $user = User::factory()->forClient($client)->create();
+    $user->syncRoles([RoleEnum::SuperAdmin->value]);
+
+    $this->actingAs($user)
+        ->get(route('admin.client-registrations.index'))
+        ->assertForbidden();
+});
+
 it('lists every permission and the roles that hold it', function () {
     $admin = platformUser();
 

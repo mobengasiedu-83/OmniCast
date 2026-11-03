@@ -28,6 +28,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'txtconnect'),
+        'endpoint' => env('SMS_ENDPOINT', 'https://api.txtconnect.net/dev/api/sms/send'),
+        'token' => env('SMS_TOKEN'),
+        'sender_id' => env('SMS_SENDER_ID', 'OmniCast'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -7,6 +7,8 @@ use App\Actions\Fortify\ResetUserPassword;
 use App\Enums\LoginEvent;
 use App\Models\LoginAudit;
 use App\Models\User;
+use App\Services\PhoneNumber;
+use App\Services\PlatformConfiguration;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -45,16 +47,17 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureAuthentication(): void
     {
         Fortify::authenticateUsing(function (Request $request): ?User {
-            $email = $request->input(Fortify::username());
+            $identifier = $request->input(Fortify::username());
             $password = $request->input('password');
 
-            if (! is_string($email) || ! is_string($password)) {
+            if (! is_string($identifier) || ! is_string($password)) {
                 return null;
             }
 
-            $user = User::query()
-                ->where(Fortify::username(), Str::lower($email))
-                ->first();
+            $normalizedIdentifier = trim($identifier);
+            $user = str_contains($normalizedIdentifier, '@')
+                ? User::query()->where('email', Str::lower($normalizedIdentifier))->first()
+                : User::query()->where('phone', app(PhoneNumber::class)->normalize($normalizedIdentifier))->first();
 
             if (! $user instanceof User || ! Hash::check($password, $user->password)) {
                 return null;
@@ -103,9 +106,15 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
-            'status' => $request->session()->get('status'),
-        ]));
+        Fortify::verifyEmailView(function (Request $request) {
+            if ($request->user()?->phone_verified_at !== null) {
+                return to_route('dashboard');
+            }
+
+            return Inertia::render('auth/verify-email', [
+                'status' => $request->session()->get('status'),
+            ]);
+        });
 
         Fortify::registerView(fn () => Inertia::render('auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
@@ -127,8 +136,9 @@ class FortifyServiceProvider extends ServiceProvider
 
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $perMinute = app(PlatformConfiguration::class)->resolve('rate_limits', 'login_attempts_per_minute', 5);
 
-            return Limit::perMinute(5)->by($throttleKey);
+            return Limit::perMinute(max(1, (int) $perMinute))->by($throttleKey);
         });
 
         RateLimiter::for('passkeys', function (Request $request) {

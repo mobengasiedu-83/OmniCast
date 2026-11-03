@@ -1,15 +1,20 @@
 <?php
 
+use App\Enums\ClientAccountType;
 use App\Enums\ClientDocumentType;
 use App\Enums\ClientStatus;
 use App\Enums\Role as RoleEnum;
 use App\Exceptions\InvalidClientTransition;
+use App\Mail\ClientActivated;
 use App\Models\Client;
 use App\Models\ClientDocument;
 use App\Services\ClientLifecycle;
+use Illuminate\Support\Facades\Mail;
 use Spatie\Activitylog\Models\Activity;
 
 it('activates a pending tenant once its documents are verified', function (): void {
+    Mail::fake();
+
     $client = Client::factory()->pending()->create();
     $admin = platformUser(RoleEnum::FinanceOfficer);
 
@@ -18,10 +23,11 @@ it('activates a pending tenant once its documents are verified', function (): vo
         ->assertSessionHas('toast');
 
     expect($client->refresh()->status)->toBe(ClientStatus::Pending);
+    Mail::assertNothingOutgoing();
 
-    foreach (ClientDocumentType::required() as $type) {
-        ClientDocument::factory()->for($client)->verified()->create(['type' => $type]);
-    }
+    ClientDocument::factory()->for($client)->verified()->create([
+        'type' => ClientDocumentType::BusinessRegistration,
+    ]);
 
     $this->actingAs($admin)
         ->post(route('admin.clients.activate', $client))
@@ -32,6 +38,23 @@ it('activates a pending tenant once its documents are verified', function (): vo
     expect($client->status)->toBe(ClientStatus::Active)
         ->and($client->activated_at)->not->toBeNull()
         ->and($client->canBroadcast())->toBeTrue();
+
+    Mail::assertQueuedOnce(ClientActivated::class);
+    Mail::assertQueued(ClientActivated::class, fn (ClientActivated $mail): bool => $mail->hasTo($client->email));
+});
+
+it('activates a private account after one verified identity document', function (): void {
+    $client = Client::factory()->pending()->create(['account_type' => ClientAccountType::Private]);
+
+    ClientDocument::factory()->for($client)->verified()->create([
+        'type' => ClientDocumentType::IdDocument,
+    ]);
+
+    $this->actingAs(platformUser(RoleEnum::FinanceOfficer))
+        ->post(route('admin.clients.activate', $client))
+        ->assertSessionHasNoErrors();
+
+    expect($client->refresh()->status)->toBe(ClientStatus::Active);
 });
 
 it('refuses to move a tenant back to pending', function (): void {

@@ -7,18 +7,29 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SenderIdController;
+use App\Http\Controllers\Settings\ClientSettingsController;
 use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware('guest')->group(function (): void {
+    Route::redirect('register', 'register-client')->name('register');
+
     Route::get('register-client', [ClientRegistrationController::class, 'create'])
         ->name('client-registration.create');
 
     Route::post('register-client', [ClientRegistrationController::class, 'store'])
         ->middleware('throttle:client-registrations')
         ->name('client-registration.store');
+
+    Route::post('register-client/verify', [ClientRegistrationController::class, 'verify'])
+        ->middleware('throttle:client-registrations')
+        ->name('client-registration.verify');
+
+    Route::post('register-client/password', [ClientRegistrationController::class, 'setPassword'])
+        ->middleware('throttle:client-registrations')
+        ->name('client-registration.password');
 
     Route::get('invitations/{token}', [InvitationAcceptanceController::class, 'show'])
         ->name('invitations.accept.show');
@@ -29,6 +40,11 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('settings/organisation', [ClientSettingsController::class, 'edit'])->name('organisation-settings.edit');
+    Route::put('settings/organisation', [ClientSettingsController::class, 'update'])->name('organisation-settings.update');
+    Route::post('settings/organisation/documents', [ClientSettingsController::class, 'storeDocument'])->name('organisation-settings.documents.store');
+    Route::get('settings/resource-requests', [ClientSettingsController::class, 'requests'])->name('organisation-settings.requests');
+    Route::post('settings/resource-requests', [ClientSettingsController::class, 'storeRequest'])->name('organisation-settings.requests.store');
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('campaigns', [CampaignController::class, 'index'])->name('campaigns.index');

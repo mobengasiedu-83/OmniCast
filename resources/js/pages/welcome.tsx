@@ -10,7 +10,8 @@ import BrandMark from '@/components/brand-mark';
 import SignalOrbit from '@/components/illustrations/signal-orbit';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
+import { create as clientSignup } from '@/routes/client-registration';
 
 export default function Welcome() {
     const { auth, name } = usePage().props;
@@ -45,7 +46,7 @@ export default function Welcome() {
                                     <Link href={login()}>Log in</Link>
                                 </Button>
                                 <Button asChild>
-                                    <Link href={register()}>
+                                    <Link href={clientSignup()}>
                                         Get started
                                         <ArrowRight />
                                     </Link>
@@ -89,7 +90,7 @@ export default function Welcome() {
                                 ) : (
                                     <>
                                         <Button size="lg" asChild>
-                                            <Link href={register()}>
+                                            <Link href={clientSignup()}>
                                                 Create an account
                                                 <ArrowRight />
                                             </Link>

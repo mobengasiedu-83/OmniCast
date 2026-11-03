@@ -46,6 +46,7 @@ class ClientController extends Controller
         $filters = [
             'search' => $request->string('search')->trim()->toString(),
             'status' => $request->string('status')->toString(),
+            'view' => $request->string('view')->toString(),
         ];
 
         /** @var LengthAwarePaginator<int, array<string, mixed>> $clients */
@@ -67,6 +68,9 @@ class ClientController extends Controller
                 });
             })
             ->when($filters['status'] !== '', fn ($query) => $query->where('status', $filters['status']))
+            ->when($filters['view'] === 'documents', fn ($query) => $query->whereHas('documents'))
+            ->when($filters['view'] === 'users', fn ($query) => $query->whereHas('users'))
+            ->when($filters['view'] === 'services', fn ($query) => $query->whereHas('entitlements'))
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString()
@@ -122,9 +126,9 @@ class ClientController extends Controller
                 fn (ClientDocumentType $type): array => [
                     'value' => $type->value,
                     'label' => $type->label(),
-                    'is_required' => $type->isRequired(),
+                    'is_required' => in_array($type, $client->accountType()->identificationTypes(), true),
                 ],
-                ClientDocumentType::cases(),
+                $client->accountType()->identificationTypes(),
             ),
             'missingDocuments' => array_map(
                 fn (ClientDocumentType $type): string => $type->label(),
@@ -134,7 +138,7 @@ class ClientController extends Controller
                 'update' => Gate::allows('update', $client),
                 'transition' => Gate::allows('transition', $client),
                 'approve' => Gate::allows('approve', $client),
-                'activate' => $missing === [],
+                'activate' => $client->hasVerifiedIdentification(),
                 'transitions' => array_map(
                     fn (ClientStatus $status): string => $status->value,
                     $client->status->allowedTransitions(),
@@ -172,10 +176,10 @@ class ClientController extends Controller
 
         $missing = $client->missingRequiredDocuments();
 
-        if ($missing !== []) {
+        if (! $client->hasVerifiedIdentification()) {
             return back()->with('toast', [
                 'type' => 'error',
-                'message' => 'Verify the required documents first: '
+                'message' => 'Verify one identification document first. Accepted documents: '
                     .implode(', ', array_map(fn (ClientDocumentType $type): string => $type->label(), $missing))
                     .'.',
             ]);
@@ -273,6 +277,8 @@ class ClientController extends Controller
         return [
             'id' => $client->id,
             'name' => $client->name,
+            'account_type' => $client->accountType()->value,
+            'account_type_label' => $client->accountType()->label(),
             'code' => $client->code,
             'email' => $client->email,
             'phone' => $client->phone,
@@ -338,6 +344,7 @@ class ClientController extends Controller
             'status' => $document->status->value,
             'status_label' => $document->status->label(),
             'original_name' => $document->original_name,
+            'mime_type' => $document->mime_type,
             'size' => $document->displaySize(),
             'rejection_reason' => $document->rejection_reason,
             'uploaded_by' => $document->uploader?->name,

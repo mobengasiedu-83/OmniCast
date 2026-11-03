@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Contact;
 
 use App\Enums\Permission;
+use App\Services\PlatformConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -34,10 +35,16 @@ class ImportContactsRequest extends FormRequest
     public function rules(): array
     {
         $clientId = $this->input('client_id');
+        $maximumUploadKilobytes = max(1, (int) app(PlatformConfiguration::class)->resolve(
+            'storage',
+            'max_upload_kb',
+            4096,
+            $this->user()?->client,
+        ));
 
         return [
             'client_id' => [Rule::requiredIf($this->user()?->isPlatformUser() ?? false), 'integer', Rule::exists('clients', 'id')],
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:4096'],
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:'.$maximumUploadKilobytes],
             'contact_list_id' => ['nullable', 'integer', Rule::exists('contact_lists', 'id')->where('client_id', $clientId)],
         ];
     }

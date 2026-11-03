@@ -10,10 +10,12 @@ use App\Http\Requests\Clients\ReviewClientDocumentRequest;
 use App\Http\Requests\Clients\StoreClientDocumentRequest;
 use App\Models\Client;
 use App\Models\ClientDocument;
+use App\Services\PlatformConfiguration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Uploads and compliance review of a tenant's documents.
@@ -28,7 +30,7 @@ class ClientDocumentController extends Controller
     /**
      * Store an uploaded document against the tenant.
      */
-    public function store(StoreClientDocumentRequest $request, Client $client): RedirectResponse
+    public function store(StoreClientDocumentRequest $request, Client $client, PlatformConfiguration $configuration): RedirectResponse
     {
         $file = $request->file('document');
 
@@ -39,10 +41,15 @@ class ClientDocumentController extends Controller
             ]);
         }
 
+        $disk = (string) $configuration->resolve('storage', 'client_documents_disk', 'local', $client);
+        $diskConfiguration = config('filesystems.disks.'.$disk);
+        abort_unless(is_array($diskConfiguration) && ($diskConfiguration['visibility'] ?? 'private') !== 'public', 422, 'Configured client document storage must be private.');
+
         $document = $client->documents()->create([
             'type' => $request->enum('type', ClientDocumentType::class),
             'title' => (string) $request->validated('title'),
-            'path' => (string) $file->store('client-documents/'.$client->id, 'local'),
+            'path' => (string) $file->store('client-documents/'.$client->id, $disk),
+            'storage_disk' => $disk,
             'original_name' => $file->getClientOriginalName(),
             'mime_type' => $file->getClientMimeType(),
             'size_bytes' => $file->getSize(),
@@ -98,6 +105,23 @@ class ClientDocumentController extends Controller
     }
 
     /**
+     * Download a private compliance document for an authorised reviewer.
+     */
+    public function view(Client $client, ClientDocument $document): StreamedResponse
+    {
+        Gate::authorize('approve', $client);
+        $this->ensureBelongsTo($client, $document);
+        abort_unless(Storage::disk($document->storage_disk)->exists($document->path), 404);
+
+        return Storage::disk($document->storage_disk)->response(
+            $document->path,
+            $document->original_name ?? $document->title,
+            ['X-Content-Type-Options' => 'nosniff'],
+            'inline',
+        );
+    }
+
+    /**
      * Remove a document from the tenant and the private disk.
      */
     public function destroy(Request $request, Client $client, ClientDocument $document): RedirectResponse
@@ -108,7 +132,7 @@ class ClientDocumentController extends Controller
 
         $title = $document->title;
 
-        Storage::disk('local')->delete($document->path);
+        Storage::disk($document->storage_disk)->delete($document->path);
 
         $document->delete();
 

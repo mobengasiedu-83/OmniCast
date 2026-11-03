@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ClientAccountType;
 use App\Enums\ClientRegistrationStatus;
 use App\Enums\ClientService;
 use Database\Factories\ClientRegistrationFactory;
@@ -21,7 +22,8 @@ use Illuminate\Support\Carbon;
  * is only created once onboarding is approved.
  *
  * @property int $id
- * @property string $company_name
+ * @property string|null $company_name
+ * @property ClientAccountType $account_type
  * @property string $contact_name
  * @property string $email
  * @property string $phone
@@ -41,7 +43,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'company_name', 'contact_name', 'email', 'phone', 'country', 'timezone',
+    'account_type', 'company_name', 'contact_name', 'email', 'phone', 'country', 'timezone',
     'website', 'services', 'expected_monthly_volume', 'message', 'status',
     'client_id', 'reviewed_by', 'reviewed_at', 'rejection_reason', 'ip_address',
 ])]
@@ -58,6 +60,7 @@ class ClientRegistration extends Model
     protected function casts(): array
     {
         return [
+            'account_type' => ClientAccountType::class,
             'status' => ClientRegistrationStatus::class,
             'services' => 'array',
             'expected_monthly_volume' => 'integer',

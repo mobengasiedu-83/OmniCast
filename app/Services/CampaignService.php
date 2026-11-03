@@ -8,7 +8,9 @@ use App\Jobs\DispatchCampaignJob;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Drives a campaign through its lifecycle: draft, review, approval and launch.
@@ -19,6 +21,8 @@ class CampaignService
         protected CampaignCostEstimator $estimator,
         protected CampaignAudienceBuilder $audience,
         protected WalletService $wallet,
+        protected PlatformConfiguration $configuration,
+        protected ClientQuotaService $quota,
     ) {}
 
     /**
@@ -79,17 +83,24 @@ class CampaignService
      */
     public function submit(Campaign $campaign, User $user): Campaign
     {
-        $this->audience->build($campaign);
-        $this->refreshEstimate($campaign);
+        return DB::transaction(function () use ($campaign, $user): Campaign {
+            $campaign = Campaign::query()->lockForUpdate()->findOrFail($campaign->id);
+            $this->ensureChannelsEnabled($campaign);
+            $this->audience->build($campaign);
+            $this->refreshEstimate($campaign);
+            $this->quota->assertAvailable($campaign);
 
-        $this->wallet->reserve($campaign, (float) $campaign->estimated_cost, $user);
+            $this->wallet->reserve($campaign, (float) $campaign->estimated_cost, $user);
 
-        $campaign->forceFill([
-            'status' => CampaignStatus::PendingApproval,
-            'submitted_at' => now(),
-            'rejected_at' => null,
-            'rejection_reason' => null,
-        ])->save();
+            $campaign->forceFill([
+                'status' => CampaignStatus::PendingApproval,
+                'submitted_at' => now(),
+                'rejected_at' => null,
+                'rejection_reason' => null,
+            ])->save();
+
+            return $campaign;
+        });
 
         return $campaign;
     }
@@ -130,6 +141,7 @@ class CampaignService
      */
     public function launch(Campaign $campaign): Campaign
     {
+        $this->ensureChannelsEnabled($campaign);
         $scheduled = $campaign->schedule_type === 'scheduled'
             && $campaign->scheduled_at !== null
             && $campaign->scheduled_at->isFuture();
@@ -187,5 +199,17 @@ class CampaignService
         } while (Campaign::withTrashed()->where('reference', $reference)->exists());
 
         return $reference;
+    }
+
+    private function ensureChannelsEnabled(Campaign $campaign): void
+    {
+        $campaign->loadMissing('client');
+        foreach ($campaign->channel->deliveryChannels() as $channel) {
+            if (! $this->configuration->channelEnabled($channel->value, $campaign->client)) {
+                throw ValidationException::withMessages([
+                    'channel' => $channel->label().' delivery is disabled by platform settings.',
+                ]);
+            }
+        }
     }
 }

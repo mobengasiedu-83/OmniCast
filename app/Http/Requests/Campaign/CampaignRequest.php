@@ -5,6 +5,7 @@ namespace App\Http\Requests\Campaign;
 use App\Enums\Channel;
 use App\Enums\Permission;
 use App\Models\Client;
+use App\Services\PlatformConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -77,13 +78,20 @@ class CampaignRequest extends FormRequest
             $client = Client::query()->find((int) $clientId);
 
             if ($client === null || $client->allowsChannel($channel)) {
-                return;
+                if ($client === null) {
+                    return;
+                }
             }
 
-            $validator->errors()->add(
-                'channel',
-                'The '.$channel->label().' channel is not enabled for this client.',
-            );
+            foreach ($channel->deliveryChannels() as $deliveryChannel) {
+                if (! app(PlatformConfiguration::class)->channelEnabled($deliveryChannel->value, $client)) {
+                    $validator->errors()->add('channel', 'The '.$deliveryChannel->label().' channel is currently unavailable.');
+                }
+            }
+
+            if (! $client->allowsChannel($channel)) {
+                $validator->errors()->add('channel', 'The '.$channel->label().' channel is not enabled for this client.');
+            }
         });
     }
 

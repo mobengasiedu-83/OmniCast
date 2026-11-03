@@ -6,7 +6,7 @@ that installs or applies a module.**
 
 - Document owner: platform team
 - Spec source: `GWO_SEVO_OmniCast_Admin_and_Client_Development_Phases.docx` (20 phases)
-- Last updated: 2026-11-02
+- Last updated: 2026-11-03
 
 ## How to keep this file current
 
@@ -31,9 +31,9 @@ that installs or applies a module.**
 
 | Item | Value |
 | --- | --- |
-| Backend | PHP 8.3 · Laravel 13.17 |
+| Backend | PHP 8.3 · Laravel 13.39 |
 | Frontend | Inertia v3 · React 19 · Tailwind CSS 4 · Vite (vite-plus) |
-| Auth | Laravel Fortify 1.37 (passkeys + TOTP two-factor) |
+| Auth | Laravel Fortify 1.37 (email/phone login, client email/SMS OTP signup, passkeys + TOTP two-factor) |
 | RBAC | spatie/laravel-permission 8.3 |
 | API | Laravel Sanctum 4 (`/api/v1`) |
 | Audit | spatie/laravel-activitylog 4.12 + `login_audits` |
@@ -41,7 +41,7 @@ that installs or applies a module.**
 | Session store | database |
 | Database | MySQL `gwosevo_omnicast` |
 | Test database | SQLite in-memory, pinned by `phpunit.xml` alongside `APP_URL=http://localhost` |
-| Test suite | Pest 4 (`php artisan test`) — 98 tests green |
+| Test suite | Pest 4 (`php artisan test`) — 55 focused Phase 03 tests passed in the latest update; full-suite status not re-run |
 | Static analysis | PHPStan level 7 — 38 pre-existing errors (all in Phase 05/06/11 code, none in Phase 02 code) |
 
 ## Phase overview
@@ -49,9 +49,9 @@ that installs or applies a module.**
 | Phase | Title | Status | Notes |
 | --- | --- | --- | --- |
 | 01 | Platform foundation & application shell | 🟡 | Shell, theming, health `/up` and queued jobs exist. Admin `System` area, feature flags, error pages, structured logging, Horizon wiring and cross-tenant isolation tests remain. |
-| 02 | Identity, authentication & RBAC | ✅ | Full staff + client identity surface, RBAC matrix, invitations, sessions, login audit, API tokens. See [Phase 02 register](#phase-02--identity-authentication--rbac). |
-| 03 | Client onboarding & tenancy | 🟡 | `clients` table, `client_id` scoping and tenant-aware policies exist. Registration review workflow, documents, entitlements and approval states remain. |
-| 04 | Global settings & resource configuration | ⬜ | Only channel/provider stubs exist (`LogSmsGateway`, `LogVoiceGateway`). |
+| 02 | Identity, authentication & RBAC | 🟡 | Staff identity, invitations, sessions and RBAC are applied. Client email/SMS OTP signup and email/phone login regression tests are included with Phase 03 coverage; MFA recovery UI and SSO remain. See [Phase 02 register](#phase-02--identity-authentication--rbac). |
+| 03 | Client onboarding & tenancy | ✅ | Application and pending tenant lifecycle, staff review, document compliance, service entitlements and quotas, client organisation screens, team activation gate, and tenant isolation acceptance coverage are complete. |
+| 04 | Global settings & resource configuration | ✅ | Global/plan/client resolution, encrypted providers, country/timezone catalog, runtime channel/rate/storage settings, client preferences, and tenant resource request review are implemented. |
 | 05 | Contacts, audiences & consent | 🟡 | Contacts CRUD, lists, tags, CSV import and consent flags exist. Segmentation, duplicates, data quality and opt-out registry remain. |
 | 06 | Unified campaign core | 🟡 | Draft → submit → approve → launch → complete with wallet reservation works for voice/SMS. Versioning, idempotency keys and immutable snapshots remain. |
 | 07 | Approvals & content governance | 🟡 | Single-step approve/reject inside campaigns. Dedicated approvals workspace, audio/SMS/email review queues and reapproval rules remain. |
@@ -193,7 +193,9 @@ pass" is covered by the identity feature tests listed below.
 | Passkey naming / deletion polish | Existing starter components only |
 | SSO / SAML | Not in the spec for this phase; listed for future enterprise work (Phase 20) |
 
-## Phase 03 — Client onboarding & tenancy (next up)
+Client signup and identifier login coverage is in `tests/Feature/Tenancy/ClientRegistrationTest.php`.
+
+## Phase 03 — Client onboarding & tenancy
 
 | Module | State |
 | --- | --- |
@@ -201,19 +203,38 @@ pass" is covered by the identity feature tests listed below.
 | `client_id` on users, contacts, campaigns, sender IDs, wallets, rate cards | ✅ |
 | Tenant-scoped policies (`sameClient` checks) and `ResolvesTenantClient` | ✅ |
 | `forUser()` scopes on domain models | ✅ |
-| Client registration form + review queue | ⬜ |
-| Pending / active / suspended lifecycle with reasons | 🟡 (`status` column only, no transition workflow or audit) |
-| Documents, service entitlements and limits | ⬜ |
-| Cross-tenant isolation test suite (UI, API, exports, guessed IDs) | ⬜ |
+| Client registration, mandatory email/phone, email-or-SMS OTP and channel-specific verification state | ✅ |
+| Business/private account selection; business name is conditional and one account-matched identification upload is required at signup | ✅ |
+| Client email or phone + password login | ✅ |
+| Application review queue, approval/rejection, pending tenant and compliance activation | ✅ |
+| Pending / active / suspended / archived lifecycle, reasons and audit trail | ✅ |
+| Client and staff compliance document upload/review with private storage; one verified accepted document satisfies the activation gate | ✅ |
+| Client account activation email queued after successful approval (includes sign-in link and email/phone login guidance) | ✅ |
+| Service entitlement management and enforced daily/monthly recipient quotas | ✅ |
+| Client organisation profile, review status and service status screens | ✅ |
+| Team invitations become available after organisation activation | ✅ |
+| Cross-tenant isolation through tenant screens, API, and guessed record IDs | ✅ |
+| Client data exports | ✅ No client-data export route is registered, so there is no export surface to cross tenant boundaries. |
+
+**Acceptance evidence:** focused tenancy tests cover email/SMS OTP signup, business/private account selection, single-document activation gates, private document review/download, application review, service access and quotas, and tenant isolation. Latest targeted run: 50 tests / 313 assertions passed. `npm run types:check`, `npm run build`, and Pint pass. Added account type columns and made registration company name nullable for private accounts.
 
 ## Phase 04 — Global settings & resource configuration
 
 | Module | State |
 | --- | --- |
 | Channel enum + `campaign_channels` pivot | ✅ |
-| Global settings screens (company, channels, providers, countries, rate limits, storage, feature flags) | ⬜ |
-| Encrypted provider credential store | ⬜ |
-| Configuration resolution global → plan → client | ⬜ |
+| Global settings grouped by company, channels, providers, countries, rate limits, storage, feature flags and plans | ✅ |
+| Staff settings screen with secret masking, encryption and key guidance | ✅ |
+| Global → assigned plan → client configuration resolution (`PlatformConfiguration`) | ✅ |
+| Runtime channel availability, login/signup rate limits, import/document upload limits | ✅ |
+| Runtime selection of private storage disk for client documents | ✅ |
+| SMS OTP through configured TxtConnect, Kannel or generic JSON provider | ✅ |
+| Country dropdown, allow-list setting and country-specific timezone selection/validation | ✅ |
+| Client timezone, locale, branding and notification preferences | ✅ |
+| Tenant-scoped resource requests and staff review queue | ✅ |
+| Settings change audit metadata | ✅ |
+| Secret values omitted from serialized settings; audit records keys, not values | ✅ |
+| **Phase acceptance gate** | **Implementation complete.** Pint, TypeScript check, production build, route listing and database migrations verified. Automated regression tests were not run for this change. |
 
 ## Phase 05 — Contacts, audiences & consent
 
@@ -275,6 +296,14 @@ php artisan queue:work                 # delivers queued invitation emails
 
 | Date | Change |
 | --- | --- |
+| 2026-11-03 | Client signup now distinguishes business and private accounts, conditionally requires a business name, accepts one matching private identification upload, and requires only one accepted document to activate an account. Staff can inspect the private upload before review. Verification: 50 focused tenancy tests / 313 assertions passed; TypeScript check, production build and Pint passed. |
+| 2026-11-03 | Client activation now queues an email to the registered contact address only after activation succeeds; blocked activation sends no email. |
+| 2026-11-03 | Phase 03 completed: added client registration, directory and tenant detail screens; client profile and compliance upload; reviewer access by client permission; activation-gated team invites; enforced service recipient quotas; and tenant isolation tests. Email/SMS OTP signup and email/phone login are covered. Verification: 55 focused tests / 333 assertions passed, TypeScript check and production build passed, Pint clean. No client-data export endpoints are registered. |
+| 2026-11-03 | Phase 04 implementation completed with grouped settings, global/plan/client resolution, encrypted provider secrets, SMS OTP drivers, country/timezone mapping, runtime channel/rate/storage configuration, client preferences/resource requests, and README setup instructions. Pint, TypeScript, production build, route listing and migrations verified; automated regression tests remain outstanding. |
+| 2026-11-03 | Client signup uses a country dropdown that selects a country-valid timezone and supports OTP by SMS or email, with method-specific delivery and verification messages. |
+| 2026-11-03 | Client account verification now records the selected OTP channel and allows either verified email or verified phone to satisfy the account verification gate. |
+| 2026-11-03 | Added TxtConnect SMS OTP integration using the attached API collection contract, bearer token settings and `OmniCast` default sender ID. |
+| 2026-11-03 | Client account signup added: mandatory email/phone, expiring email OTP, password creation, pending tenant and client-admin account; login accepts either email or phone. Existing applicant approval reuses the created tenant/account. |
 | 2026-11-02 | Phase 02 applied: identity, RBAC, invitations, sessions, login audit, API tokens, suspension enforcement, rate limits, activity logging. Added `docs/IMPLEMENTATION-STATUS.md`. |
 | 2026-11-02 | `phpunit.xml` pins `APP_URL=http://localhost`, so the suite no longer depends on the developer `.env`. |
 | 2026-11-02 | Identity work verified: 40 Phase 02 feature tests and the full 98-test suite pass, `tsc --noEmit` is clean, and PHPStan errors dropped from 59 to 38 (all remaining errors are pre-existing Phase 05/06/11 debt). |

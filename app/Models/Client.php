@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Channel;
+use App\Enums\ClientAccountType;
 use App\Enums\ClientDocumentType;
 use App\Enums\ClientService;
 use App\Enums\ClientStatus;
@@ -20,6 +21,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $name
+ * @property ClientAccountType|string $account_type
  * @property string $code
  * @property string|null $email
  * @property string|null $phone
@@ -36,7 +38,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  */
-#[Fillable(['name', 'code', 'email', 'phone', 'timezone', 'status', 'status_reason', 'credit_limit', 'notes', 'created_by'])]
+#[Fillable(['name', 'account_type', 'code', 'email', 'phone', 'timezone', 'status', 'status_reason', 'status_changed_at', 'activated_at', 'suspended_at', 'archived_at', 'credit_limit', 'notes', 'created_by', 'settings'])]
 class Client extends Model
 {
     /** @use HasFactory<ClientFactory> */
@@ -50,12 +52,14 @@ class Client extends Model
     protected function casts(): array
     {
         return [
+            'account_type' => ClientAccountType::class,
             'status' => ClientStatus::class,
             'credit_limit' => 'decimal:2',
             'status_changed_at' => 'datetime',
             'activated_at' => 'datetime',
             'suspended_at' => 'datetime',
             'archived_at' => 'datetime',
+            'settings' => 'array',
         ];
     }
 
@@ -229,7 +233,7 @@ class Client extends Model
     }
 
     /**
-     * The required document types that have not been verified yet.
+     * Identification document options still acceptable for verification.
      *
      * @return list<ClientDocumentType>
      */
@@ -241,14 +245,40 @@ class Client extends Model
             ->all();
 
         $verified = array_filter(array_map(
-            fn (mixed $type): ?ClientDocumentType => is_string($type) ? ClientDocumentType::tryFrom($type) : null,
+            fn (mixed $type): ?string => $type instanceof ClientDocumentType
+                ? $type->value
+                : (is_string($type) ? ClientDocumentType::tryFrom($type)?->value : null),
             $verifiedTypes,
         ));
 
-        return array_values(array_filter(
-            ClientDocumentType::required(),
-            fn (ClientDocumentType $type): bool => ! in_array($type, $verified, true),
-        ));
+        $acceptedTypeValues = array_map(
+            fn (ClientDocumentType $type): string => $type->value,
+            $this->accountType()->identificationTypes(),
+        );
+
+        if (array_intersect($acceptedTypeValues, $verified) !== []) {
+            return [];
+        }
+
+        return $this->accountType()->identificationTypes();
+    }
+
+    /**
+     * Whether at least one acceptable identification document has been verified.
+     */
+    public function hasVerifiedIdentification(): bool
+    {
+        return $this->missingRequiredDocuments() === [];
+    }
+
+    /**
+     * The account type, with legacy records treated as business accounts.
+     */
+    public function accountType(): ClientAccountType
+    {
+        return $this->account_type instanceof ClientAccountType
+            ? $this->account_type
+            : ClientAccountType::tryFrom((string) $this->account_type) ?? ClientAccountType::Business;
     }
 
     /**

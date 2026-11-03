@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Client;
+use App\Models\PlatformSetting;
+
+/** Resolves configuration in order: global defaults, plan defaults, then tenant overrides. */
+class PlatformConfiguration
+{
+    public function resolve(string $group, string $key, mixed $default = null, ?Client $client = null, array $plan = []): mixed
+    {
+        $setting = PlatformSetting::query()->where('group', $group)->where('key', $key)->first();
+        $value = $setting?->value ?? $default;
+
+        $planCode = $client?->settings['plan_code'] ?? 'default';
+        if (is_string($planCode) && $planCode !== '') {
+            $planSetting = PlatformSetting::query()
+                ->where('group', 'plans')
+                ->where('key', $planCode.'.'.$group.'.'.$key)
+                ->first()?->value;
+            if ($planSetting !== null) {
+                $value = $planSetting;
+            }
+        }
+
+        $planSettings = $plan[$group] ?? [];
+        if (is_array($planSettings) && array_key_exists($key, $planSettings)) {
+            $value = $planSettings[$key];
+        }
+
+        $overrides = $client?->settings['overrides'] ?? [];
+
+        if (is_array($overrides) && array_key_exists($group.'.'.$key, $overrides)) {
+            $value = $overrides[$group.'.'.$key];
+        } elseif (is_array($overrides[$group] ?? null) && array_key_exists($key, $overrides[$group])) {
+            $value = $overrides[$group][$key];
+        }
+
+        return $value;
+    }
+
+    public function enabled(string $key, bool $default = true, ?Client $client = null): bool
+    {
+        return filter_var($this->resolve('feature_flags', $key, $default, $client), FILTER_VALIDATE_BOOL);
+    }
+
+    public function channelEnabled(string $channel, ?Client $client = null): bool
+    {
+        $default = filter_var($this->resolve('channels', $channel.'.enabled', true, $client), FILTER_VALIDATE_BOOL);
+
+        return $this->enabled('channels.'.$channel, $default, $client);
+    }
+}

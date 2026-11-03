@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ClientStatus;
 use App\Enums\Role as RoleEnum;
 use App\Mail\UserInvitationMail;
 use App\Models\Client;
@@ -44,6 +45,26 @@ it('forbids client operators from inviting colleagues', function () {
             'role' => RoleEnum::ClientOperator->value,
         ])
         ->assertForbidden();
+
+    expect(UserInvitation::query()->count())->toBe(0);
+});
+
+it('blocks client team invitations until the organisation is activated', function (): void {
+    [$client, , $clientAdmin] = clientWithWallet();
+    $client->update(['status' => ClientStatus::Pending]);
+
+    $this->actingAs($clientAdmin)
+        ->get(route('team.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('can.invite', false));
+
+    $this->actingAs($clientAdmin)
+        ->post(route('team.store'), [
+            'email' => 'teammate@example.com',
+            'role' => RoleEnum::ClientOperator->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('toast');
 
     expect(UserInvitation::query()->count())->toBe(0);
 });

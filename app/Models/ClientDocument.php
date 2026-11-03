@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property ClientDocumentType $type
  * @property string $title
  * @property string $path
+ * @property string $storage_disk
  * @property string|null $original_name
  * @property string|null $mime_type
  * @property int|null $size_bytes
@@ -36,7 +37,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'client_id', 'type', 'title', 'path', 'original_name', 'mime_type',
+    'client_id', 'type', 'title', 'path', 'storage_disk', 'original_name', 'mime_type',
     'size_bytes', 'status', 'uploaded_by', 'reviewed_by', 'reviewed_at',
     'rejection_reason', 'expires_at',
 ])]

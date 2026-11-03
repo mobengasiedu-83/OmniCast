@@ -93,6 +93,7 @@ class ClientRegistrationController extends Controller
      */
     public function approve(ApproveClientRegistrationRequest $request, ClientRegistration $registration): RedirectResponse
     {
+        $hasAccount = $registration->client_id !== null;
         $reviewer = $request->user();
 
         if (! $reviewer instanceof User) {
@@ -103,7 +104,9 @@ class ClientRegistrationController extends Controller
 
         return to_route('admin.clients.show', $client)->with('toast', [
             'type' => 'success',
-            'message' => "{$client->name} created as a pending client and the applicant invited.",
+            'message' => $hasAccount
+                ? "{$client->name}'s registration approved. The account remains pending compliance activation."
+                : "{$client->name} created as a pending client and the applicant invited.",
         ]);
     }
 
@@ -136,6 +139,8 @@ class ClientRegistrationController extends Controller
         return [
             'id' => $registration->id,
             'company_name' => $registration->company_name,
+            'account_type' => $registration->account_type->value,
+            'account_type_label' => $registration->account_type->label(),
             'contact_name' => $registration->contact_name,
             'email' => $registration->email,
             'phone' => $registration->phone,

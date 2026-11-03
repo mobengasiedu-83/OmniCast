@@ -37,21 +37,28 @@ class ClientOnboarding
     {
         $this->ensurePending($registration);
 
-        $client = DB::transaction(function () use ($registration, $reviewer, $overrides): Client {
-            $client = Client::query()->create([
-                'name' => $overrides['name'] ?? $registration->company_name,
-                'code' => $overrides['code'] ?? $this->generateCode($registration->company_name),
-                'email' => $registration->email,
-                'phone' => $registration->phone,
-                'timezone' => $registration->timezone,
-                'status' => ClientStatus::Pending,
-                'status_changed_at' => now(),
-                'credit_limit' => $overrides['credit_limit'] ?? 0,
-                'notes' => $registration->message,
-                'created_by' => $reviewer->id,
-            ]);
+        $wasAlreadyCreated = $registration->client_id !== null;
+        $client = DB::transaction(function () use ($registration, $reviewer, $overrides, $wasAlreadyCreated): Client {
+            $accountName = $registration->company_name ?? $registration->contact_name;
+            $client = $wasAlreadyCreated
+                ? Client::query()->findOrFail($registration->client_id)
+                : Client::query()->create([
+                    'name' => $overrides['name'] ?? $accountName,
+                    'account_type' => $registration->account_type,
+                    'code' => $overrides['code'] ?? $this->generateCode($accountName),
+                    'email' => $registration->email,
+                    'phone' => $registration->phone,
+                    'timezone' => $registration->timezone,
+                    'status' => ClientStatus::Pending,
+                    'status_changed_at' => now(),
+                    'credit_limit' => $overrides['credit_limit'] ?? 0,
+                    'notes' => $registration->message,
+                    'created_by' => $reviewer->id,
+                ]);
 
-            $this->seedEntitlements($client, $registration);
+            if (! $wasAlreadyCreated) {
+                $this->seedEntitlements($client, $registration);
+            }
 
             $registration->forceFill([
                 'status' => ClientRegistrationStatus::Approved,
@@ -74,12 +81,14 @@ class ClientOnboarding
             return $client;
         });
 
-        $this->invitations->issue([
-            'email' => $registration->email,
-            'name' => $registration->contact_name,
-            'role' => RoleEnum::ClientAdmin->value,
-            'client_id' => $client->id,
-        ], $reviewer);
+        if (! $wasAlreadyCreated) {
+            $this->invitations->issue([
+                'email' => $registration->email,
+                'name' => $registration->contact_name,
+                'role' => RoleEnum::ClientAdmin->value,
+                'client_id' => $client->id,
+            ], $reviewer);
+        }
 
         return $client;
     }
@@ -97,6 +106,8 @@ class ClientOnboarding
             'reviewed_at' => now(),
             'rejection_reason' => $reason,
         ])->save();
+
+        $registration->client?->users()->update(['is_active' => false]);
 
         activity()
             ->performedOn($registration)
