@@ -11,12 +11,18 @@ type EditableCampaign = {
     name: string;
     channel: string;
     contact_list_id: number | null;
+    contact_segment_id: number | null;
     sender_id: number | null;
     caller_id: number | null;
     sms_message: string | null;
     voice_script: string | null;
     voice_recording_path: string | null;
     voice_max_duration_seconds: number | null;
+    ivr_enabled: boolean;
+    ivr_prompt: string | null;
+    ivr_timeout_seconds: number;
+    ivr_max_attempts: number;
+    ivr_options: Record<string, string>;
     schedule_type: string | null;
     scheduled_at: string | null;
     timezone: string | null;
@@ -41,6 +47,7 @@ function initialValues(campaign: EditableCampaign): Partial<CampaignFormValues> 
         name: campaign.name,
         channel: campaign.channel,
         contact_list_id: text(campaign.contact_list_id),
+        contact_segment_id: text(campaign.contact_segment_id),
         sender_id: text(campaign.sender_id),
         caller_id: text(campaign.caller_id),
         sms_message: text(campaign.sms_message),
@@ -48,6 +55,11 @@ function initialValues(campaign: EditableCampaign): Partial<CampaignFormValues> 
         voice_max_duration_seconds: text(
             campaign.voice_max_duration_seconds,
         ),
+        ivr_enabled: campaign.ivr_enabled ? '1' : '0',
+        ivr_prompt: text(campaign.ivr_prompt),
+        ivr_timeout_seconds: text(campaign.ivr_timeout_seconds),
+        ivr_max_attempts: text(campaign.ivr_max_attempts),
+        ivr_options: campaign.ivr_options ?? {},
         schedule_type: campaign.schedule_type ?? 'now',
         scheduled_at: text(campaign.scheduled_at),
         timezone: text(campaign.timezone),

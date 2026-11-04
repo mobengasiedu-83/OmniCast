@@ -10,6 +10,9 @@ use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\User;
+use App\Models\VoiceCall;
+use App\Services\VoiceCallReport;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
@@ -125,6 +128,52 @@ class ReportController extends Controller
             'can' => [
                 'export' => Gate::allows(Permission::ExportReports->value),
             ],
+            'clients' => $this->selectableClients($request),
+        ]);
+    }
+
+    /**
+     * Show the voice call report for a date range.
+     *
+     * Answer rate, talk time and the DTMF breakdown come from the call log the
+     * switch writes through the signed webhook, so the report reflects what the
+     * PBX actually did rather than what the dispatcher handed it.
+     */
+    public function voice(Request $request, VoiceCallReport $reports): Response
+    {
+        abort_unless($request->user()->can(Permission::ViewReports->value), 403);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $to = Carbon::parse($request->string('to')->toString() ?: null)->endOfDay();
+        $from = Carbon::parse($request->string('from')->toString() ?: null)->startOfDay();
+        $campaignId = $request->integer('campaign');
+
+        $calls = VoiceCall::query()
+            ->forUser($user)
+            ->whereBetween('dialled_at', [$from, $to])
+            ->when($campaignId > 0, fn (Builder $query) => $query->where('campaign_id', $campaignId));
+
+        return Inertia::render('reports/voice', [
+            'filters' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'campaign' => $campaignId > 0 ? $campaignId : null,
+            ],
+            'report' => $reports->forQuery($calls, 25),
+            'campaigns' => Campaign::query()
+                ->forUser($user)
+                ->whereIn('channel', [Channel::Voice->value, Channel::MultiChannel->value])
+                ->latest('id')
+                ->limit(100)
+                ->get(['id', 'reference', 'name'])
+                ->map(fn (Campaign $campaign): array => [
+                    'id' => $campaign->id,
+                    'name' => $campaign->name,
+                    'reference' => $campaign->reference,
+                ])
+                ->all(),
             'clients' => $this->selectableClients($request),
         ]);
     }

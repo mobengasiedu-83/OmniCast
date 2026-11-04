@@ -23,7 +23,7 @@ import type {
     ClientOption,
     ContactFormValues,
     ContactListOption,
-    SelectOption,
+    TagOption,
 } from '@/types';
 
 const defaults: ContactFormValues = {
@@ -38,9 +38,10 @@ const defaults: ContactFormValues = {
     location: '',
     language: 'en',
     timezone: 'Africa/Accra',
-    consent_status: 'pending',
-    is_do_not_contact: false,
+    dnd: false,
     contact_list_ids: [],
+    tag_ids: [],
+    custom_fields_json: '{}',
     client_id: '',
 };
 
@@ -48,7 +49,7 @@ export default function ContactForm({
     action,
     method,
     contactLists,
-    consentStatuses,
+    tags,
     clients,
     initial,
     submitLabel,
@@ -57,7 +58,7 @@ export default function ContactForm({
     action: string;
     method: 'post' | 'put';
     contactLists: ContactListOption[];
-    consentStatuses: SelectOption[];
+    tags: TagOption[];
     clients: ClientOption[];
     initial?: Partial<ContactFormValues>;
     submitLabel: string;
@@ -88,14 +89,19 @@ export default function ContactForm({
         );
     };
 
+    const toggleTag = (tagId: number): void => {
+        const selected = form.data.tag_ids.includes(tagId);
+        form.setData('tag_ids', selected ? form.data.tag_ids.filter((id) => id !== tagId) : [...form.data.tag_ids, tagId]);
+    };
+
     return (
         <form onSubmit={submit} className="flex flex-col gap-4">
             <Card className="py-4">
                 <CardHeader>
                     <CardTitle>Contact details</CardTitle>
                     <CardDescription>
-                        A phone number and consent status are all that is
-                        required to reach someone.
+                        Only the phone number (MSISDN) is required. Uploaded
+                        contacts are treated as already consented.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -140,7 +146,7 @@ export default function ContactForm({
                             onChange={(event) =>
                                 form.setData('first_name', event.target.value)
                             }
-                            required
+                            placeholder="Optional"
                         />
                         <InputError message={form.errors.first_name} />
                     </div>
@@ -158,7 +164,10 @@ export default function ContactForm({
                     </div>
 
                     <div className="grid gap-1.5">
-                        <Label htmlFor="phone">Phone number</Label>
+                        <Label htmlFor="phone">
+                            Phone number (MSISDN){' '}
+                            <span className="text-destructive">*</span>
+                        </Label>
                         <Input
                             id="phone"
                             value={form.data.phone}
@@ -211,6 +220,11 @@ export default function ContactForm({
                             }
                         />
                         <InputError message={form.errors.company} />
+                    </div>
+                    <div className="grid gap-1.5 sm:col-span-2">
+                        <Label htmlFor="custom_fields_json">Custom fields (JSON object)</Label>
+                        <textarea id="custom_fields_json" value={form.data.custom_fields_json} onChange={(event) => form.setData('custom_fields_json', event.target.value)} className="border-input bg-background min-h-24 rounded-md border px-3 py-2 text-sm" placeholder='{"membership":"gold"}' />
+                        <InputError message={form.errors.custom_fields_json} />
                     </div>
                 </CardContent>
             </Card>
@@ -291,58 +305,32 @@ export default function ContactForm({
             </Card>
             <Card className="py-4">
                 <CardHeader>
-                    <CardTitle>Consent &amp; audiences</CardTitle>
+                    <CardTitle>DND &amp; audiences</CardTitle>
                     <CardDescription>
-                        Campaigns only reach contacts that have opted in.
+                        Campaigns reach every contact unless the number is on
+                        the DND list.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4">
-                    <div className="grid gap-1.5 sm:max-w-xs">
-                        <Label htmlFor="consent_status">Consent status</Label>
-                        <Select
-                            value={form.data.consent_status}
-                            onValueChange={(value) =>
-                                form.setData('consent_status', value)
-                            }
-                        >
-                            <SelectTrigger id="consent_status">
-                                <SelectValue placeholder="Select consent" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {consentStatuses.map((status) => (
-                                    <SelectItem
-                                        key={status.value}
-                                        value={status.value}
-                                    >
-                                        {status.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={form.errors.consent_status} />
-                    </div>
-
                     <div className="grid gap-1">
                         <label className="flex items-start gap-2 text-sm">
                             <Checkbox
-                                checked={form.data.is_do_not_contact}
+                                checked={form.data.dnd}
                                 onCheckedChange={(checked) =>
-                                    form.setData(
-                                        'is_do_not_contact',
-                                        checked === true,
-                                    )
+                                    form.setData('dnd', checked === true)
                                 }
                             />
                             <span>
                                 <span className="font-medium">
-                                    Do not contact
+                                    Do not disturb (DND)
                                 </span>
                                 <span className="text-muted-foreground block text-xs">
-                                    Excludes this contact from every campaign.
+                                    Blocks SMS, voice and email for this number
+                                    and adds it to the DND registry.
                                 </span>
                             </span>
                         </label>
-                        <InputError message={form.errors.is_do_not_contact} />
+                        <InputError message={form.errors.dnd} />
                     </div>
 
                     <div className="grid gap-2">
@@ -375,6 +363,15 @@ export default function ContactForm({
                             </div>
                         )}
                         <InputError message={form.errors.contact_list_ids} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Tags</Label>
+                        {tags.length === 0 ? <p className="text-muted-foreground text-sm">Create tags from Audiences.</p> : (
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {tags.map((tag) => <label key={tag.id} className="flex items-center gap-2 text-sm"><Checkbox checked={form.data.tag_ids.includes(tag.id)} onCheckedChange={() => toggleTag(tag.id)} /><span>{tag.name}</span></label>)}
+                            </div>
+                        )}
+                        <InputError message={form.errors.tag_ids} />
                     </div>
                 </CardContent>
             </Card>

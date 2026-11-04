@@ -9,9 +9,15 @@ use App\Http\Requests\Campaign\CampaignRequest;
 use App\Http\Requests\Campaign\RejectCampaignRequest;
 use App\Models\CallerId;
 use App\Models\Campaign;
+use App\Models\CampaignVersion;
 use App\Models\ContactList;
+use App\Models\ContactSegment;
 use App\Models\SenderId;
+use App\Services\CampaignReadiness;
 use App\Services\CampaignService;
+use App\Services\ContactSegmentQuery;
+use App\Services\PlatformConfiguration;
+use App\Services\VoiceCallReport;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,6 +32,9 @@ class CampaignController extends Controller
     public function __construct(
         protected CampaignService $campaigns,
         protected WalletService $wallets,
+        protected CampaignReadiness $readiness,
+        protected PlatformConfiguration $configuration,
+        protected VoiceCallReport $voiceReport,
     ) {}
 
     /**
@@ -43,7 +52,7 @@ class CampaignController extends Controller
 
         $campaigns = Campaign::query()
             ->forUser($request->user())
-            ->with(['senderId:id,name', 'contactList:id,name', 'client:id,name'])
+            ->with(['senderId:id,name', 'contactList:id,name', 'contactSegment:id,name', 'client:id,name'])
             ->when($filters['status'] !== '', fn ($query) => $query->where('status', $filters['status']))
             ->when($filters['channel'] !== '', fn ($query) => $query->where('channel', $filters['channel']))
             ->when($filters['search'] !== '', fn ($query) => $query->where(function ($query) use ($filters): void {
@@ -87,8 +96,10 @@ class CampaignController extends Controller
         $campaign = $this->campaigns->create($request->campaignAttributes(), $request->user());
 
         return to_route('campaigns.show', $campaign)->with('toast', [
-            'type' => 'success',
-            'message' => "Campaign {$campaign->reference} saved as a draft.",
+            'type' => $campaign->wasRecentlyCreated ? 'success' : 'warning',
+            'message' => $campaign->wasRecentlyCreated
+                ? "Campaign {$campaign->reference} saved as a draft."
+                : "Campaign {$campaign->reference} was already saved for this request.",
         ]);
     }
 
@@ -102,10 +113,11 @@ class CampaignController extends Controller
         $campaign->load([
             'client:id,name,timezone',
             'contactList:id,name',
-            'senderId:id,name',
+            'senderId:id,name,channel,status',
             'callerId:id,number,label',
             'creator:id,name',
             'approver:id,name',
+            'audioReviewer:id,name',
         ]);
 
         $statusCounts = $campaign->campaignContacts()
@@ -129,6 +141,22 @@ class CampaignController extends Controller
                 'sent_at' => $campaignContact->sent_at?->toIso8601String(),
             ]);
 
+        $versions = $campaign->versions()
+            ->with('author:id,name')
+            ->orderByDesc('version')
+            ->get()
+            ->map(fn (CampaignVersion $version): array => [
+                'id' => $version->id,
+                'version' => $version->version,
+                'status' => $version->status->value,
+                'status_label' => $version->status->label(),
+                'audience_size' => $version->audience_size,
+                'estimated_cost' => (float) $version->estimated_cost,
+                'fingerprint' => $version->fingerprint,
+                'frozen_at' => $version->frozen_at?->toIso8601String(),
+                'author' => $version->author?->name,
+            ]);
+
         return Inertia::render('campaigns/show', [
             'campaign' => [
                 ...$this->summary($campaign),
@@ -136,6 +164,11 @@ class CampaignController extends Controller
                 'voice_script' => $campaign->voice_script,
                 'voice_recording_path' => $campaign->voice_recording_path,
                 'voice_max_duration_seconds' => $campaign->voice_max_duration_seconds,
+                'ivr_enabled' => (bool) $campaign->ivr_enabled,
+                'ivr_prompt' => $campaign->ivr_prompt,
+                'ivr_timeout_seconds' => (int) $campaign->ivr_timeout_seconds,
+                'ivr_max_attempts' => (int) $campaign->ivr_max_attempts,
+                'ivr_options' => $campaign->ivr_options ?? [],
                 'timezone' => $campaign->timezone,
                 'schedule_type' => $campaign->schedule_type,
                 'max_retries' => $campaign->max_retries,
@@ -151,14 +184,31 @@ class CampaignController extends Controller
                 'completed_at' => $campaign->completed_at?->toIso8601String(),
             ],
             'statusCounts' => $statusCounts,
+            'versions' => $versions,
             'recipients' => $recipients,
+            'review' => [
+                'requires_audio' => $campaign->requiresAudioApproval(),
+                'requires_campaign_approval' => $this->configuration->campaignApprovalRequired($campaign->client),
+                'audio_status' => $campaign->audio_status->value,
+                'audio_status_label' => $campaign->audio_status->label(),
+                'audio_rejection_reason' => $campaign->audio_rejection_reason,
+                'audio_reviewed_at' => $campaign->audio_reviewed_at?->toIso8601String(),
+                'audio_reviewer' => $campaign->audioReviewer?->name,
+                'outbound_caller' => $this->readiness->outboundCallerId($campaign->client),
+                'blockers' => $this->readiness->issues($campaign),
+            ],
+            'voiceReport' => $campaign->channel->requiresVoiceContent()
+                ? $this->voiceReport->forCampaign($campaign, 8)
+                : null,
             'abilities' => [
                 'update' => Gate::allows('update', $campaign),
                 'submit' => Gate::allows('submit', $campaign),
                 'approve' => Gate::allows('approve', $campaign),
+                'review_audio' => Gate::allows('reviewAudio', $campaign),
                 'launch' => Gate::allows('launch', $campaign),
                 'cancel' => Gate::allows('cancel', $campaign),
                 'delete' => Gate::allows('delete', $campaign),
+                'duplicate' => Gate::allows('duplicate', $campaign),
             ],
         ]);
     }
@@ -178,12 +228,18 @@ class CampaignController extends Controller
                 'name' => $campaign->name,
                 'channel' => $campaign->channel->value,
                 'contact_list_id' => $campaign->contact_list_id,
+                'contact_segment_id' => $campaign->contact_segment_id,
                 'sender_id' => $campaign->sender_id,
                 'caller_id' => $campaign->caller_id,
                 'sms_message' => $campaign->sms_message,
                 'voice_script' => $campaign->voice_script,
                 'voice_recording_path' => $campaign->voice_recording_path,
                 'voice_max_duration_seconds' => $campaign->voice_max_duration_seconds,
+                'ivr_enabled' => (bool) $campaign->ivr_enabled,
+                'ivr_prompt' => $campaign->ivr_prompt,
+                'ivr_timeout_seconds' => $campaign->ivr_timeout_seconds,
+                'ivr_max_attempts' => $campaign->ivr_max_attempts,
+                'ivr_options' => $campaign->ivr_options ?? [],
                 'schedule_type' => $campaign->schedule_type,
                 'scheduled_at' => $campaign->scheduled_at?->format('Y-m-d\TH:i'),
                 'timezone' => $campaign->timezone,
@@ -225,17 +281,20 @@ class CampaignController extends Controller
     }
 
     /**
-     * Build the audience and send the campaign for approval.
+     * Build the audience, hold the funds and either approve the campaign
+     * automatically or send it for review.
      */
     public function submit(Request $request, Campaign $campaign): RedirectResponse
     {
         Gate::authorize('submit', $campaign);
 
-        $this->campaigns->submit($campaign, $request->user());
+        $campaign = $this->campaigns->submit($campaign, $request->user());
 
         return back()->with('toast', [
             'type' => 'success',
-            'message' => 'Campaign submitted for approval. Estimated cost is now reserved.',
+            'message' => $campaign->status === CampaignStatus::Approved
+                ? 'Campaign approved automatically. Estimated cost is now reserved and it is ready to launch.'
+                : 'Campaign submitted for review. Estimated cost is now reserved.',
         ]);
     }
 
@@ -270,13 +329,49 @@ class CampaignController extends Controller
     }
 
     /**
+     * Approve the audio a voice campaign will play.
+     */
+    public function approveAudio(Request $request, Campaign $campaign): RedirectResponse
+    {
+        Gate::authorize('reviewAudio', $campaign);
+
+        $campaign = $this->campaigns->approveAudio($campaign, $request->user());
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => $campaign->status === CampaignStatus::Approved
+                ? 'Voice audio approved. The campaign is approved and ready to launch.'
+                : 'Voice audio approved. The campaign can now be approved for delivery.',
+        ]);
+    }
+
+    /**
+     * Reject the voice audio with a reason the tenant can act on.
+     */
+    public function rejectAudio(Request $request, Campaign $campaign): RedirectResponse
+    {
+        Gate::authorize('reviewAudio', $campaign);
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+
+        $this->campaigns->rejectAudio($campaign, $request->user(), $validated['reason']);
+
+        return back()->with('toast', [
+            'type' => 'warning',
+            'message' => 'Voice audio rejected. The tenant can edit and submit the campaign again.',
+        ]);
+    }
+
+    /**
      * Launch an approved campaign now or hand it to the scheduler.
      */
     public function launch(Campaign $campaign): RedirectResponse
     {
         Gate::authorize('launch', $campaign);
 
-        $this->campaigns->launch($campaign);
+        $campaign = $this->campaigns->launch($campaign);
 
         return back()->with('toast', [
             'type' => 'success',
@@ -302,6 +397,21 @@ class CampaignController extends Controller
     }
 
     /**
+     * Copy a campaign into a new editable draft.
+     */
+    public function duplicate(Request $request, Campaign $campaign): RedirectResponse
+    {
+        Gate::authorize('duplicate', $campaign);
+
+        $copy = $this->campaigns->duplicate($campaign, $request->user());
+
+        return to_route('campaigns.show', $copy)->with('toast', [
+            'type' => 'success',
+            'message' => "Campaign copied into draft {$copy->reference}.",
+        ]);
+    }
+
+    /**
      * Shape a campaign row for the list and detail screens.
      *
      * @return array<string, mixed>
@@ -317,7 +427,7 @@ class CampaignController extends Controller
             'channel_label' => $campaign->channel->label(),
             'status' => $campaign->status->value,
             'status_label' => $campaign->status->label(),
-            'audience' => $campaign->contactList?->name ?? 'All broadcastable contacts',
+            'audience' => $campaign->contactSegment?->name ?? $campaign->contactList?->name ?? 'All broadcastable contacts',
             'sender' => $campaign->senderId?->name,
             'estimated_recipients' => $campaign->estimated_recipients,
             'estimated_sms_parts' => $campaign->estimated_sms_parts,
@@ -352,11 +462,23 @@ class CampaignController extends Controller
                     'contacts_count' => $list->contacts_count,
                 ])
                 ->all(),
+            'contactSegments' => $client === null ? [] : ContactSegment::query()
+                ->where('client_id', $client->id)->orderBy('name')->get()
+                ->map(fn (ContactSegment $segment): array => [
+                    'id' => $segment->id,
+                    'name' => $segment->name,
+                    'contacts_count' => app(ContactSegmentQuery::class)->count($segment),
+                ])->all(),
             'senderIds' => $client === null ? [] : SenderId::query()
                 ->where('client_id', $client->id)
                 ->where('status', 'approved')
                 ->orderBy('name')
-                ->get(['id', 'name'])
+                ->get(['id', 'name', 'channel'])
+                ->map(fn (SenderId $senderId): array => [
+                    'id' => $senderId->id,
+                    'name' => $senderId->name,
+                    'channel' => $senderId->channel->value,
+                ])
                 ->all(),
             'callerIds' => $client === null ? [] : CallerId::query()
                 ->where('client_id', $client->id)
@@ -365,6 +487,7 @@ class CampaignController extends Controller
                 ->get(['id', 'number', 'label'])
                 ->all(),
             'channels' => $this->channelOptions(),
+            'outboundCallerId' => $this->readiness->outboundCallerId($client),
         ];
     }
 

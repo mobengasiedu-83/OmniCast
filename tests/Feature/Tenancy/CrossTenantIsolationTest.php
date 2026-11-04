@@ -182,5 +182,5 @@ it('refuses to approve another tenant sender id', function (): void {
         ->withoutVite()
         ->get(route('sender-ids.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->has('senderIds', 0));
+        ->assertInertia(fn (Assert $page) => $page->where('senderIds.total', 0));
 });

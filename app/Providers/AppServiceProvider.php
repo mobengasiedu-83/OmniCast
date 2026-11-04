@@ -7,8 +7,10 @@ use App\Contracts\VoiceGateway;
 use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Services\LogSmsGateway;
-use App\Services\LogVoiceGateway;
 use App\Services\PlatformConfiguration;
+use App\Services\Voice\AmiTransport;
+use App\Services\Voice\StreamAmiTransport;
+use App\Services\Voice\VoiceGatewayManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -31,7 +33,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(SmsGateway::class, LogSmsGateway::class);
-        $this->app->bind(VoiceGateway::class, LogVoiceGateway::class);
+        $this->app->bind(AmiTransport::class, StreamAmiTransport::class);
+        $this->app->bind(
+            VoiceGateway::class,
+            fn (): VoiceGateway => $this->app->make(VoiceGatewayManager::class)->driver(),
+        );
     }
 
     /**
@@ -52,7 +58,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(RoleModel::class, RolePolicy::class);
 
         Gate::before(static function (User $user, string $ability, array $arguments): ?bool {
-            if ($ability === 'update' && ($arguments[0] ?? null) instanceof RoleModel) {
+            $target = $arguments[0] ?? null;
+
+            if ($ability === 'update' && $target instanceof RoleModel) {
+                return null;
+            }
+
+            if ($ability === 'suspend' && $target instanceof User && $target->is($user)) {
                 return null;
             }
 

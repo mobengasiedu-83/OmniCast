@@ -14,6 +14,9 @@ import { withBasePath as path } from '@/lib/base-path';
 export const urls = {
     dashboard: path('/dashboard'),
     login: path('/login'),
+    approvals: {
+        index: path('/approvals'),
+    },
     campaigns: {
         index: path('/campaigns'),
         create: path('/campaigns/create'),
@@ -25,21 +28,47 @@ export const urls = {
         submit: (campaign: number) => path(`/campaigns/${campaign}/submit`),
         approve: (campaign: number) => path(`/campaigns/${campaign}/approve`),
         reject: (campaign: number) => path(`/campaigns/${campaign}/reject`),
+        approveAudio: (campaign: number) =>
+            path(`/campaigns/${campaign}/audio/approve`),
+        rejectAudio: (campaign: number) =>
+            path(`/campaigns/${campaign}/audio/reject`),
         launch: (campaign: number) => path(`/campaigns/${campaign}/launch`),
         cancel: (campaign: number) => path(`/campaigns/${campaign}/cancel`),
+        duplicate: (campaign: number) => path(`/campaigns/${campaign}/duplicate`),
     },
     contacts: {
         index: path('/contacts'),
         create: path('/contacts/create'),
         store: path('/contacts'),
+        show: (contact: number) => path(`/contacts/${contact}`),
         edit: (contact: number) => path(`/contacts/${contact}/edit`),
         update: (contact: number) => path(`/contacts/${contact}`),
         destroy: (contact: number) => path(`/contacts/${contact}`),
+        bulk: path('/contacts/bulk'),
+        dnd: (contact: number) => path(`/contacts/${contact}/dnd`),
         import: path('/contacts/import'),
+        importTemplate: path('/contacts/import/template'),
+        audiences: path('/contacts/audiences'),
+        storeTag: path('/contacts/audiences/tags'),
+        deleteTag: (tag: number) => path(`/contacts/audiences/tags/${tag}`),
+        storeList: path('/contacts/audiences/lists'),
+        deleteList: (list: number) => path(`/contacts/audiences/lists/${list}`),
+        storeSegment: path('/contacts/audiences/segments'),
+        updateSegment: (segment: number) =>
+            path(`/contacts/audiences/segments/${segment}`),
+        deleteSegment: (segment: number) =>
+            path(`/contacts/audiences/segments/${segment}`),
+        mergeDuplicates: path('/contacts/audiences/duplicates/merge'),
+        storeSuppression: path('/contacts/audiences/suppressions'),
+        liftSuppression: (suppression: number) =>
+            path(`/contacts/audiences/suppressions/${suppression}`),
     },
     senderIds: {
         index: path('/sender-ids'),
+        create: path('/sender-ids/create'),
         store: path('/sender-ids'),
+        edit: (senderId: number) => path(`/sender-ids/${senderId}/edit`),
+        update: (senderId: number) => path(`/sender-ids/${senderId}`),
         approve: (senderId: number) => path(`/sender-ids/${senderId}/approve`),
         reject: (senderId: number) => path(`/sender-ids/${senderId}/reject`),
         destroy: (senderId: number) => path(`/sender-ids/${senderId}`),
@@ -50,6 +79,7 @@ export const urls = {
     },
     reports: {
         index: path('/reports'),
+        voice: path('/reports/voice'),
     },
     admin: {
         settings: {

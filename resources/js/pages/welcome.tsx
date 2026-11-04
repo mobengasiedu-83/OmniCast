@@ -75,8 +75,7 @@ export default function Welcome() {
                             <p className="text-muted-foreground max-w-xl text-base leading-relaxed">
                                 Draft a campaign, reserve the credit, get it
                                 approved and launch voice or SMS at scale — then
-                                watch delivery, spend and consent land in real
-                                time.
+                                watch delivery and spend land in real time.
                             </p>
 
                             <div className="flex flex-wrap items-center gap-3">
@@ -179,8 +178,8 @@ export default function Welcome() {
                             },
                             {
                                 icon: MessageSquare,
-                                title: 'Consent by default',
-                                copy: 'Consent and do-not-contact flags travel with every recipient, on every channel.',
+                                title: 'DND built in',
+                                copy: 'Every number can be added to the DND list, which blocks SMS, voice and email before a single message is sent.',
                             },
                         ].map((feature, index) => (
                             <div

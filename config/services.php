@@ -35,6 +35,15 @@ return [
         'sender_id' => env('SMS_SENDER_ID', 'OmniCast'),
     ],
 
+    'voice' => [
+        /*
+        | Every voice campaign dials from the single platform DID (outbound
+        | caller ID). Operators can override it at runtime with the
+        | `voice.outbound_caller_id` platform setting.
+        */
+        'outbound_caller_id' => env('VOICE_OUTBOUND_CALLER_ID'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

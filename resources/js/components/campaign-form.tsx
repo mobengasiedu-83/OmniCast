@@ -1,5 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
-import { type FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,11 +25,17 @@ const defaults: CampaignFormValues = {
     name: '',
     channel: 'sms',
     contact_list_id: '',
+    contact_segment_id: '',
     sender_id: '',
     caller_id: '',
     sms_message: '',
     voice_script: '',
     voice_max_duration_seconds: '30',
+    ivr_enabled: '0',
+    ivr_prompt: '',
+    ivr_timeout_seconds: '6',
+    ivr_max_attempts: '3',
+    ivr_options: {},
     schedule_type: 'now',
     scheduled_at: '',
     timezone: 'Africa/Accra',
@@ -37,7 +43,33 @@ const defaults: CampaignFormValues = {
     retry_delay_minutes: '15',
     notes: '',
     client_id: '',
+    idempotency_key: '',
 };
+
+/**
+ * The digits a campaign may map onto an action, in the order the switch reads
+ * them. The opt-out digit is added by the platform and cannot be remapped.
+ */
+const ivrDigits = ['1', '2', '3', '4'];
+
+const ivrActions = [
+    { value: 'connect', label: 'Play the message' },
+    { value: 'repeat', label: 'Replay the prompt' },
+    { value: 'callback', label: 'Request a callback' },
+    { value: 'opt_out', label: 'Opt the recipient out' },
+];
+
+/**
+ * A key that stays stable for this form mount, so a retried submit cannot
+ * create a second draft.
+ */
+function newIdempotencyKey(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+
+    return `key-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export default function CampaignForm({
     action,
@@ -54,10 +86,22 @@ export default function CampaignForm({
     submitLabel: string;
     cancelHref: string;
 }) {
-    const form = useForm<CampaignFormValues>({ ...defaults, ...initial });
+    const [idempotencyKey] = useState<string>(() =>
+        method === 'post' ? newIdempotencyKey() : '',
+    );
+    const form = useForm<CampaignFormValues>({
+        ...defaults,
+        idempotency_key: idempotencyKey,
+        ...initial,
+    });
 
     const requiresSms = form.data.channel !== 'voice';
     const requiresVoice = form.data.channel !== 'sms';
+    const senderChannel =
+        form.data.channel === 'multi_channel' ? 'sms' : form.data.channel;
+    const senderOptions = options.senderIds.filter(
+        (sender) => sender.channel === senderChannel,
+    );
     const needsClient = options.clients.length > 0;
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
@@ -159,12 +203,13 @@ export default function CampaignForm({
                         <Label htmlFor="contact_list_id">Audience</Label>
                         <Select
                             value={form.data.contact_list_id || 'all'}
-                            onValueChange={(value) =>
+                            onValueChange={(value) => {
                                 form.setData(
                                     'contact_list_id',
                                     value === 'all' ? '' : value,
-                                )
-                            }
+                                );
+                                form.setData('contact_segment_id', '');
+                            }}
                         >
                             <SelectTrigger id="contact_list_id">
                                 <SelectValue placeholder="All contacts" />
@@ -186,6 +231,15 @@ export default function CampaignForm({
                         <InputError message={form.errors.contact_list_id} />
                     </div>
 
+                    <div className="grid gap-1.5">
+                        <Label htmlFor="contact_segment_id">Saved segment</Label>
+                        <Select value={form.data.contact_segment_id || 'none'} onValueChange={(value) => { form.setData('contact_segment_id', value === 'none' ? '' : value); form.setData('contact_list_id', ''); }}>
+                            <SelectTrigger id="contact_segment_id"><SelectValue placeholder="No saved segment" /></SelectTrigger>
+                            <SelectContent><SelectItem value="none">Choose list or all contacts</SelectItem>{options.contactSegments.map((segment) => <SelectItem key={segment.id} value={String(segment.id)}>{segment.name} ({segment.contacts_count})</SelectItem>)}</SelectContent>
+                        </Select>
+                        <InputError message={form.errors.contact_segment_id} />
+                    </div>
+
                     {requiresSms && (
                         <div className="grid gap-1.5">
                             <Label htmlFor="sender_id">Sender ID</Label>
@@ -205,7 +259,7 @@ export default function CampaignForm({
                                     <SelectItem value="none">
                                         Use the default sender
                                     </SelectItem>
-                                    {options.senderIds.map((sender) => (
+                                    {senderOptions.map((sender) => (
                                         <SelectItem
                                             key={sender.id}
                                             value={String(sender.id)}
@@ -215,40 +269,41 @@ export default function CampaignForm({
                                     ))}
                                 </SelectContent>
                             </Select>
+                            {senderOptions.length === 0 && (
+                                <p className="text-muted-foreground text-xs">
+                                    No approved {senderChannel} sender ID yet —
+                                    request one under Sender IDs.
+                                </p>
+                            )}
                             <InputError message={form.errors.sender_id} />
                         </div>
                     )}
 
                     {requiresVoice && (
                         <div className="grid gap-1.5">
-                            <Label htmlFor="caller_id">Caller ID</Label>
-                            <Select
-                                value={form.data.caller_id || 'none'}
-                                onValueChange={(value) =>
-                                    form.setData(
-                                        'caller_id',
-                                        value === 'none' ? '' : value,
-                                    )
-                                }
-                            >
-                                <SelectTrigger id="caller_id">
-                                    <SelectValue placeholder="Default caller" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">
-                                        Use the default caller
-                                    </SelectItem>
-                                    {options.callerIds.map((caller) => (
-                                        <SelectItem
-                                            key={caller.id}
-                                            value={String(caller.id)}
-                                        >
-                                            {caller.label ?? caller.number}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <InputError message={form.errors.caller_id} />
+                            <Label>Outbound caller ID</Label>
+                            <div className="bg-muted/50 ring-border rounded-lg p-3 ring-1">
+                                {options.outboundCallerId ? (
+                                    <>
+                                        <p className="font-mono text-xs">
+                                            {options.outboundCallerId}
+                                        </p>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            Every voice campaign dials from the
+                                            platform DID. A reviewer approves
+                                            the recording or script before
+                                            delivery starts.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p className="text-destructive text-xs">
+                                        No outbound DID is configured. An
+                                        operator must set
+                                        voice.outbound_caller_id before voice
+                                        campaigns can run.
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     )}
                 </CardContent>
@@ -337,6 +392,195 @@ export default function CampaignForm({
                                     }
                                 />
                             </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="ivr_enabled">
+                                        Keypad menu
+                                    </Label>
+                                    <Select
+                                        value={form.data.ivr_enabled || '0'}
+                                        onValueChange={(value) =>
+                                            form.setData('ivr_enabled', value)
+                                        }
+                                    >
+                                        <SelectTrigger id="ivr_enabled">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">
+                                                Play the message only
+                                            </SelectItem>
+                                            <SelectItem value="1">
+                                                Offer a keypad menu
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        message={form.errors.ivr_enabled}
+                                    />
+                                </div>
+                            </div>
+
+                            {form.data.ivr_enabled === '1' && (
+                                <div className="grid gap-3 rounded-lg border p-3">
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor="ivr_prompt">
+                                            Menu prompt
+                                        </Label>
+                                        <Textarea
+                                            id="ivr_prompt"
+                                            value={form.data.ivr_prompt}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'ivr_prompt',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            rows={3}
+                                            maxLength={1000}
+                                            placeholder="Press 1 to hear the message, 2 to hear it again."
+                                        />
+                                        <p className="text-muted-foreground text-xs">
+                                            Falls back to the voice script when
+                                            left empty.
+                                        </p>
+                                        <InputError
+                                            message={form.errors.ivr_prompt}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="ivr_timeout_seconds">
+                                                Wait for a key (seconds)
+                                            </Label>
+                                            <Input
+                                                id="ivr_timeout_seconds"
+                                                type="number"
+                                                min={1}
+                                                max={30}
+                                                value={
+                                                    form.data
+                                                        .ivr_timeout_seconds
+                                                }
+                                                onChange={(event) =>
+                                                    form.setData(
+                                                        'ivr_timeout_seconds',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                            <InputError
+                                                message={
+                                                    form.errors
+                                                        .ivr_timeout_seconds
+                                                }
+                                            />
+                                        </div>
+                                        <div className="grid gap-1.5">
+                                            <Label htmlFor="ivr_max_attempts">
+                                                Prompt repeats
+                                            </Label>
+                                            <Input
+                                                id="ivr_max_attempts"
+                                                type="number"
+                                                min={1}
+                                                max={5}
+                                                value={
+                                                    form.data.ivr_max_attempts
+                                                }
+                                                onChange={(event) =>
+                                                    form.setData(
+                                                        'ivr_max_attempts',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                            <InputError
+                                                message={
+                                                    form.errors
+                                                        .ivr_max_attempts
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <p className="text-sm font-medium">
+                                            Key mapping
+                                        </p>
+                                        {ivrDigits.map((digit) => (
+                                            <div
+                                                key={digit}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold">
+                                                    {digit}
+                                                </span>
+                                                <Select
+                                                    value={
+                                                        form.data
+                                                            .ivr_options[digit] ??
+                                                        'none'
+                                                    }
+                                                    onValueChange={(value) => {
+                                                        const next = {
+                                                            ...form.data
+                                                                .ivr_options,
+                                                        };
+
+                                                        if (value === 'none') {
+                                                            delete next[digit];
+                                                        } else {
+                                                            next[digit] =
+                                                                value;
+                                                        }
+
+                                                        form.setData(
+                                                            'ivr_options',
+                                                            next,
+                                                        );
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full max-w-xs">
+                                                        <SelectValue placeholder="Not used" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">
+                                                            Not used
+                                                        </SelectItem>
+                                                        {ivrActions.map(
+                                                            (action) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        action.value
+                                                                    }
+                                                                    value={
+                                                                        action.value
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        action.label
+                                                                    }
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        ))}
+                                        <p className="text-muted-foreground text-xs">
+                                            The opt-out key is always on the
+                                            menu, so a recipient can leave from
+                                            the handset.
+                                        </p>
+                                        <InputError
+                                            message={form.errors.ivr_options}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </CardContent>

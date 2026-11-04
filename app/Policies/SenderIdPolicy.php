@@ -26,16 +26,25 @@ class SenderIdPolicy
         return $user->can(Permission::ManageSenderIds->value);
     }
 
+    public function update(User $user, SenderId $senderId): bool
+    {
+        return $user->can(Permission::ManageSenderIds->value)
+            && $this->sameClient($user, $senderId)
+            && $senderId->isEditable();
+    }
+
     public function approve(User $user, SenderId $senderId): bool
     {
-        return $user->can(Permission::ApproveSenderIds->value) && $this->sameClient($user, $senderId);
+        return $user->can(Permission::ApproveSenderIds->value)
+            && $this->sameClient($user, $senderId)
+            && $senderId->status->canBeReviewed();
     }
 
     public function delete(User $user, SenderId $senderId): bool
     {
         return $user->can(Permission::ManageSenderIds->value)
             && $this->sameClient($user, $senderId)
-            && ! $senderId->status->isApproved();
+            && $senderId->isEditable();
     }
 
     protected function sameClient(User $user, SenderId $senderId): bool

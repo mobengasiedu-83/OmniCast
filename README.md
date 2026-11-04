@@ -56,6 +56,65 @@ Platform setting keys support global values, plan values, and client overrides. 
 
 Examples include `channels.sms.enabled`, `feature_flags.channels.sms`, `countries.enabled` (comma-separated ISO country codes), `rate_limits.login_attempts_per_minute`, `rate_limits.client_registrations_per_minute`, `storage.max_upload_kb`, and `storage.client_documents_disk`. Client document storage must use a configured private disk. Provider credentials and client overrides are tenant-scoped and resolved through the shared `PlatformConfiguration` service.
 
+## Campaign approval mode and sender ID rules
+
+Campaigns launch on their assets, not on a reviewer's sign-off. A campaign approves itself as
+soon as the sender ID it broadcasts under (SMS) or its audio (voice) is approved, and the campaign
+is only held in the `/approvals` queue when the platform asks for a human decision. Three switches
+in `.env` control this, and all three can be overridden per tenant through platform settings
+(`campaigns.require_approval`, `campaigns.require_approved_sender_id`, `campaigns.require_approved_audio`):
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `CAMPAIGNS_REQUIRE_APPROVAL` | `false` | When `true`, every submitted campaign waits for a reviewer before it can launch |
+| `CAMPAIGNS_REQUIRE_APPROVED_SENDER_ID` | `true` | Blocks submission until the selected SMS sender ID is approved |
+| `CAMPAIGNS_REQUIRE_APPROVED_AUDIO` | `true` | Blocks launch until a reviewer approves the voice recording or script |
+
+SMS sender IDs are allowed spaces, keep the case the client typed and are limited to 11 characters
+including spaces. These limits are configuration, not code:
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `SMS_SENDER_ID_MIN_LENGTH` | `3` | Shortest accepted SMS sender ID |
+| `SMS_SENDER_ID_MAX_LENGTH` | `11` | Longest accepted SMS sender ID, spaces included |
+| `SMS_SENDER_ID_ALLOW_SPACES` | `true` | Whether spaces belong to the identity (`false` restricts it to letters, digits and symbols) |
+| `EMAIL_SENDER_ID_MAX_LENGTH` | `120` | Longest accepted email from address (capped at the 120-character `sender_ids.name` column) |
+
+SMS sender IDs are compared case-sensitively, so `OmniCast` and `omnicast` are two different
+sender IDs on one account; email addresses are lower-cased before they are stored.
+
+## Voice broadcasting (phase 8)
+
+A voice campaign originates one call per recipient through a `VoiceGateway`. The driver is
+`voice.driver` (platform setting) over `config/voice.php`:
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `VOICE_DRIVER` | `log` | `log` writes the originate to `storage/logs/laravel.log`, `ami` uses the Asterisk Manager Interface, `ari` uses the Asterisk REST Interface |
+| `VOICE_BROADCAST_ENABLED` | `false` | Live PBX drivers refuse every call while this is off; `log` always dials |
+| `VOICE_OUTBOUND_CALLER_ID` | — | The single platform DID every voice campaign dials from |
+| `VITALPBX_AMI_HOST` / `_PORT` / `_USERNAME` / `_SECRET` / `_TIMEOUT` | `127.0.0.1` / `5038` / — / — / `5` | AMI account used for `Originate` |
+| `VITALPBX_TRUNK_NAME` / `VITALPBX_BROADCAST_CONTEXT` | `SIP/omnicast` / `omnicast-outbound` | PJSIP endpoint and dialplan context of the broadcast trunk |
+| `VITALPBX_ARI_URL` / `_USERNAME` / `_SECRET` / `_APP` / `_ENDPOINT` | `http://127.0.0.1:8088/ari` / — / — / `omnicast` / `PJSIP` | ARI originate settings |
+| `VOICE_WEBHOOK_SECRET` | — | Shared secret for the switch callbacks; when empty every callback is refused |
+| `VOICE_IVR_TIMEOUT_SECONDS` / `_MAX_ATTEMPTS` / `_OPT_OUT_DIGIT` | `6` / `3` / `9` | Defaults for the campaign keypad menu; a campaign can override timeout and repeats, never the opt-out digit |
+
+The call reference OmniCast generates is sent to the switch as both `Exten` and `ActionID`, and the
+dialplan reads the `OMNICAST_CALL`, `OMNICAST_CALLER_ID`, `OMNICAST_SCRIPT`, `OMNICAST_RECORDING`,
+`OMNICAST_MAX_DURATION` and `OMNICAST_IVR_*` variables.
+
+Call events come back on `POST /webhooks/voice`, signed with `X-Omnicast-Signature:
+hash_hmac('sha256', $rawBody, VOICE_WEBHOOK_SECRET)` (a `sha256=` prefix is accepted):
+
+```json
+{ "reference": "01H…", "event": "dtmf", "digits": "9", "event_id": "switch-1234", "duration": 42, "hangup_cause": "NORMAL_CLEARING" }
+```
+
+`event` is one of `initiated`, `ringing`, `answered`, `dtmf`, `completed`, `failed`. The endpoint
+answers `202` for an unknown reference, `403` for a missing/incorrect signature and `422` for an
+unknown event, so a switch retry can never move a call that this platform did not dial. Call logs and
+per-campaign call reports are available at `/reports/voice`.
+
 ## Verification commands
 
 ```bash

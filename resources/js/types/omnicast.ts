@@ -14,6 +14,8 @@ export type ContactListOption = {
     contacts_count: number;
 };
 
+export type TagOption = { id: number; name: string; color: string; contacts_count?: number };
+
 export type PaginationLink = {
     url: string | null;
     label: string;
@@ -62,6 +64,11 @@ export type CampaignDetail = CampaignRow & {
     voice_script: string | null;
     voice_recording_path: string | null;
     voice_max_duration_seconds: number | null;
+    ivr_enabled: boolean;
+    ivr_prompt: string | null;
+    ivr_timeout_seconds: number;
+    ivr_max_attempts: number;
+    ivr_options: Record<string, string>;
     timezone: string | null;
     schedule_type: string | null;
     max_retries: number | null;
@@ -89,24 +96,88 @@ export type CampaignRecipient = {
     sent_at: string | null;
 };
 
+export type CampaignVersionRow = {
+    id: number;
+    version: number;
+    status: string;
+    status_label: string;
+    audience_size: number;
+    estimated_cost: number;
+    fingerprint: string;
+    frozen_at: string | null;
+    author: string | null;
+};
+
+export type VoiceCallRow = {
+    id: number;
+    reference: string;
+    to: string;
+    from: string;
+    contact: string | null;
+    status: string;
+    status_label: string;
+    attempts: number;
+    duration_seconds: number;
+    dtmf_digits: string | null;
+    ivr_action: string | null;
+    ivr_action_label: string | null;
+    dialled_at: string | null;
+    ended_at: string | null;
+    error_message: string | null;
+};
+
+export type VoiceDigitRow = {
+    digit: string | null;
+    action: string | null;
+    action_label: string | null;
+    total: number;
+};
+
+export type VoiceCallTotals = {
+    calls: number;
+    answered: number;
+    no_answer: number;
+    busy: number;
+    failed: number;
+    canceled: number;
+    answer_rate: number | null;
+    average_duration: number;
+    opt_outs: number;
+    spend: number;
+};
+
+export type VoiceCallReport = {
+    totals: VoiceCallTotals;
+    digits: VoiceDigitRow[];
+    recent: VoiceCallRow[];
+};
+
 export type CampaignFormOptions = {
     clients: ClientOption[];
     tenantClientId: number | null;
     contactLists: ContactListOption[];
-    senderIds: { id: number; name: string }[];
+    contactSegments: { id: number; name: string; contacts_count: number }[];
+    senderIds: { id: number; name: string; channel: string }[];
     callerIds: { id: number; number: string; label: string | null }[];
     channels: SelectOption[];
+    outboundCallerId: string | null;
 };
 
 export type CampaignFormValues = {
     name: string;
     channel: string;
     contact_list_id: string;
+    contact_segment_id: string;
     sender_id: string;
     caller_id: string;
     sms_message: string;
     voice_script: string;
     voice_max_duration_seconds: string;
+    ivr_enabled: string;
+    ivr_prompt: string;
+    ivr_timeout_seconds: string;
+    ivr_max_attempts: string;
+    ivr_options: Record<string, string>;
     schedule_type: string;
     scheduled_at: string;
     timezone: string;
@@ -114,6 +185,113 @@ export type CampaignFormValues = {
     retry_delay_minutes: string;
     notes: string;
     client_id: string;
+    idempotency_key: string;
+};
+
+export type SenderIdRow = {
+    id: number;
+    name: string;
+    channel: string;
+    channel_label: string;
+    identifier_label: string;
+    country: string | null;
+    purpose: string | null;
+    status: string;
+    status_label: string;
+    requested_at: string | null;
+    approved_at: string | null;
+    rejection_reason: string | null;
+    requester: string | null;
+    client: string | null;
+    campaigns_count: number;
+    can: {
+        update: boolean;
+        delete: boolean;
+        approve: boolean;
+    };
+};
+
+export type SenderIdChannelOption = {
+    value: string;
+    label: string;
+    description: string;
+    identifier_label: string;
+    placeholder: string;
+    hint: string;
+    requires_country: boolean;
+    max_length: number;
+};
+
+export type SenderIdFormValues = {
+    channel: string;
+    name: string;
+    country: string;
+    purpose: string;
+    client_id: string;
+};
+
+export type ReadinessIssue = {
+    key: string;
+    label: string;
+    detail: string;
+};
+
+export type CampaignReview = {
+    requires_audio: boolean;
+    requires_campaign_approval: boolean;
+    audio_status: string;
+    audio_status_label: string;
+    audio_rejection_reason: string | null;
+    audio_reviewed_at: string | null;
+    audio_reviewer: string | null;
+    outbound_caller: string | null;
+    blockers: ReadinessIssue[];
+};
+
+export type ApprovalCampaignRow = {
+    id: number;
+    reference: string;
+    name: string;
+    client: string | null;
+    channel: string;
+    channel_label: string;
+    audience: string;
+    sender: string | null;
+    recipients: number;
+    estimated_cost: number;
+    submitted_at: string | null;
+    blockers: string[];
+};
+
+export type ApprovalAudioRow = {
+    id: number;
+    reference: string;
+    name: string;
+    client: string | null;
+    channel_label: string;
+    voice_script: string | null;
+    voice_recording_path: string | null;
+    voice_max_duration_seconds: number;
+    submitted_at: string | null;
+    blockers: string[];
+};
+
+export type ApprovalSenderIdRow = {
+    id: number;
+    name: string;
+    channel: string;
+    channel_label: string;
+    identifier_label: string;
+    country: string | null;
+    purpose: string | null;
+    client: string | null;
+    requester: string | null;
+    requested_at: string | null;
+};
+
+export type ApprovalQueue<T> = {
+    items: T[];
+    total: number;
 };
 
 export type ContactRow = {
@@ -124,11 +302,101 @@ export type ContactRow = {
     company: string | null;
     account_number: string | null;
     location: string | null;
-    consent_status: string;
-    consent_label: string;
-    is_do_not_contact: boolean;
+    dnd: boolean;
+    dnd_at: string | null;
     lists: string[];
+    tags: string[];
     created_at: string | null;
+};
+
+export type ContactChannelQuality = {
+    channel: string;
+    eligible: number;
+    blocked: number;
+};
+
+export type ContactQualityReport = {
+    total: number;
+    broadcastable: number;
+    dnd: number;
+    missing_email: number;
+    invalid_email: number;
+    duplicate_emails: number;
+    duplicate_contacts: number;
+    suppressed: number;
+    added_last_30_days: number;
+    channels: ContactChannelQuality[];
+};
+
+export type ContactDuplicateMember = {
+    id: number;
+    name: string;
+    phone: string;
+    dnd: boolean;
+    created_at: string | null;
+};
+
+export type ContactDuplicateGroup = {
+    email: string;
+    contacts: ContactDuplicateMember[];
+};
+
+export type ContactSuppressionRow = {
+    id: number;
+    channel: string;
+    identifier: string;
+    reason: string;
+    reason_label: string;
+    source: string;
+    is_global: boolean;
+    suppressed_at: string | null;
+};
+
+export type ContactSegmentRow = {
+    id: number;
+    name: string;
+    description: string | null;
+    filters: Record<string, unknown>;
+    contacts_count: number;
+};
+
+export type ContactEligibilitySnapshot = {
+    eligible: boolean;
+    reason: string | null;
+    suppression_id: number | null;
+};
+
+export type ContactDetail = {
+    id: number;
+    name: string;
+    first_name: string | null;
+    last_name: string | null;
+    phone: string;
+    original_phone: string | null;
+    alternative_phone: string | null;
+    email: string | null;
+    company: string | null;
+    account_number: string | null;
+    customer_id: string | null;
+    location: string | null;
+    language: string | null;
+    timezone: string | null;
+    dnd: boolean;
+    dnd_at: string | null;
+    custom_fields: Record<string, unknown>;
+    lists: string[];
+    tags: { id: number; name: string; color: string }[];
+    creator: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+};
+
+export type ContactCampaignHistory = {
+    id: number;
+    name: string;
+    reference: string;
+    channel: string;
+    status: string;
 };
 
 export type ContactFormValues = {
@@ -143,22 +411,11 @@ export type ContactFormValues = {
     location: string;
     language: string;
     timezone: string;
-    consent_status: string;
-    is_do_not_contact: boolean;
+    dnd: boolean;
     contact_list_ids: number[];
+    tag_ids: number[];
+    custom_fields_json: string;
     client_id: string;
-};
-
-export type SenderIdRow = {
-    id: number;
-    name: string;
-    country: string | null;
-    purpose: string | null;
-    status: string;
-    status_label: string;
-    requested_at: string | null;
-    approved_at: string | null;
-    rejection_reason: string | null;
 };
 
 export type CallerIdRow = {

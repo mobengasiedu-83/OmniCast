@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Enums\BillingUnit;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
-use App\Enums\ContactConsentStatus;
 use App\Enums\Role;
 use App\Enums\SenderIdStatus;
 use App\Enums\SmsEncoding;
@@ -13,6 +12,7 @@ use App\Models\Campaign;
 use App\Models\Client;
 use App\Models\Contact;
 use App\Models\ContactList;
+use App\Models\PlatformSetting;
 use App\Models\Rate;
 use App\Models\RateCard;
 use App\Models\SenderId;
@@ -56,6 +56,15 @@ class DemoSeeder extends Seeder
         );
 
         $this->seedRates($rateCard);
+
+        PlatformSetting::query()->firstOrCreate(
+            ['group' => 'voice', 'key' => 'outbound_caller_id'],
+            [
+                'value' => '+233200000000',
+                'is_secret' => false,
+            ],
+        );
+
         $this->seedUsers($client);
 
         $senderId = SenderId::query()->firstOrCreate(
@@ -149,8 +158,8 @@ class DemoSeeder extends Seeder
         $contacts->take(10)->each(fn (Contact $contact) => $contact->tags()->syncWithoutDetaching([$tag->id]));
 
         $contacts->take(5)->each(fn (Contact $contact) => $contact->update([
-            'consent_status' => ContactConsentStatus::OptedOut,
-            'opted_out_at' => now()->subDays(3),
+            'dnd' => true,
+            'dnd_at' => now()->subDays(3),
         ]));
 
         $all = ContactList::query()->firstOrCreate(

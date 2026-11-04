@@ -47,15 +47,23 @@ class CampaignRequest extends FormRequest
             'name' => ['required', 'string', 'max:120'],
             'channel' => ['required', Rule::enum(Channel::class)],
             'contact_list_id' => ['nullable', 'integer', Rule::exists('contact_lists', 'id')->where('client_id', $clientId)],
+            'contact_segment_id' => ['nullable', 'integer', Rule::exists('contact_segments', 'id')->where('client_id', $clientId)],
             'sender_id' => ['nullable', 'integer', Rule::exists('sender_ids', 'id')->where('client_id', $clientId)],
             'caller_id' => ['nullable', 'integer', Rule::exists('caller_ids', 'id')->where('client_id', $clientId)],
             'sms_message' => [Rule::requiredIf($requiresSms), 'nullable', 'string', 'max:1600'],
             'voice_script' => [Rule::requiredIf($requiresVoice), 'nullable', 'string', 'max:4000'],
             'voice_recording_path' => ['nullable', 'string', 'max:2048'],
             'voice_max_duration_seconds' => ['nullable', 'integer', 'min:5', 'max:300'],
+            'ivr_enabled' => ['nullable', 'boolean'],
+            'ivr_prompt' => ['nullable', 'string', 'max:1000'],
+            'ivr_timeout_seconds' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'ivr_max_attempts' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'ivr_options' => ['nullable', 'array'],
+            'ivr_options.*' => ['nullable', Rule::in(['connect', 'repeat', 'opt_out', 'callback', 'unrecognised'])],
             'schedule_type' => ['required', Rule::in(['now', 'scheduled'])],
             'scheduled_at' => ['nullable', 'required_if:schedule_type,scheduled', 'date', 'after:now'],
             'timezone' => ['nullable', 'string', 'timezone:all'],
+            'idempotency_key' => ['nullable', 'string', 'max:64'],
             'max_retries' => ['nullable', 'integer', 'min:1', 'max:10'],
             'retry_delay_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -68,6 +76,9 @@ class CampaignRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            if ($this->filled('contact_list_id') && $this->filled('contact_segment_id')) {
+                $validator->errors()->add('contact_segment_id', 'Choose either a contact list or a saved segment.');
+            }
             $channel = $this->enum('channel', Channel::class);
             $clientId = $this->input('client_id');
 
@@ -103,9 +114,11 @@ class CampaignRequest extends FormRequest
     public function campaignAttributes(): array
     {
         return $this->safe()->only([
-            'client_id', 'name', 'channel', 'contact_list_id', 'sender_id', 'caller_id',
+            'client_id', 'name', 'channel', 'contact_list_id', 'contact_segment_id', 'sender_id', 'caller_id',
             'sms_message', 'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
+            'ivr_enabled', 'ivr_prompt', 'ivr_timeout_seconds', 'ivr_max_attempts', 'ivr_options',
             'schedule_type', 'scheduled_at', 'timezone', 'max_retries', 'retry_delay_minutes', 'notes',
+            'idempotency_key',
         ]);
     }
 }

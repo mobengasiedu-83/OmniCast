@@ -7,12 +7,12 @@ import type {
     ClientOption,
     ContactFormValues,
     ContactListOption,
-    SelectOption,
+    TagOption,
 } from '@/types';
 
 type EditableContact = {
     id: number;
-    first_name: string;
+    first_name: string | null;
     last_name: string | null;
     phone: string;
     alternative_phone: string | null;
@@ -23,14 +23,15 @@ type EditableContact = {
     location: string | null;
     language: string | null;
     timezone: string | null;
-    consent_status: string;
-    is_do_not_contact: boolean;
+    dnd: boolean;
     contact_list_ids: number[];
+    tag_ids: number[];
+    custom_fields_json: string;
 };
 
 type PageProps = {
     contactLists: ContactListOption[];
-    consentStatuses: SelectOption[];
+    tags: TagOption[];
     clients: ClientOption[];
     contact: EditableContact;
 };
@@ -42,7 +43,7 @@ function initialValues(contact: EditableContact): Partial<ContactFormValues> {
     const text = (value: string | null): string => value ?? '';
 
     return {
-        first_name: contact.first_name,
+        first_name: text(contact.first_name),
         last_name: text(contact.last_name),
         phone: contact.phone,
         alternative_phone: text(contact.alternative_phone),
@@ -53,16 +54,17 @@ function initialValues(contact: EditableContact): Partial<ContactFormValues> {
         location: text(contact.location),
         language: text(contact.language),
         timezone: text(contact.timezone),
-        consent_status: contact.consent_status,
-        is_do_not_contact: contact.is_do_not_contact,
+        dnd: contact.dnd,
         contact_list_ids: contact.contact_list_ids,
+        tag_ids: contact.tag_ids,
+        custom_fields_json: contact.custom_fields_json,
     };
 }
 
 export default function ContactsEdit({ contact, ...options }: PageProps) {
     return (
         <>
-            <Head title={`Edit ${contact.first_name}`} />
+            <Head title={`Edit ${contact.first_name ?? contact.phone}`} />
 
             <div className="flex flex-col gap-4">
                 <PageHeader
@@ -75,7 +77,7 @@ export default function ContactsEdit({ contact, ...options }: PageProps) {
                     action={urls.contacts.update(contact.id)}
                     method="put"
                     contactLists={options.contactLists}
-                    consentStatuses={options.consentStatuses}
+                    tags={options.tags}
                     clients={options.clients}
                     initial={initialValues(contact)}
                     submitLabel="Save changes"

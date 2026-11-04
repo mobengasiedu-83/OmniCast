@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\ContactConsentStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -27,7 +26,7 @@ return new class extends Migration
             $table->string('location')->nullable();
             $table->string('language', 8)->default('en');
             $table->string('timezone')->default('Africa/Accra');
-            $table->string('consent_status')->default(ContactConsentStatus::Unknown->value);
+            $table->string('consent_status')->default('unknown');
             $table->boolean('is_do_not_contact')->default(false);
             $table->timestamp('opted_out_at')->nullable();
             $table->json('custom_fields')->nullable();

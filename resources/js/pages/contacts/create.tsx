@@ -3,11 +3,11 @@ import { UserPlus } from 'lucide-react';
 import ContactForm from '@/components/contact-form';
 import PageHeader from '@/components/page-header';
 import { urls } from '@/lib/urls';
-import type { ClientOption, ContactListOption, SelectOption } from '@/types';
+import type { ClientOption, ContactListOption, TagOption } from '@/types';
 
 type PageProps = {
     contactLists: ContactListOption[];
-    consentStatuses: SelectOption[];
+    tags: TagOption[];
     clients: ClientOption[];
     contact: null;
 };
@@ -28,7 +28,7 @@ export default function ContactsCreate(props: PageProps) {
                     action={urls.contacts.store}
                     method="post"
                     contactLists={props.contactLists}
-                    consentStatuses={props.consentStatuses}
+                    tags={props.tags}
                     clients={props.clients}
                     submitLabel="Add contact"
                     cancelHref={urls.contacts.index}

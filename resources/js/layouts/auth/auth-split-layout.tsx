@@ -9,7 +9,7 @@ import type { AuthLayoutProps } from '@/types';
 const highlights = [
     'Voice calls and SMS campaigns from one workspace',
     'Credit reserved on submit, captured on launch',
-    'Consent, DNC and delivery tracked per recipient',
+    'DND and delivery tracked per recipient',
 ];
 
 export default function AuthSplitLayout({

@@ -52,6 +52,18 @@ class CampaignPolicy
             && $campaign->status->canBeApproved();
     }
 
+    /**
+     * Voice audio is reviewed by the same team that approves campaigns.
+     */
+    public function reviewAudio(User $user, Campaign $campaign): bool
+    {
+        return $user->can(Permission::ApproveCampaigns->value)
+            && $this->sameClient($user, $campaign)
+            && $campaign->requiresAudioApproval()
+            && $campaign->audio_status->canBeReviewed()
+            && ! $campaign->status->isTerminal();
+    }
+
     public function launch(User $user, Campaign $campaign): bool
     {
         return $user->can(Permission::LaunchCampaigns->value)
@@ -64,6 +76,12 @@ class CampaignPolicy
         return $user->can(Permission::ManageCampaigns->value)
             && $this->sameClient($user, $campaign)
             && ! $campaign->status->isTerminal();
+    }
+
+    public function duplicate(User $user, Campaign $campaign): bool
+    {
+        return $user->can(Permission::ManageCampaigns->value)
+            && $this->sameClient($user, $campaign);
     }
 
     protected function sameClient(User $user, Campaign $campaign): bool

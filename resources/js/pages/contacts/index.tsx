@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Ban, Plus, Search, ShieldCheck, Upload, Users } from 'lucide-react';
+import { Ban, MailWarning, Plus, Search, ShieldCheck, SlidersHorizontal, Upload, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import ClientFilter from '@/components/client-filter';
 import EmptyState from '@/components/empty-state';
@@ -9,6 +9,7 @@ import StatCard from '@/components/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -33,6 +34,7 @@ import type {
     ImportResult,
     Paginated,
     SelectOption,
+    TagOption,
 } from '@/types';
 
 type PageProps = {
@@ -40,63 +42,65 @@ type PageProps = {
     filters: {
         search: string;
         contact_list_id: number | null;
-        consent_status: string;
+        tag_id: number | null;
+        quality: string;
     };
     contactLists: ContactListOption[];
-    consentStatuses: SelectOption[];
+    qualityFilters: SelectOption[];
+    tags: TagOption[];
     stats: {
         total: number;
         broadcastable: number;
-        do_not_contact: number;
+        dnd: number;
+        missing_email: number;
     };
     can: {
         create: boolean;
+        update: boolean;
         import: boolean;
     };
     clients: ClientOption[];
+    tenantClientId: number | null;
     flash: {
         import: ImportResult | null;
     };
 };
 
-/** Consent reads green when reachable, grey when opted out. */
-function consentTone(
-    status: string,
-): 'success' | 'warning' | 'muted' | 'outline' {
-    if (status === 'opted_in' || status === 'subscribed') {
-        return 'success';
-    }
-
-    if (status === 'opted_out' || status === 'unsubscribed') {
-        return 'muted';
-    }
-
-    if (status === 'pending') {
-        return 'warning';
-    }
-
-    return 'outline';
-}
+type BulkAction =
+    | 'add_to_list'
+    | 'remove_from_list'
+    | 'add_tag'
+    | 'mark_dnd'
+    | 'clear_dnd'
+    | 'delete';
 
 export default function ContactsIndex({
     contacts,
     filters,
     contactLists,
-    consentStatuses,
+    qualityFilters,
+    tags,
     stats,
     can,
     clients,
+    tenantClientId,
     flash,
 }: PageProps) {
     const [search, setSearch] = useState(filters.search);
+    const [selected, setSelected] = useState<number[]>([]);
+    const [bulkAction, setBulkAction] = useState<BulkAction>('add_to_list');
+    const [bulkValue, setBulkValue] = useState('');
+    const [processing, setProcessing] = useState(false);
 
     const apply = (overrides: Record<string, string | number | null>): void => {
+        setSelected([]);
         router.get(
             urls.contacts.index,
             {
                 search: filters.search || null,
                 contact_list_id: filters.contact_list_id,
-                consent_status: filters.consent_status || null,
+                tag_id: filters.tag_id,
+                quality: filters.quality || null,
                 ...overrides,
             },
             { preserveState: true, preserveScroll: true, replace: true },
@@ -111,6 +115,51 @@ export default function ContactsIndex({
     const formatDate = (value: string | null): string =>
         value ? new Date(value).toLocaleDateString() : '—';
 
+    const pageIds = contacts.data.map((contact) => contact.id);
+    const allSelected =
+        pageIds.length > 0 && pageIds.every((id) => selected.includes(id));
+    const bulkNeedsList =
+        bulkAction === 'add_to_list' || bulkAction === 'remove_from_list';
+    const bulkNeedsTag = bulkAction === 'add_tag';
+    const bulkBlocked =
+        (bulkNeedsList && bulkValue === '') || (bulkNeedsTag && bulkValue === '');
+
+    const toggleAll = (checked: boolean): void => {
+        setSelected(checked ? pageIds : []);
+    };
+
+    const toggleOne = (id: number, checked: boolean): void => {
+        setSelected((current) =>
+            checked ? [...current, id] : current.filter((value) => value !== id),
+        );
+    };
+
+    /** Every bulk operation hits one endpoint so the audit trail stays uniform. */
+    const runBulk = (): void => {
+        if (selected.length === 0 || bulkBlocked) {
+            return;
+        }
+
+        setProcessing(true);
+        router.post(
+            urls.contacts.bulk,
+            {
+                action: bulkAction,
+                contact_ids: selected,
+                contact_list_id: bulkNeedsList ? Number(bulkValue) : null,
+                tag_id: bulkNeedsTag ? Number(bulkValue) : null,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSelected([]);
+                    setBulkValue('');
+                },
+                onFinish: () => setProcessing(false),
+            },
+        );
+    };
+
     return (
         <>
             <Head title="Contacts" />
@@ -119,7 +168,7 @@ export default function ContactsIndex({
                 <PageHeader
                     icon={Users}
                     title="Contacts"
-                    description="Manage the people campaigns reach and their consent."
+                    description="Manage the people campaigns reach and the numbers on the DND list."
                     actions={
                         <>
                             {can.import && (
@@ -130,6 +179,7 @@ export default function ContactsIndex({
                                     </Link>
                                 </Button>
                             )}
+                            <Button variant="outline" asChild><Link href={urls.contacts.audiences}><SlidersHorizontal /> Audiences & DND</Link></Button>
 
                             {can.create && (
                                 <Button asChild>
@@ -157,7 +207,7 @@ export default function ContactsIndex({
                     </Card>
                 )}
 
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         title="Total contacts"
                         value={stats.total}
@@ -169,24 +219,33 @@ export default function ContactsIndex({
                     <StatCard
                         title="Broadcastable"
                         value={stats.broadcastable}
-                        description="Consented and reachable"
+                        description="Reachable and not on DND"
                         icon={ShieldCheck}
                         tone="success"
                         className="animate-fade-in-up"
                         style={{ animationDelay: '60ms' }}
                     />
                     <StatCard
-                        title="Do not contact"
-                        value={stats.do_not_contact}
-                        description="Suppressed from every campaign"
-                        icon={Ban}
-                        tone="danger"
+                        title="Missing email"
+                        value={stats.missing_email}
+                        description="SMS or voice only"
+                        icon={MailWarning}
+                        tone="warning"
                         className="animate-fade-in-up"
                         style={{ animationDelay: '120ms' }}
                     />
+                    <StatCard
+                        title="DND"
+                        value={stats.dnd}
+                        description="Blocked from every campaign"
+                        icon={Ban}
+                        tone="danger"
+                        className="animate-fade-in-up"
+                        style={{ animationDelay: '180ms' }}
+                    />
                 </div>
 
-                                <Card className="py-3">
+                <Card className="py-3">
                     <CardContent className="flex flex-wrap items-end gap-2 px-4">
                         <form
                             onSubmit={submit}
@@ -238,26 +297,28 @@ export default function ContactsIndex({
                             </SelectContent>
                         </Select>
 
+                        <Select value={filters.tag_id ? String(filters.tag_id) : 'all'} onValueChange={(value) => apply({ tag_id: value === 'all' ? null : value })}>
+                            <SelectTrigger className="w-40"><SelectValue placeholder="Any tag" /></SelectTrigger>
+                            <SelectContent><SelectItem value="all">Any tag</SelectItem>{tags.map((tag) => <SelectItem key={tag.id} value={String(tag.id)}>{tag.name}</SelectItem>)}</SelectContent>
+                        </Select>
+
                         <Select
-                            value={filters.consent_status || 'all'}
+                            value={filters.quality || 'all'}
                             onValueChange={(value) =>
-                                apply({
-                                    consent_status:
-                                        value === 'all' ? null : value,
-                                })
+                                apply({ quality: value === 'all' ? null : value })
                             }
                         >
-                            <SelectTrigger className="w-40">
-                                <SelectValue placeholder="Any consent" />
+                            <SelectTrigger className="w-44">
+                                <SelectValue placeholder="Any quality" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Any consent</SelectItem>
-                                {consentStatuses.map((status) => (
+                                <SelectItem value="all">Any quality</SelectItem>
+                                {qualityFilters.map((option) => (
                                     <SelectItem
-                                        key={status.value}
-                                        value={status.value}
+                                        key={option.value}
+                                        value={option.value}
                                     >
-                                        {status.label}
+                                        {option.label}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -265,15 +326,114 @@ export default function ContactsIndex({
 
                         <ClientFilter
                             clients={clients}
-                            value={null}
+                            value={tenantClientId}
                             query={{
                                 search: filters.search || null,
                                 contact_list_id: filters.contact_list_id,
-                                consent_status: filters.consent_status || null,
+                                tag_id: filters.tag_id,
+                                quality: filters.quality || null,
                             }}
                         />
                     </CardContent>
                 </Card>
+
+                {can.update && selected.length > 0 && (
+                    <Card className="border-brand/30 bg-brand-soft/60 py-3">
+                        <CardContent className="flex flex-wrap items-center gap-2 px-4">
+                            <span className="text-sm font-medium">
+                                {selected.length} selected
+                            </span>
+
+                            <Select
+                                value={bulkAction}
+                                onValueChange={(value) => {
+                                    setBulkAction(value as BulkAction);
+                                    setBulkValue('');
+                                }}
+                            >
+                                <SelectTrigger className="w-52">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="add_to_list">
+                                        Add to list
+                                    </SelectItem>
+                                    <SelectItem value="remove_from_list">
+                                        Remove from list
+                                    </SelectItem>
+                                    <SelectItem value="add_tag">
+                                        Add tag
+                                    </SelectItem>
+                                    <SelectItem value="mark_dnd">
+                                        Add to DND list
+                                    </SelectItem>
+                                    <SelectItem value="clear_dnd">
+                                        Remove from DND list
+                                    </SelectItem>
+                                    <SelectItem value="delete">
+                                        Delete contacts
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {bulkNeedsList && (
+                                <Select
+                                    value={bulkValue}
+                                    onValueChange={setBulkValue}
+                                >
+                                    <SelectTrigger className="w-44">
+                                        <SelectValue placeholder="Choose list" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {contactLists.map((list) => (
+                                            <SelectItem
+                                                key={list.id}
+                                                value={String(list.id)}
+                                            >
+                                                {list.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+
+                            {bulkAction === 'add_tag' && (
+                                <Select
+                                    value={bulkValue}
+                                    onValueChange={setBulkValue}
+                                >
+                                    <SelectTrigger className="w-44">
+                                        <SelectValue placeholder="Choose tag" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {tags.map((tag) => (
+                                            <SelectItem
+                                                key={tag.id}
+                                                value={String(tag.id)}
+                                            >
+                                                {tag.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+
+                            <Button
+                                onClick={runBulk}
+                                disabled={processing || bulkBlocked}
+                            >
+                                {processing ? 'Applying…' : 'Apply'}
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                onClick={() => setSelected([])}
+                            >
+                                Clear
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <Card className="gap-0 overflow-hidden py-0">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/60 py-3">
@@ -290,15 +450,26 @@ export default function ContactsIndex({
                             <EmptyState
                                 icon={Users}
                                 title="No contacts match these filters"
-                                description="Adjust the search, list or consent filters to see contacts again."
+                                description="Adjust the search, list or quality filters to see contacts again."
                             />
                         ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        {can.update && (
+                                            <TableHead className="w-10">
+                                                <Checkbox
+                                                    checked={allSelected}
+                                                    onCheckedChange={(value) =>
+                                                        toggleAll(value === true)
+                                                    }
+                                                    aria-label="Select all contacts on this page"
+                                                />
+                                            </TableHead>
+                                        )}
                                         <TableHead>Contact</TableHead>
                                         <TableHead>Lists</TableHead>
-                                        <TableHead>Consent</TableHead>
+                                        <TableHead>DND</TableHead>
                                         <TableHead>Added</TableHead>
                                         <TableHead className="text-right">
                                             Actions
@@ -308,11 +479,34 @@ export default function ContactsIndex({
 
                                 <TableBody>{contacts.data.map((contact) => (
                                         <TableRow key={contact.id}>
+                                            {can.update && (
+                                                <TableCell>
+                                                    <Checkbox
+                                                        checked={selected.includes(
+                                                            contact.id,
+                                                        )}
+                                                        onCheckedChange={(
+                                                            value,
+                                                        ) =>
+                                                            toggleOne(
+                                                                contact.id,
+                                                                value === true,
+                                                            )
+                                                        }
+                                                        aria-label={`Select ${contact.name}`}
+                                                    />
+                                                </TableCell>
+                                            )}
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium">
+                                                    <Link
+                                                        href={urls.contacts.show(
+                                                            contact.id,
+                                                        )}
+                                                        className="font-medium hover:underline"
+                                                    >
                                                         {contact.name}
-                                                    </span>
+                                                    </Link>
                                                     <span className="text-muted-foreground text-xs">
                                                         {contact.phone}
                                                         {contact.email
@@ -329,21 +523,21 @@ export default function ContactsIndex({
                                             </TableCell>
 
                                             <TableCell>
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                    <Badge
-                                                        variant={consentTone(
-                                                            contact.consent_status,
-                                                        )}
-                                                    >
-                                                        {contact.consent_label}
-                                                    </Badge>
-
-                                                    {contact.is_do_not_contact && (
+                                                {contact.dnd ? (
+                                                    <div className="flex flex-col gap-1">
                                                         <Badge variant="destructive">
-                                                            DNC
+                                                            DND
                                                         </Badge>
-                                                    )}
-                                                </div>
+                                                        <span className="text-muted-foreground text-xs">
+                                                            Blocked on every
+                                                            channel
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <Badge variant="success">
+                                                        Reachable
+                                                    </Badge>
+                                                )}
                                             </TableCell>
 
                                             <TableCell className="text-muted-foreground text-xs">
@@ -353,7 +547,21 @@ export default function ContactsIndex({
                                             </TableCell>
 
                                             <TableCell className="text-right">
-                                                {can.create && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={urls.contacts.show(
+                                                            contact.id,
+                                                        )}
+                                                    >
+                                                        View
+                                                    </Link>
+                                                </Button>
+
+                                                {can.update && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

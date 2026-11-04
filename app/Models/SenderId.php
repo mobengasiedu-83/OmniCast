@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SenderIdChannel;
 use App\Enums\SenderIdStatus;
 use Database\Factories\SenderIdFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,8 +18,9 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $client_id
+ * @property SenderIdChannel $channel
  * @property string $name
- * @property string $country
+ * @property string|null $country
  * @property string|null $purpose
  * @property SenderIdStatus $status
  * @property Carbon|null $requested_at
@@ -29,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $rejection_reason
  */
 #[Fillable([
-    'client_id', 'name', 'country', 'purpose', 'status', 'requested_at', 'submitted_at',
+    'client_id', 'channel', 'name', 'country', 'purpose', 'status', 'requested_at', 'submitted_at',
     'approved_at', 'approved_by', 'expires_at', 'rejection_reason', 'created_by',
 ])]
 class SenderId extends Model
@@ -45,6 +47,7 @@ class SenderId extends Model
     protected function casts(): array
     {
         return [
+            'channel' => SenderIdChannel::class,
             'status' => SenderIdStatus::class,
             'requested_at' => 'datetime',
             'submitted_at' => 'datetime',
@@ -62,6 +65,16 @@ class SenderId extends Model
     }
 
     /**
+     * The team member that requested the sender ID.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function requester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function approver(): BelongsTo
@@ -74,7 +87,36 @@ class SenderId extends Model
      */
     public function campaigns(): HasMany
     {
-        return $this->hasMany(Campaign::class);
+        return $this->hasMany(Campaign::class, 'sender_id');
+    }
+
+    /**
+     * The identity shown in listings, for example "OMNICAST · SMS".
+     */
+    public function displayName(): string
+    {
+        return "{$this->name} · {$this->channel->label()}";
+    }
+
+    /**
+     * Whether the client may still change or withdraw the request.
+     */
+    public function isEditable(): bool
+    {
+        return in_array($this->status, [
+            SenderIdStatus::Pending,
+            SenderIdStatus::Submitted,
+            SenderIdStatus::Rejected,
+        ], true);
+    }
+
+    /**
+     * Limit the query to a single delivery channel.
+     */
+    #[Scope]
+    protected function forChannel(Builder $query, SenderIdChannel $channel): void
+    {
+        $query->where($query->qualifyColumn('channel'), $channel->value);
     }
 
     /**

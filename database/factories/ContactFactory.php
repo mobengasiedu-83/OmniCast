@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\ContactConsentStatus;
 use App\Models\Client;
 use App\Models\Contact;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -30,29 +29,18 @@ class ContactFactory extends Factory
             'location' => fake()->city(),
             'language' => 'en',
             'timezone' => 'Africa/Accra',
-            'consent_status' => ContactConsentStatus::OptedIn,
-            'is_do_not_contact' => false,
+            'dnd' => false,
         ];
     }
 
     /**
-     * Indicate that the contact has opted out of broadcasts.
+     * Indicate that the contact asked not to be disturbed.
      */
-    public function optedOut(): static
+    public function dnd(): static
     {
         return $this->state(fn (array $attributes) => [
-            'consent_status' => ContactConsentStatus::OptedOut,
-            'opted_out_at' => now(),
-        ]);
-    }
-
-    /**
-     * Indicate that the contact is flagged as do not contact.
-     */
-    public function doNotContact(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_do_not_contact' => true,
+            'dnd' => true,
+            'dnd_at' => now(),
         ]);
     }
 

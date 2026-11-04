@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Services\CampaignDispatcher;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
 class DispatchCampaignJob implements ShouldQueue
 {
@@ -18,6 +19,16 @@ class DispatchCampaignJob implements ShouldQueue
     public function __construct(public int $campaignId)
     {
         //
+    }
+
+    /**
+     * Hold a lock so two workers never dispatch the same campaign at once.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping('campaign-dispatch-'.$this->campaignId))->expireAfter(900)];
     }
 
     /**

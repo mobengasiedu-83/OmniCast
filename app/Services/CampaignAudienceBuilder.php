@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Enums\CampaignContactStatus;
+use App\Enums\Channel;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
+use App\Models\ContactSegment;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -13,6 +15,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class CampaignAudienceBuilder
 {
+    public function __construct(protected ContactEligibility $eligibility) {}
+
     /**
      * The contacts that may receive the campaign: broadcastable and, when a list is
      * attached, members of that list.
@@ -21,20 +25,28 @@ class CampaignAudienceBuilder
      */
     public function eligibleContactIds(Campaign $campaign): array
     {
-        $query = Contact::query()
-            ->where('client_id', $campaign->client_id)
-            ->broadcastable();
+        $query = Contact::query()->where('client_id', $campaign->client_id);
 
-        if ($campaign->contact_list_id !== null) {
+        $channels = array_map(fn (Channel $channel): string => $channel->value, $campaign->channel->deliveryChannels());
+        $query->where(function (Builder $query) use ($channels): void {
+            foreach ($channels as $channel) {
+                $query->orWhere(fn (Builder $channelQuery) => $this->eligibility->constrainEligible($channelQuery, $channel));
+            }
+        });
+
+        if ($campaign->contact_segment_id !== null) {
+            $segment = ContactSegment::query()->where('client_id', $campaign->client_id)->find($campaign->contact_segment_id);
+            if ($segment === null) {
+                return [];
+            }
+            app(ContactSegmentQuery::class)->apply($query, $segment->filters, $campaign->client_id);
+        } elseif ($campaign->contact_list_id !== null) {
             $query->whereHas('contactLists', function (Builder $query) use ($campaign): void {
                 $query->whereKey($campaign->contact_list_id);
             });
         }
 
-        /** @var list<int> $ids */
-        $ids = $query->pluck('id')->all();
-
-        return $ids;
+        return array_values($query->pluck('contacts.id')->map(fn (mixed $id): int => (int) $id)->all());
     }
 
     /**
@@ -60,6 +72,11 @@ class CampaignAudienceBuilder
             ->all();
 
         $newContactIds = array_values(array_diff($eligible, $alreadyQueued));
+        $channels = array_map(fn (Channel $channel): string => $channel->value, $campaign->channel->deliveryChannels());
+        $snapshots = [];
+        Contact::query()->whereIn('id', $newContactIds)->chunkById(500, function ($contacts) use (&$snapshots, $channels): void {
+            $snapshots += $this->eligibility->snapshots($contacts, $channels);
+        });
 
         foreach (array_chunk($newContactIds, 500) as $chunk) {
             $now = now();
@@ -67,6 +84,7 @@ class CampaignAudienceBuilder
             CampaignContact::query()->insert(array_map(fn (int $contactId): array => [
                 'campaign_id' => $campaign->id,
                 'contact_id' => $contactId,
+                'recipient_snapshot' => json_encode($snapshots[$contactId] ?? [], JSON_THROW_ON_ERROR),
                 'status' => CampaignContactStatus::Pending->value,
                 'attempts' => 0,
                 'cost' => 0,

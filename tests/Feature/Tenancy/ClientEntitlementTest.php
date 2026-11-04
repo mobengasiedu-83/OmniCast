@@ -6,6 +6,7 @@ use App\Models\Campaign;
 use App\Models\ClientEntitlement;
 use App\Models\Contact;
 use App\Models\ContactList;
+use App\Models\SenderId;
 use App\Services\CampaignService;
 use Illuminate\Validation\ValidationException;
 use Spatie\Activitylog\Models\Activity;
@@ -108,12 +109,14 @@ it('rejects campaign submissions that exceed a configured recipient quota', func
     $list = ContactList::factory()->forClient($client)->create();
     $contacts = Contact::factory()->count(4)->forClient($client)->create();
     $list->contacts()->attach($contacts->pluck('id'), ['added_at' => now()]);
+    $sender = SenderId::factory()->for($client)->sms()->approved()->create();
     $campaigns = app(CampaignService::class);
     $attributes = [
         'client_id' => $client->id,
         'name' => 'Quota check',
         'channel' => Channel::Sms,
         'contact_list_id' => $list->id,
+        'sender_id' => $sender->id,
         'sms_message' => 'Quota controlled message',
         'schedule_type' => 'now',
     ];

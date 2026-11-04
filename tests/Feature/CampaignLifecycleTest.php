@@ -12,9 +12,13 @@ use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
 use App\Models\ContactList;
+use App\Models\ContactSegment;
+use App\Models\ContactSuppression;
+use App\Models\SenderId;
 use App\Services\CampaignDispatcher;
 use App\Services\CampaignService;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 
 beforeEach(function (): void {
     [$this->client, $this->wallet, $this->user] = clientWithWallet(balance: 10.0, smsPrice: 0.05);
@@ -26,11 +30,14 @@ beforeEach(function (): void {
 
     $this->list->contacts()->attach($this->contacts->pluck('id'), ['added_at' => now()]);
 
+    $this->sender = SenderId::factory()->for($this->client)->sms()->approved()->create();
+
     $this->draft = fn (array $attributes = []): Campaign => $this->service->create([
         'client_id' => $this->client->id,
         'name' => 'Balance reminder',
         'channel' => Channel::Sms,
         'contact_list_id' => $this->list->id,
+        'sender_id' => $this->sender->id,
         'sms_message' => str_repeat('a', 200),
         ...$attributes,
     ], $this->user);
@@ -46,20 +53,35 @@ it('prices a draft from the audience size and the sms segmentation', function ()
         ->and((float) $campaign->estimated_cost)->toBe(0.4);
 });
 
-it('holds the estimated spend when a campaign is submitted for approval', function (): void {
+it('holds the estimated spend when a campaign is submitted', function (): void {
     $campaign = ($this->draft)();
 
     $this->service->submit($campaign, $this->user);
 
     $reservation = BillingReservation::query()->where('campaign_id', $campaign->id)->sole();
 
-    expect($campaign->refresh()->status)->toBe(CampaignStatus::PendingApproval)
+    expect($campaign->refresh()->status)->toBe(CampaignStatus::Approved)
         ->and($campaign->submitted_at)->not->toBeNull()
+        ->and($campaign->approved_at)->not->toBeNull()
+        ->and($campaign->approved_by)->toBeNull()
         ->and(CampaignContact::query()->where('campaign_id', $campaign->id)->count())->toBe(4)
         ->and($reservation->status)->toBe(ReservationStatus::Held)
         ->and((float) $reservation->amount)->toBe(0.4)
         ->and((float) $this->wallet->refresh()->reserved_balance)->toBe(0.4)
         ->and((float) $this->wallet->balance)->toBe(10.0);
+});
+
+it('leaves a campaign in the review queue when the platform still requires approval', function (): void {
+    config()->set('campaigns.require_approval', true);
+
+    $campaign = ($this->draft)();
+
+    $this->service->submit($campaign, $this->user);
+
+    expect($campaign->refresh()->status)->toBe(CampaignStatus::PendingApproval)
+        ->and($campaign->approved_at)->toBeNull()
+        ->and(fn () => $this->service->launch($campaign->refresh()))
+        ->toThrow(ValidationException::class);
 });
 
 it('refuses to submit when the wallet cannot cover the estimate', function (): void {
@@ -91,13 +113,11 @@ it('releases the held funds when a campaign is rejected', function (): void {
         ->and((float) $this->wallet->balance)->toBe(10.0);
 });
 
-
 it('queues the campaign for dispatch as soon as it is launched', function (): void {
     Queue::fake();
 
     $campaign = ($this->draft)();
     $this->service->submit($campaign, $this->user);
-    $this->service->approve($campaign, $this->user);
     $this->service->launch($campaign);
 
     expect($campaign->refresh()->status)->toBe(CampaignStatus::Running)
@@ -115,7 +135,6 @@ it('waits for the start time when a campaign is scheduled', function (): void {
     ]);
 
     $this->service->submit($campaign, $this->user);
-    $this->service->approve($campaign, $this->user);
     $this->service->launch($campaign);
 
     expect($campaign->refresh()->status)->toBe(CampaignStatus::Scheduled)
@@ -129,7 +148,6 @@ it('delivers to every recipient, captures the real spend and releases the rest',
 
     $campaign = ($this->draft)();
     $this->service->submit($campaign, $this->user);
-    $this->service->approve($campaign, $this->user);
     $this->service->launch($campaign);
 
     $stillRetrying = app(CampaignDispatcher::class)->run($campaign->refresh());
@@ -153,17 +171,16 @@ it('skips a recipient that became unreachable after the campaign was submitted',
 
     $campaign = ($this->draft)();
     $this->service->submit($campaign, $this->user);
-    $this->service->approve($campaign, $this->user);
     $this->service->launch($campaign);
 
-    $optedOut = $this->contacts->first();
-    $optedOut->update(['is_do_not_contact' => true]);
+    $blocked = $this->contacts->first();
+    $blocked->update(['dnd' => true]);
 
     app(CampaignDispatcher::class)->run($campaign->refresh());
 
     $skipped = CampaignContact::query()
         ->where('campaign_id', $campaign->id)
-        ->where('contact_id', $optedOut->id)
+        ->where('contact_id', $blocked->id)
         ->sole();
 
     expect($skipped->status)->toBe(CampaignContactStatus::Skipped)
@@ -171,6 +188,45 @@ it('skips a recipient that became unreachable after the campaign was submitted',
         ->and($campaign->refresh()->status)->toBe(CampaignStatus::Completed)
         ->and((float) $campaign->actual_cost)->toBe(0.3)
         ->and((float) $this->wallet->refresh()->balance)->toBe(9.7);
+});
+
+it('records suppression evidence in the audience snapshot and rechecks the DND registry before sending', function (): void {
+    Queue::fake();
+    $campaign = ($this->draft)();
+    $this->service->submit($campaign, $this->user);
+    $this->service->launch($campaign);
+
+    $contact = $this->contacts->first();
+    ContactSuppression::query()->create([
+        'client_id' => null,
+        'channel' => 'sms',
+        'identifier' => $contact->phone,
+        'reason' => 'dnd',
+        'source' => 'test',
+        'is_active' => true,
+    ]);
+
+    app(CampaignDispatcher::class)->run($campaign->refresh());
+    $recipient = CampaignContact::query()->where('campaign_id', $campaign->id)->where('contact_id', $contact->id)->sole();
+
+    expect($recipient->status)->toBe(CampaignContactStatus::Skipped)
+        ->and($recipient->recipient_snapshot['sms']['eligible'] ?? $recipient->recipient_snapshot['channels']['sms']['eligible'])->toBeFalse()
+        ->and($recipient->recipient_snapshot['channels']['sms']['suppression_id'])->not->toBeNull();
+});
+
+it('uses a tenant saved segment as the campaign audience', function (): void {
+    $this->contacts[0]->update(['company' => 'Acme Ghana']);
+    $this->contacts[1]->update(['company' => 'Acme Retail']);
+    $this->contacts[2]->update(['company' => 'Other']);
+    $this->contacts[3]->update(['company' => 'Other']);
+    $segment = ContactSegment::factory()->for($this->client)->create([
+        'name' => 'Acme accounts',
+        'filters' => ['company' => 'Acme'],
+    ]);
+
+    $campaign = ($this->draft)(['contact_list_id' => null, 'contact_segment_id' => $segment->id]);
+
+    expect($campaign->estimated_recipients)->toBe(2);
 });
 
 it('retries failed recipients until the retry budget is spent', function (): void {
@@ -186,7 +242,6 @@ it('retries failed recipients until the retry budget is spent', function (): voi
 
     $campaign = ($this->draft)();
     $this->service->submit($campaign, $this->user);
-    $this->service->approve($campaign, $this->user);
     $this->service->launch($campaign);
 
     $dispatcher = app(CampaignDispatcher::class);
@@ -209,7 +264,6 @@ it('finishes the campaign through the dispatch job without requeueing it', funct
 
     $campaign = ($this->draft)();
     $this->service->submit($campaign, $this->user);
-    $this->service->approve($campaign, $this->user);
     $this->service->launch($campaign);
 
     (new DispatchCampaignJob($campaign->id))->handle(app(CampaignDispatcher::class));

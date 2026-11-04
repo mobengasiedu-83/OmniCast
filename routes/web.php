@@ -1,17 +1,31 @@
 <?php
 
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\Auth\InvitationAcceptanceController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ClientRegistrationController;
+use App\Http\Controllers\ContactComplianceController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ContactDndController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SenderIdController;
 use App\Http\Controllers\Settings\ClientSettingsController;
+use App\Http\Controllers\VoiceWebhookController;
 use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+Route::get('stop-messages/{contact}', [ContactDndController::class, 'show'])
+    ->middleware('signed')
+    ->name('contacts.dnd.request');
+
+Route::post('stop-messages/{contact}', [ContactDndController::class, 'store'])
+    ->middleware(['signed', 'throttle:30,1'])
+    ->name('contacts.dnd.request.store');
+
+Route::post('webhooks/voice', VoiceWebhookController::class)->name('webhooks.voice');
 
 Route::middleware('guest')->group(function (): void {
     Route::redirect('register', 'register-client')->name('register');
@@ -48,6 +62,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('campaigns', [CampaignController::class, 'index'])->name('campaigns.index');
+    Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals.index');
     Route::get('campaigns/create', [CampaignController::class, 'create'])->name('campaigns.create');
     Route::post('campaigns', [CampaignController::class, 'store'])->name('campaigns.store');
     Route::get('campaigns/{campaign}', [CampaignController::class, 'show'])->name('campaigns.show');
@@ -57,20 +72,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('campaigns/{campaign}/submit', [CampaignController::class, 'submit'])->name('campaigns.submit');
     Route::post('campaigns/{campaign}/approve', [CampaignController::class, 'approve'])->name('campaigns.approve');
     Route::post('campaigns/{campaign}/reject', [CampaignController::class, 'reject'])->name('campaigns.reject');
+    Route::post('campaigns/{campaign}/audio/approve', [CampaignController::class, 'approveAudio'])->name('campaigns.audio.approve');
+    Route::post('campaigns/{campaign}/audio/reject', [CampaignController::class, 'rejectAudio'])->name('campaigns.audio.reject');
     Route::post('campaigns/{campaign}/launch', [CampaignController::class, 'launch'])->name('campaigns.launch');
     Route::post('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
+    Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
 
+    Route::get('contacts/audiences', [ContactComplianceController::class, 'index'])->name('contacts.audiences.index');
+    Route::post('contacts/audiences/tags', [ContactComplianceController::class, 'storeTag'])->name('contacts.audiences.tags.store');
+    Route::delete('contacts/audiences/tags/{tag}', [ContactComplianceController::class, 'destroyTag'])->name('contacts.audiences.tags.destroy');
+    Route::post('contacts/audiences/lists', [ContactComplianceController::class, 'storeList'])->name('contacts.audiences.lists.store');
+    Route::delete('contacts/audiences/lists/{list}', [ContactComplianceController::class, 'destroyList'])->name('contacts.audiences.lists.destroy');
+    Route::post('contacts/audiences/segments', [ContactComplianceController::class, 'storeSegment'])->name('contacts.audiences.segments.store');
+    Route::put('contacts/audiences/segments/{segment}', [ContactComplianceController::class, 'updateSegment'])->name('contacts.audiences.segments.update');
+    Route::delete('contacts/audiences/segments/{segment}', [ContactComplianceController::class, 'destroySegment'])->name('contacts.audiences.segments.destroy');
+    Route::post('contacts/audiences/duplicates/merge', [ContactComplianceController::class, 'mergeDuplicates'])->name('contacts.audiences.duplicates.merge');
+    Route::post('contacts/audiences/suppressions', [ContactComplianceController::class, 'storeSuppression'])->name('contacts.audiences.suppressions.store');
+    Route::delete('contacts/audiences/suppressions/{suppression}', [ContactComplianceController::class, 'liftSuppression'])->name('contacts.audiences.suppressions.lift');
     Route::get('contacts/import', [ContactController::class, 'showImport'])->name('contacts.import.create');
+    Route::get('contacts/import/template', [ContactController::class, 'template'])->name('contacts.import.template');
     Route::post('contacts/import', [ContactController::class, 'import'])->name('contacts.import');
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::get('contacts/create', [ContactController::class, 'create'])->name('contacts.create');
     Route::post('contacts', [ContactController::class, 'store'])->name('contacts.store');
+    Route::post('contacts/bulk', [ContactController::class, 'bulk'])->name('contacts.bulk');
+    Route::post('contacts/{contact}/dnd', [ContactController::class, 'dnd'])->name('contacts.dnd');
+    Route::get('contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
     Route::get('contacts/{contact}/edit', [ContactController::class, 'edit'])->name('contacts.edit');
     Route::put('contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
     Route::delete('contacts/{contact}', [ContactController::class, 'destroy'])->name('contacts.destroy');
 
     Route::get('sender-ids', [SenderIdController::class, 'index'])->name('sender-ids.index');
+    Route::get('sender-ids/create', [SenderIdController::class, 'create'])->name('sender-ids.create');
     Route::post('sender-ids', [SenderIdController::class, 'store'])->name('sender-ids.store');
+    Route::get('sender-ids/{senderId}/edit', [SenderIdController::class, 'edit'])->name('sender-ids.edit');
+    Route::put('sender-ids/{senderId}', [SenderIdController::class, 'update'])->name('sender-ids.update');
     Route::post('sender-ids/{senderId}/approve', [SenderIdController::class, 'approve'])->name('sender-ids.approve');
     Route::post('sender-ids/{senderId}/reject', [SenderIdController::class, 'reject'])->name('sender-ids.reject');
     Route::delete('sender-ids/{senderId}', [SenderIdController::class, 'destroy'])->name('sender-ids.destroy');
@@ -79,6 +115,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('wallet/top-up', [WalletController::class, 'topUp'])->name('wallet.top-up');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/voice', [ReportController::class, 'voice'])->name('reports.voice');
 });
 
 require __DIR__.'/admin.php';

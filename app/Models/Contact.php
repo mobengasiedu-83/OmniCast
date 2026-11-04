@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\ContactConsentStatus;
 use Database\Factories\ContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Appends;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,7 +19,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $client_id
- * @property string $first_name
+ * @property string|null $first_name
  * @property string|null $last_name
  * @property string $phone
  * @property string|null $original_phone
@@ -32,9 +31,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $location
  * @property string $language
  * @property string $timezone
- * @property ContactConsentStatus $consent_status
- * @property bool $is_do_not_contact
- * @property Carbon|null $opted_out_at
+ * @property bool $dnd
+ * @property Carbon|null $dnd_at
  * @property array<string, mixed>|null $custom_fields
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -42,7 +40,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'client_id', 'first_name', 'last_name', 'phone', 'original_phone', 'alternative_phone',
     'email', 'company', 'account_number', 'customer_id', 'location', 'language', 'timezone',
-    'consent_status', 'is_do_not_contact', 'opted_out_at', 'custom_fields', 'created_by',
+    'dnd', 'dnd_at', 'custom_fields', 'created_by',
 ])]
 #[Appends(['full_name'])]
 class Contact extends Model
@@ -58,9 +56,8 @@ class Contact extends Model
     protected function casts(): array
     {
         return [
-            'consent_status' => ContactConsentStatus::class,
-            'is_do_not_contact' => 'boolean',
-            'opted_out_at' => 'datetime',
+            'dnd' => 'boolean',
+            'dnd_at' => 'datetime',
             'custom_fields' => 'array',
         ];
     }
@@ -108,17 +105,23 @@ class Contact extends Model
     }
 
     /**
-     * The display name of the contact.
+     * The display name of the contact, falling back to the MSISDN.
      *
      * @return Attribute<string, never>
      */
     protected function fullName(): Attribute
     {
-        return Attribute::get(fn (): string => trim($this->first_name.' '.$this->last_name));
+        return Attribute::get(function (): string {
+            $name = trim(((string) $this->first_name).' '.((string) $this->last_name));
+
+            return $name !== '' ? $name : $this->phone;
+        });
     }
 
     /**
      * Limit the query to the client an authenticated user may see.
+     *
+     * @param  Builder<Contact>  $query
      */
     #[Scope]
     protected function forUser(Builder $query, User $user): void
@@ -129,17 +132,20 @@ class Contact extends Model
     }
 
     /**
-     * Limit the query to contacts that may legally receive a broadcast.
+     * Limit the query to contacts that may receive a broadcast.
+     *
+     * @param  Builder<Contact>  $query
      */
     #[Scope]
     protected function broadcastable(Builder $query): void
     {
-        $query->where('is_do_not_contact', false)
-            ->where('consent_status', '!=', ContactConsentStatus::OptedOut->value);
+        $query->where('dnd', false);
     }
 
     /**
      * Limit the query to a free-text search over name, phone and account number.
+     *
+     * @param  Builder<Contact>  $query
      */
     #[Scope]
     protected function search(Builder $query, ?string $term): void
@@ -152,6 +158,7 @@ class Contact extends Model
             $query->where('first_name', 'like', "%{$term}%")
                 ->orWhere('last_name', 'like', "%{$term}%")
                 ->orWhere('phone', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%")
                 ->orWhere('account_number', 'like', "%{$term}%");
         });
     }

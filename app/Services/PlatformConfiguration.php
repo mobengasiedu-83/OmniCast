@@ -51,4 +51,37 @@ class PlatformConfiguration
 
         return $this->enabled('channels.'.$channel, $default, $client);
     }
+
+    /**
+     * Whether a reviewer still has to approve a campaign before it can launch.
+     */
+    public function campaignApprovalRequired(?Client $client = null): bool
+    {
+        return filter_var(
+            $this->resolve('campaigns', 'require_approval', config('campaigns.require_approval', false), $client),
+            FILTER_VALIDATE_BOOL,
+        );
+    }
+
+    /**
+     * Whether a campaign needs its sender ID approved before it may run.
+     */
+    public function senderIdApprovalRequired(?Client $client = null): bool
+    {
+        return filter_var(
+            $this->resolve('campaigns', 'require_approved_sender_id', config('campaigns.require_approved_sender_id', true), $client),
+            FILTER_VALIDATE_BOOL,
+        );
+    }
+
+    /**
+     * Whether voice audio needs a reviewer before the campaign may run.
+     */
+    public function audioApprovalRequired(?Client $client = null): bool
+    {
+        return filter_var(
+            $this->resolve('campaigns', 'require_approved_audio', config('campaigns.require_approved_audio', true), $client),
+            FILTER_VALIDATE_BOOL,
+        );
+    }
 }

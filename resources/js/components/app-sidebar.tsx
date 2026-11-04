@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Fingerprint,
     KeyRound,
     LayoutDashboard,
     MailPlus,
@@ -12,6 +13,7 @@ import {
     ShieldCheck,
     PackagePlus,
     Layers3,
+    PhoneCall,
     UserRoundCog,
     Users,
     UsersRound,
@@ -51,6 +53,16 @@ const messagingNavItems: NavItem[] = [
         title: 'Contacts',
         href: urls.contacts.index,
         icon: Users,
+    },
+    {
+        title: 'Sender IDs',
+        href: urls.senderIds.index,
+        icon: Fingerprint,
+    },
+    {
+        title: 'Voice calls',
+        href: urls.reports.voice,
+        icon: PhoneCall,
     },
 ];
 
@@ -110,6 +122,8 @@ export function AppSidebar() {
     const canManageUsers = permissions.includes('users.manage');
     const canManageClients = permissions.includes('clients.manage');
     const canReviewClients = permissions.includes('clients.approve');
+    const canReviewCampaigns = permissions.includes('campaigns.approve');
+    const canReviewSenderIds = permissions.includes('sender-ids.approve');
     const isClientUser = !isPlatformUser && (auth?.clientId ?? null) !== null;
 
     const accountNavItems: NavItem[] = [
@@ -169,6 +183,18 @@ export function AppSidebar() {
             <SidebarContent className="gap-2">
                 <NavMain items={platformNavItems} label="Platform" />
                 <NavMain items={messagingNavItems} label="Messaging" />
+                {(canReviewCampaigns || canReviewSenderIds) && (
+                    <NavMain
+                        items={[
+                            {
+                                title: 'Approvals',
+                                href: urls.approvals.index,
+                                icon: ClipboardCheck,
+                            },
+                        ]}
+                        label="Review"
+                    />
+                )}
                 {isPlatformUser && (canManageClients || canReviewClients) && (
                     <NavMain
                         items={[

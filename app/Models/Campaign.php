@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CampaignAudioStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
 use App\Enums\SmsEncoding;
@@ -19,11 +20,15 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $reference
+ * @property string|null $idempotency_key
  * @property int $client_id
+ * @property int|null $duplicated_from_id
  * @property string $name
  * @property Channel $channel
  * @property CampaignStatus $status
+ * @property int $current_version
  * @property int|null $contact_list_id
+ * @property int|null $contact_segment_id
  * @property int|null $sender_id
  * @property int|null $caller_id
  * @property string|null $sms_message
@@ -31,6 +36,15 @@ use Illuminate\Support\Carbon;
  * @property string|null $voice_script
  * @property string|null $voice_recording_path
  * @property int $voice_max_duration_seconds
+ * @property bool $ivr_enabled
+ * @property string|null $ivr_prompt
+ * @property int $ivr_timeout_seconds
+ * @property int $ivr_max_attempts
+ * @property array<string, string>|null $ivr_options
+ * @property CampaignAudioStatus $audio_status
+ * @property Carbon|null $audio_reviewed_at
+ * @property int|null $audio_reviewed_by
+ * @property string|null $audio_rejection_reason
  * @property int $estimated_recipients
  * @property int $estimated_sms_parts
  * @property string $estimated_cost
@@ -55,8 +69,11 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'reference', 'client_id', 'name', 'channel', 'status', 'contact_list_id', 'sender_id', 'caller_id',
+    'reference', 'idempotency_key', 'client_id', 'duplicated_from_id', 'name', 'channel', 'status', 'current_version',
+    'contact_list_id', 'contact_segment_id', 'sender_id', 'caller_id',
     'sms_message', 'sms_encoding', 'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
+    'ivr_enabled', 'ivr_prompt', 'ivr_timeout_seconds', 'ivr_max_attempts', 'ivr_options',
+    'audio_status', 'audio_reviewed_at', 'audio_reviewed_by', 'audio_rejection_reason',
     'estimated_recipients', 'estimated_sms_parts', 'estimated_cost',
     'reserved_amount', 'actual_cost', 'schedule_type', 'scheduled_at', 'window_starts_at',
     'window_ends_at', 'timezone', 'max_retries', 'retry_delay_minutes', 'notes',
@@ -78,10 +95,16 @@ class Campaign extends Model
         return [
             'channel' => Channel::class,
             'status' => CampaignStatus::class,
+            'audio_status' => CampaignAudioStatus::class,
             'sms_encoding' => SmsEncoding::class,
+            'current_version' => 'integer',
             'estimated_recipients' => 'integer',
             'estimated_sms_parts' => 'integer',
             'voice_max_duration_seconds' => 'integer',
+            'ivr_enabled' => 'boolean',
+            'ivr_timeout_seconds' => 'integer',
+            'ivr_max_attempts' => 'integer',
+            'ivr_options' => 'array',
             'estimated_cost' => 'decimal:2',
             'reserved_amount' => 'decimal:2',
             'actual_cost' => 'decimal:2',
@@ -90,6 +113,7 @@ class Campaign extends Model
             'scheduled_at' => 'datetime',
             'submitted_at' => 'datetime',
             'approved_at' => 'datetime',
+            'audio_reviewed_at' => 'datetime',
             'rejected_at' => 'datetime',
             'launched_at' => 'datetime',
             'completed_at' => 'datetime',
@@ -112,12 +136,18 @@ class Campaign extends Model
         return $this->belongsTo(ContactList::class);
     }
 
+    /** @return BelongsTo<ContactSegment, $this> */
+    public function contactSegment(): BelongsTo
+    {
+        return $this->belongsTo(ContactSegment::class);
+    }
+
     /**
      * @return BelongsTo<SenderId, $this>
      */
     public function senderId(): BelongsTo
     {
-        return $this->belongsTo(SenderId::class);
+        return $this->belongsTo(SenderId::class, 'sender_id');
     }
 
     /**
@@ -125,7 +155,7 @@ class Campaign extends Model
      */
     public function callerId(): BelongsTo
     {
-        return $this->belongsTo(CallerId::class);
+        return $this->belongsTo(CallerId::class, 'caller_id');
     }
 
     /**
@@ -145,6 +175,32 @@ class Campaign extends Model
     }
 
     /**
+     * The reviewer that approved or rejected the voice audio.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function audioReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'audio_reviewed_by');
+    }
+
+    /**
+     * @return BelongsTo<Campaign, $this>
+     */
+    public function duplicatedFrom(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'duplicated_from_id');
+    }
+
+    /**
+     * @return HasMany<CampaignVersion, $this>
+     */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(CampaignVersion::class);
+    }
+
+    /**
      * @return HasMany<CampaignChannel, $this>
      */
     public function channels(): HasMany
@@ -158,6 +214,16 @@ class Campaign extends Model
     public function campaignContacts(): HasMany
     {
         return $this->hasMany(CampaignContact::class);
+    }
+
+    /**
+     * Every call this campaign has dialled, including redials.
+     *
+     * @return HasMany<VoiceCall, $this>
+     */
+    public function voiceCalls(): HasMany
+    {
+        return $this->hasMany(VoiceCall::class);
     }
 
     /**
@@ -194,5 +260,33 @@ class Campaign extends Model
     protected function awaitingApproval(Builder $query): void
     {
         $query->where('status', CampaignStatus::PendingApproval->value);
+    }
+
+    /**
+     * Limit the query to campaigns whose voice audio still needs a review.
+     */
+    #[Scope]
+    protected function awaitingAudioReview(Builder $query): void
+    {
+        $query->whereIn($query->qualifyColumn('channel'), [
+            Channel::Voice->value,
+            Channel::MultiChannel->value,
+        ])->where('audio_status', CampaignAudioStatus::Pending->value);
+    }
+
+    /**
+     * Whether the campaign plays audio a reviewer has to approve.
+     */
+    public function requiresAudioApproval(): bool
+    {
+        return $this->channel->requiresVoiceContent();
+    }
+
+    /**
+     * Whether the audio has already been cleared by a reviewer.
+     */
+    public function hasApprovedAudio(): bool
+    {
+        return $this->audio_status->isApproved();
     }
 }
