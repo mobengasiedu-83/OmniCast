@@ -24,6 +24,7 @@ const tones: Record<string, BadgeVariant> = {
     delivered: 'success',
     sent: 'success',
     subscribed: 'success',
+    paid: 'success',
     running: 'info',
     held: 'warning',
     pending: 'warning',
@@ -35,9 +36,13 @@ const tones: Record<string, BadgeVariant> = {
     skipped: 'muted',
     unknown: 'muted',
     unsubscribed: 'muted',
+    abandoned: 'muted',
+    expired: 'muted',
+    void: 'muted',
     cancelled: 'destructive',
     failed: 'destructive',
     rejected: 'destructive',
+    refunded: 'info',
 };
 
 /** Statuses that are actively moving data and get a pulse on their dot. */

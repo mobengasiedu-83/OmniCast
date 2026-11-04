@@ -7,8 +7,13 @@ use App\Enums\ReservationStatus;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Http\Requests\Wallet\TopUpWalletRequest;
 use App\Models\BillingReservation;
+use App\Models\Client;
+use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Services\Billing\PackageCatalogue;
+use App\Services\Billing\PaymentGatewayManager;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +25,11 @@ class WalletController extends Controller
 {
     use ResolvesTenantClient;
 
-    public function __construct(protected WalletService $wallets) {}
+    public function __construct(
+        protected WalletService $wallets,
+        protected PackageCatalogue $packages,
+        protected PaymentGatewayManager $gateways,
+    ) {}
 
     /**
      * Show the client wallet, its ledger and open reservations.
@@ -72,10 +81,75 @@ class WalletController extends Controller
                 ])
                 ->all(),
             'can' => [
-                'top_up' => $request->user()->can(Permission::TopUpWallet->value),
+                'checkout' => $request->user()->can(Permission::TopUpWallet->value),
+                'manual_credit' => $request->user()->isPlatformUser()
+                    && $request->user()->can(Permission::TopUpWallet->value),
             ],
             'clients' => $this->selectableClients($request),
+            'client' => $client === null ? null : ['id' => $client->id, 'name' => $client->name],
+            'currency' => $this->packages->currency(),
+            'packages' => $this->packages->all(),
+            'limits' => $this->packages->limits(),
+            'gateway' => [
+                'driver' => (string) config('billing.driver', 'paystack'),
+                'live' => $this->gateways->isLive(),
+            ],
+            'payments' => $client === null ? [] : $this->recentPayments($client),
+            'invoices' => $client === null ? [] : $this->recentInvoices($client),
         ]);
+    }
+
+    /**
+     * The last few top ups started for a client.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function recentPayments(Client $client): array
+    {
+        return Payment::query()
+            ->where('client_id', $client->id)
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(fn (Payment $payment): array => [
+                'id' => $payment->id,
+                'reference' => $payment->reference,
+                'description' => $payment->description,
+                'status' => $payment->status->value,
+                'status_label' => $payment->status->label(),
+                'currency' => $payment->currency,
+                'amount' => (float) $payment->amount,
+                'channel' => $payment->channel,
+                'failure_reason' => $payment->failure_reason,
+                'authorization_url' => $payment->status->isOpen() ? $payment->authorization_url : null,
+                'cancel_url' => $payment->status->isOpen() ? route('wallet.checkout.cancel', $payment) : null,
+                'created_at' => $payment->created_at?->toIso8601String(),
+            ])
+            ->all();
+    }
+
+    /**
+     * The last few receipts raised for a client.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function recentInvoices(Client $client): array
+    {
+        return Invoice::query()
+            ->where('client_id', $client->id)
+            ->latest('issued_at')
+            ->take(5)
+            ->get()
+            ->map(fn (Invoice $invoice): array => [
+                'id' => $invoice->id,
+                'number' => $invoice->number,
+                'status' => $invoice->status->value,
+                'status_label' => $invoice->status->label(),
+                'currency' => $invoice->currency,
+                'total' => (float) $invoice->total,
+                'issued_at' => $invoice->issued_at?->toIso8601String(),
+            ])
+            ->all();
     }
 
     /**
@@ -86,6 +160,12 @@ class WalletController extends Controller
         $client = $this->tenantClient($request);
 
         abort_if($client === null, 403, 'Select a client account before topping up.');
+
+        abort_unless(
+            $request->user()->isPlatformUser(),
+            403,
+            'Wallets are funded by card. Only the platform team may credit a wallet directly.',
+        );
 
         $wallet = $this->wallets->walletFor($client);
 

@@ -120,6 +120,26 @@ class Client extends Model
     }
 
     /**
+     * The wallet top-ups the tenant has started or settled.
+     *
+     * @return HasMany<Payment, $this>
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * The receipts issued for settled top-ups.
+     *
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    /**
      * The compliance documents uploaded for the tenant.
      *
      * @return HasMany<ClientDocument, $this>

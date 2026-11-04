@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $wallet_id
  * @property int|null $campaign_id
  * @property int|null $billing_reservation_id
+ * @property int|null $payment_id
  * @property WalletTransactionType $type
  * @property string $amount
  * @property string $balance_after
@@ -22,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, mixed>|null $metadata
  */
 #[Fillable([
-    'wallet_id', 'campaign_id', 'billing_reservation_id', 'type', 'amount',
+    'wallet_id', 'campaign_id', 'billing_reservation_id', 'payment_id', 'type', 'amount',
     'balance_after', 'description', 'reference', 'created_by', 'metadata',
 ])]
 class WalletTransaction extends Model
@@ -67,5 +68,13 @@ class WalletTransaction extends Model
     public function reservation(): BelongsTo
     {
         return $this->belongsTo(BillingReservation::class, 'billing_reservation_id');
+    }
+
+    /**
+     * @return BelongsTo<Payment, $this>
+     */
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
     }
 }

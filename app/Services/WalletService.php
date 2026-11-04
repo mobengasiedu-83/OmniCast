@@ -8,6 +8,7 @@ use App\Exceptions\InsufficientWalletBalance;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\Client;
+use App\Models\Payment;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
@@ -39,6 +40,7 @@ class WalletService
         ?User $user = null,
         string $description = 'Wallet top up',
         ?string $reference = null,
+        ?Payment $payment = null,
     ): WalletTransaction {
         $amount = round($amount, 2);
 
@@ -46,13 +48,14 @@ class WalletService
             throw new InvalidArgumentException('A top up amount must be greater than zero.');
         }
 
-        return DB::transaction(function () use ($amount, $description, $reference, $user, $wallet): WalletTransaction {
+        return DB::transaction(function () use ($amount, $description, $payment, $reference, $user, $wallet): WalletTransaction {
             $wallet = $this->lock($wallet);
 
             $wallet->balance = round((float) $wallet->balance + $amount, 2);
             $wallet->save();
 
             return $wallet->transactions()->create([
+                'payment_id' => $payment?->id,
                 'type' => WalletTransactionType::Credit,
                 'amount' => $amount,
                 'balance_after' => $wallet->balance,

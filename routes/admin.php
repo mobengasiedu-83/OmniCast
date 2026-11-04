@@ -5,8 +5,11 @@ use App\Http\Controllers\Admin\ClientDocumentController;
 use App\Http\Controllers\Admin\ClientEntitlementController;
 use App\Http\Controllers\Admin\ClientRegistrationController;
 use App\Http\Controllers\Admin\InvitationController;
+use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\LoginAuditController;
+use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\RateCardController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -78,6 +81,21 @@ Route::middleware(['auth', 'verified', 'platform'])
 
             Route::put('clients/{client}/entitlements', [ClientEntitlementController::class, 'update'])
                 ->name('clients.entitlements.update');
+        });
+
+        Route::middleware('can:wallet.manage')->group(function (): void {
+            Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+            Route::post('payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
+
+            Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        });
+
+        Route::middleware('can:rates.view')->group(function (): void {
+            Route::get('rate-cards', [RateCardController::class, 'index'])->name('rate-cards.index');
+        });
+
+        Route::middleware('can:rates.manage')->group(function (): void {
+            Route::put('rates/{rate}', [RateCardController::class, 'updateRate'])->name('rates.update');
         });
 
         Route::middleware('can:clients.approve')->group(function (): void {

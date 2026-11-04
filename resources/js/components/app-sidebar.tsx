@@ -10,15 +10,19 @@ import {
     MonitorSmartphone,
     FileText,
     ClipboardCheck,
+    CreditCard,
+    ReceiptText,
     ScrollText,
     Settings,
     ShieldCheck,
     PackagePlus,
     Layers3,
     PhoneCall,
+    Tags,
     UserRoundCog,
     Users,
     UsersRound,
+    Wallet,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -136,7 +140,45 @@ export function AppSidebar() {
     const canReviewClients = permissions.includes('clients.approve');
     const canReviewCampaigns = permissions.includes('campaigns.approve');
     const canReviewSenderIds = permissions.includes('sender-ids.approve');
+    const canViewWallet = permissions.includes('wallet.view');
+    const canManageWallet = isPlatformUser && permissions.includes('wallet.manage');
+    const canViewRates = isPlatformUser && permissions.includes('rates.view');
     const isClientUser = !isPlatformUser && (auth?.clientId ?? null) !== null;
+
+    const billingNavItems: NavItem[] = [
+        ...(canViewWallet
+            ? [
+                  {
+                      title: 'Wallet',
+                      href: urls.wallet.index,
+                      icon: Wallet,
+                  },
+              ]
+            : []),
+        ...(canManageWallet
+            ? [
+                  {
+                      title: 'Payments',
+                      href: urls.admin.payments.index,
+                      icon: CreditCard,
+                  },
+                  {
+                      title: 'Invoices',
+                      href: urls.admin.invoices.index,
+                      icon: ReceiptText,
+                  },
+              ]
+            : []),
+        ...(canViewRates
+            ? [
+                  {
+                      title: 'Rate cards',
+                      href: urls.admin.rateCards.index,
+                      icon: Tags,
+                  },
+              ]
+            : []),
+    ];
 
     const accountNavItems: NavItem[] = [
         ...(isClientUser
@@ -195,6 +237,9 @@ export function AppSidebar() {
             <SidebarContent className="gap-2">
                 <NavMain items={platformNavItems} label="Platform" />
                 <NavMain items={messagingNavItems} label="Messaging" />
+                {billingNavItems.length > 0 && (
+                    <NavMain items={billingNavItems} label="Billing" />
+                )}
                 {(canReviewCampaigns || canReviewSenderIds) && (
                     <NavMain
                         items={[

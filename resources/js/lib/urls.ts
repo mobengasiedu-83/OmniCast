@@ -76,6 +76,10 @@ export const urls = {
     wallet: {
         index: path('/wallet'),
         topUp: path('/wallet/top-up'),
+        checkout: path('/wallet/checkout'),
+        checkoutCallback: path('/wallet/checkout/callback'),
+        cancelCheckout: (payment: number) =>
+            path(`/wallet/checkout/${payment}/cancel`),
     },
     reports: {
         index: path('/reports'),
@@ -88,6 +92,17 @@ export const urls = {
             index: path('/admin/settings'),
             plans: path('/admin/settings/plans'),
             assignPlan: (client: number) => path(`/admin/settings/plans/${client}`),
+        },
+        payments: {
+            index: path('/admin/payments'),
+            verify: (payment: number) => path(`/admin/payments/${payment}/verify`),
+        },
+        invoices: {
+            index: path('/admin/invoices'),
+        },
+        rateCards: {
+            index: path('/admin/rate-cards'),
+            updateRate: (rate: number) => path(`/admin/rates/${rate}`),
         },
         clients: {
             index: path('/admin/clients'),

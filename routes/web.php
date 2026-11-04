@@ -9,11 +9,13 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactDndController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailWebhookController;
+use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SenderIdController;
 use App\Http\Controllers\Settings\ClientSettingsController;
 use App\Http\Controllers\SmsWebhookController;
 use App\Http\Controllers\VoiceWebhookController;
+use App\Http\Controllers\WalletCheckoutController;
 use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +34,8 @@ Route::post('webhooks/voice', VoiceWebhookController::class)->name('webhooks.voi
 Route::match(['get', 'post'], 'webhooks/sms', SmsWebhookController::class)->name('webhooks.sms');
 
 Route::match(['get', 'post'], 'webhooks/email', EmailWebhookController::class)->name('webhooks.email');
+
+Route::post('webhooks/paystack', PaystackWebhookController::class)->name('webhooks.paystack');
 
 Route::middleware('guest')->group(function (): void {
     Route::redirect('register', 'register-client')->name('register');
@@ -119,6 +123,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
     Route::post('wallet/top-up', [WalletController::class, 'topUp'])->name('wallet.top-up');
+
+    Route::post('wallet/checkout', [WalletCheckoutController::class, 'store'])->name('wallet.checkout.store');
+    Route::get('wallet/checkout/callback', [WalletCheckoutController::class, 'callback'])
+        ->name('wallet.checkout.callback');
+    Route::get('wallet/checkout/{payment}/cancel', [WalletCheckoutController::class, 'cancel'])
+        ->name('wallet.checkout.cancel');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/voice', [ReportController::class, 'voice'])->name('reports.voice');

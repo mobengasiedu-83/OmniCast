@@ -532,6 +532,143 @@ export type WalletReservationRow = {
     created_at: string | null;
 };
 
+export type WalletPackageUnit = {
+    service: string;
+    label: string;
+    quantity: number;
+    formatted: string;
+};
+
+export type WalletPackage = {
+    key: string;
+    name: string;
+    price: number;
+    popular: boolean;
+    tagline: string;
+    units: WalletPackageUnit[];
+};
+
+export type WalletPaymentRow = {
+    id: number;
+    reference: string;
+    description: string;
+    status: string;
+    status_label: string;
+    currency: string;
+    amount: number;
+    channel: string | null;
+    failure_reason: string | null;
+    authorization_url: string | null;
+    cancel_url: string | null;
+    created_at: string | null;
+};
+
+export type WalletInvoiceRow = {
+    id: number;
+    number: string;
+    status: string;
+    status_label: string;
+    currency: string;
+    total: number;
+    issued_at: string | null;
+};
+
+export type PaymentRow = {
+    id: number;
+    reference: string;
+    client_id: number;
+    client: string | null;
+    package_key: string | null;
+    package: string | null;
+    description: string;
+    provider: string;
+    status: string;
+    status_label: string;
+    is_open: boolean;
+    is_settled: boolean;
+    currency: string;
+    amount: number;
+    amount_paid: number;
+    channel: string | null;
+    failure_reason: string | null;
+    invoice_number: string | null;
+    paid_at: string | null;
+    created_at: string | null;
+};
+
+export type PaymentStats = {
+    currency: string;
+    total: number;
+    paid: number;
+    pending: number;
+    failed: number;
+    collected: number;
+};
+
+export type InvoiceLine = {
+    description: string;
+    quantity: number;
+    unit_price: number;
+    amount: number;
+};
+
+export type InvoiceRow = {
+    id: number;
+    number: string;
+    client_id: number;
+    client: string | null;
+    payment_reference: string | null;
+    channel: string | null;
+    status: string;
+    status_label: string;
+    currency: string;
+    subtotal: number;
+    tax: number;
+    total: number;
+    lines: InvoiceLine[];
+    issued_at: string | null;
+    paid_at: string | null;
+};
+
+export type InvoiceStats = {
+    currency: string;
+    total: number;
+    paid: number;
+    refunded: number;
+    void: number;
+    billed: number;
+};
+
+export type RateRow = {
+    id: number;
+    destination: string;
+    destination_label: string;
+    billing_unit: string;
+    billing_unit_label: string;
+    unit_price: number;
+    supplier_cost: number;
+    margin: number;
+};
+
+export type RateCardRow = {
+    id: number;
+    name: string;
+    client_id: number | null;
+    client: string;
+    channel: string;
+    channel_label: string;
+    currency: string;
+    is_default: boolean;
+    effective_from: string | null;
+    effective_to: string | null;
+    rates: RateRow[];
+};
+
+export type Option = {
+    value: string;
+    label: string;
+};
+
 export type ReportSummary = {
     campaigns: number;
     completed_campaigns: number;
