@@ -61,6 +61,9 @@ export type CampaignRow = {
 
 export type CampaignDetail = CampaignRow & {
     sms_message: string | null;
+    email_subject: string | null;
+    email_body: string | null;
+    email_format: string | null;
     voice_script: string | null;
     voice_recording_path: string | null;
     voice_max_duration_seconds: number | null;
@@ -88,6 +91,7 @@ export type CampaignRecipient = {
     id: number;
     name: string | null;
     phone: string | null;
+    email: string | null;
     status: string;
     status_label: string;
     attempts: number;
@@ -152,6 +156,74 @@ export type VoiceCallReport = {
     recent: VoiceCallRow[];
 };
 
+export type SmsMessageRow = {
+    id: number;
+    reference: string;
+    to: string;
+    from: string;
+    contact: string | null;
+    status: string;
+    status_label: string;
+    provider_status: string | null;
+    segments: number;
+    attempts: number;
+    submitted_at: string | null;
+    delivered_at: string | null;
+    error_message: string | null;
+};
+
+export type SmsMessageTotals = {
+    messages: number;
+    delivered: number;
+    pending: number;
+    undelivered: number;
+    expired: number;
+    rejected: number;
+    failed: number;
+    delivery_rate: number | null;
+    segments: number;
+    spend: number;
+};
+
+export type SmsMessageReport = {
+    totals: SmsMessageTotals;
+    recent: SmsMessageRow[];
+};
+
+export type EmailMessageRow = {
+    id: number;
+    reference: string;
+    to: string;
+    from: string;
+    contact: string | null;
+    subject: string;
+    status: string;
+    status_label: string;
+    provider_status: string | null;
+    attempts: number;
+    submitted_at: string | null;
+    delivered_at: string | null;
+    error_message: string | null;
+};
+
+export type EmailMessageTotals = {
+    messages: number;
+    delivered: number;
+    pending: number;
+    bounced: number;
+    complained: number;
+    rejected: number;
+    failed: number;
+    delivery_rate: number | null;
+    bounce_rate: number | null;
+    spend: number;
+};
+
+export type EmailMessageReport = {
+    totals: EmailMessageTotals;
+    recent: EmailMessageRow[];
+};
+
 export type CampaignFormOptions = {
     clients: ClientOption[];
     tenantClientId: number | null;
@@ -171,6 +243,9 @@ export type CampaignFormValues = {
     sender_id: string;
     caller_id: string;
     sms_message: string;
+    email_subject: string;
+    email_body: string;
+    email_format: string;
     voice_script: string;
     voice_max_duration_seconds: string;
     ivr_enabled: string;

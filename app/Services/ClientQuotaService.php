@@ -70,7 +70,7 @@ class ClientQuotaService
         $channels = match ($service) {
             ClientService::Voice => [Channel::Voice->value, Channel::MultiChannel->value],
             ClientService::Sms => [Channel::Sms->value, Channel::MultiChannel->value],
-            ClientService::Email => [],
+            ClientService::Email => [Channel::Email->value],
         };
 
         if ($channels === []) {

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Campaign;
 
 use App\Enums\Channel;
+use App\Enums\EmailFormat;
 use App\Enums\Permission;
 use App\Models\Client;
 use App\Services\PlatformConfiguration;
@@ -41,6 +42,7 @@ class CampaignRequest extends FormRequest
         $channel = $this->enum('channel', Channel::class);
         $requiresSms = $channel?->requiresSmsContent() ?? false;
         $requiresVoice = ($channel?->requiresVoiceContent() ?? false) && blank($this->input('voice_recording_path'));
+        $requiresEmail = $channel?->requiresEmailContent() ?? false;
 
         return [
             'client_id' => [Rule::requiredIf($this->user()?->isPlatformUser() ?? false), 'integer', Rule::exists('clients', 'id')],
@@ -51,6 +53,9 @@ class CampaignRequest extends FormRequest
             'sender_id' => ['nullable', 'integer', Rule::exists('sender_ids', 'id')->where('client_id', $clientId)],
             'caller_id' => ['nullable', 'integer', Rule::exists('caller_ids', 'id')->where('client_id', $clientId)],
             'sms_message' => [Rule::requiredIf($requiresSms), 'nullable', 'string', 'max:1600'],
+            'email_subject' => [Rule::requiredIf($requiresEmail), 'nullable', 'string', 'max:255'],
+            'email_body' => [Rule::requiredIf($requiresEmail), 'nullable', 'string', 'max:100000'],
+            'email_format' => [$requiresEmail ? 'required' : 'nullable', Rule::enum(EmailFormat::class)],
             'voice_script' => [Rule::requiredIf($requiresVoice), 'nullable', 'string', 'max:4000'],
             'voice_recording_path' => ['nullable', 'string', 'max:2048'],
             'voice_max_duration_seconds' => ['nullable', 'integer', 'min:5', 'max:300'],
@@ -115,7 +120,8 @@ class CampaignRequest extends FormRequest
     {
         return $this->safe()->only([
             'client_id', 'name', 'channel', 'contact_list_id', 'contact_segment_id', 'sender_id', 'caller_id',
-            'sms_message', 'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
+            'sms_message', 'email_subject', 'email_body', 'email_format',
+            'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
             'ivr_enabled', 'ivr_prompt', 'ivr_timeout_seconds', 'ivr_max_attempts', 'ivr_options',
             'schedule_type', 'scheduled_at', 'timezone', 'max_retries', 'retry_delay_minutes', 'notes',
             'idempotency_key',

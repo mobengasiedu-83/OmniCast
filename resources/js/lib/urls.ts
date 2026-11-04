@@ -80,6 +80,8 @@ export const urls = {
     reports: {
         index: path('/reports'),
         voice: path('/reports/voice'),
+        sms: path('/reports/sms'),
+        email: path('/reports/email'),
     },
     admin: {
         settings: {

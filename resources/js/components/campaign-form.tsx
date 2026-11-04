@@ -29,6 +29,9 @@ const defaults: CampaignFormValues = {
     sender_id: '',
     caller_id: '',
     sms_message: '',
+    email_subject: '',
+    email_body: '',
+    email_format: 'html',
     voice_script: '',
     voice_max_duration_seconds: '30',
     ivr_enabled: '0',
@@ -95,8 +98,12 @@ export default function CampaignForm({
         ...initial,
     });
 
-    const requiresSms = form.data.channel !== 'voice';
-    const requiresVoice = form.data.channel !== 'sms';
+    const requiresSms =
+        form.data.channel === 'sms' || form.data.channel === 'multi_channel';
+    const requiresVoice =
+        form.data.channel === 'voice' ||
+        form.data.channel === 'multi_channel';
+    const requiresEmail = form.data.channel === 'email';
     const senderChannel =
         form.data.channel === 'multi_channel' ? 'sms' : form.data.channel;
     const senderOptions = options.senderIds.filter(
@@ -240,9 +247,11 @@ export default function CampaignForm({
                         <InputError message={form.errors.contact_segment_id} />
                     </div>
 
-                    {requiresSms && (
+                    {(requiresSms || requiresEmail) && (
                         <div className="grid gap-1.5">
-                            <Label htmlFor="sender_id">Sender ID</Label>
+                            <Label htmlFor="sender_id">
+                                {requiresEmail ? 'From address' : 'Sender ID'}
+                            </Label>
                             <Select
                                 value={form.data.sender_id || 'none'}
                                 onValueChange={(value) =>
@@ -339,6 +348,83 @@ export default function CampaignForm({
                                 characters
                             </p>
                             <InputError message={form.errors.sms_message} />
+                        </div>
+                    )}
+
+                    {requiresEmail && (
+                        <div className="grid gap-3">
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="email_subject">Subject</Label>
+                                <Input
+                                    id="email_subject"
+                                    value={form.data.email_subject}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'email_subject',
+                                            event.target.value,
+                                        )
+                                    }
+                                    maxLength={255}
+                                    placeholder="Your October statement is ready"
+                                />
+                                <p className="text-muted-foreground text-xs">
+                                    {form.data.email_subject.length} of 255
+                                    characters
+                                </p>
+                                <InputError
+                                    message={form.errors.email_subject}
+                                />
+                            </div>
+
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="email_format">Format</Label>
+                                <Select
+                                    value={form.data.email_format}
+                                    onValueChange={(value) =>
+                                        form.setData('email_format', value)
+                                    }
+                                >
+                                    <SelectTrigger id="email_format">
+                                        <SelectValue placeholder="HTML" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="html">HTML</SelectItem>
+                                        <SelectItem value="text">
+                                            Plain text
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError
+                                    message={form.errors.email_format}
+                                />
+                            </div>
+
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="email_body">Body</Label>
+                                <Textarea
+                                    id="email_body"
+                                    value={form.data.email_body}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'email_body',
+                                            event.target.value,
+                                        )
+                                    }
+                                    rows={10}
+                                    maxLength={100000}
+                                    placeholder={
+                                        form.data.email_format === 'html'
+                                            ? '<p>Hello, your October statement is ready…</p>'
+                                            : 'Hello, your October statement is ready…'
+                                    }
+                                />
+                                <p className="text-muted-foreground text-xs">
+                                    {form.data.email_format === 'html'
+                                        ? 'Markup is rendered inside the branded broadcast shell, and a plain-text alternative is generated automatically.'
+                                        : 'Sent exactly as typed, with no markup.'}
+                                </p>
+                                <InputError message={form.errors.email_body} />
+                            </div>
                         </div>
                     )}
 

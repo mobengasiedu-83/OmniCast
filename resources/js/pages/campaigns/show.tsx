@@ -1,5 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { CheckCircle2, Megaphone, PhoneCall } from 'lucide-react';
+import {
+    CheckCircle2,
+    Mail,
+    Megaphone,
+    MessageSquareText,
+    PhoneCall,
+} from 'lucide-react';
 import { useState } from 'react';
 import PageHeader from '@/components/page-header';
 import Pagination from '@/components/pagination';
@@ -36,7 +42,9 @@ import type {
     CampaignRecipient,
     CampaignReview,
     CampaignVersionRow,
+    EmailMessageReport,
     Paginated,
+    SmsMessageReport,
     VoiceCallReport,
 } from '@/types';
 
@@ -58,6 +66,8 @@ type PageProps = {
     recipients: Paginated<CampaignRecipient>;
     review: CampaignReview;
     voiceReport: VoiceCallReport | null;
+    smsReport: SmsMessageReport | null;
+    emailReport: EmailMessageReport | null;
     abilities: Abilities;
 };
 
@@ -84,6 +94,8 @@ export default function CampaignsShow({
     recipients,
     review,
     voiceReport,
+    smsReport,
+    emailReport,
     abilities,
 }: PageProps) {
     const [rejecting, setRejecting] = useState(false);
@@ -323,6 +335,38 @@ export default function CampaignsShow({
                                     </p>
                                 </div>
                             )}
+                            {campaign.email_subject && (
+                                <div className="space-y-1.5">
+                                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                        Email subject
+                                    </p>
+                                    <p className="text-sm font-medium">
+                                        {campaign.email_subject}
+                                    </p>
+                                </div>
+                            )}
+                            {campaign.email_body && (
+                                <div className="space-y-1.5">
+                                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                        Email body ·{' '}
+                                        {campaign.email_format === 'text'
+                                            ? 'plain text'
+                                            : 'HTML'}
+                                    </p>
+                                    {campaign.email_format === 'text' ? (
+                                        <p className="bg-brand-soft/70 ring-brand/20 max-w-md rounded-2xl rounded-tl-sm p-3 text-sm whitespace-pre-wrap ring-1">
+                                            {campaign.email_body}
+                                        </p>
+                                    ) : (
+                                        <iframe
+                                            title="Email body preview"
+                                            sandbox=""
+                                            srcDoc={campaign.email_body}
+                                            className="ring-border h-64 w-full max-w-md rounded-2xl ring-1"
+                                        />
+                                    )}
+                                </div>
+                            )}
                             {campaign.voice_script && (
                                 <div className="space-y-1.5">
                                     <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
@@ -333,7 +377,9 @@ export default function CampaignsShow({
                                     </p>
                                 </div>
                             )}
-                            {!campaign.sms_message && !campaign.voice_script && (
+                            {!campaign.sms_message &&
+                                !campaign.email_body &&
+                                !campaign.voice_script && (
                                 <p className="text-muted-foreground text-sm">
                                     No copy captured yet.
                                 </p>
@@ -641,6 +687,247 @@ export default function CampaignsShow({
                     </Card>
                 )}
 
+                {smsReport !== null && (
+                    <Card className="py-4">
+                        <CardHeader>
+                            <CardTitle>SMS delivery</CardTitle>
+                            <CardDescription>
+                                Delivery rate and carrier status come from the
+                                receipts the network posts back.{' '}
+                                <Link
+                                    href={`${urls.reports.sms}?campaign=${campaign.id}`}
+                                    className="text-brand underline-offset-4 hover:underline"
+                                >
+                                    Open the delivery report
+                                </Link>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4">
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Submitted
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {smsReport.totals.messages.toLocaleString()}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs">
+                                        {smsReport.totals.segments.toLocaleString()}{' '}
+                                        segments
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Delivery rate
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {smsReport.totals.delivery_rate === null
+                                            ? '—'
+                                            : `${smsReport.totals.delivery_rate}%`}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs">
+                                        {smsReport.totals.delivered.toLocaleString()}{' '}
+                                        delivered
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Awaiting receipts
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {smsReport.totals.pending.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Not delivered
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {(
+                                            smsReport.totals.undelivered +
+                                            smsReport.totals.expired +
+                                            smsReport.totals.rejected +
+                                            smsReport.totals.failed
+                                        ).toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Recipient</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Carrier</TableHead>
+                                        <TableHead>Segments</TableHead>
+                                        <TableHead className="pr-4">
+                                            Submitted
+                                        </TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {smsReport.recent.length === 0 && (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={5}
+                                                className="text-muted-foreground py-6 text-center"
+                                            >
+                                                <span className="inline-flex items-center gap-2">
+                                                    <MessageSquareText className="size-4" />
+                                                    No messages have been
+                                                    submitted for this campaign
+                                                    yet.
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {smsReport.recent.map((message) => (
+                                        <TableRow key={message.id}>
+                                            <TableCell>
+                                                <p className="font-medium">
+                                                    {message.contact ?? message.to}
+                                                </p>
+                                                <p className="text-muted-foreground font-mono text-xs">
+                                                    {message.to}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <StatusBadge
+                                                    status={message.status}
+                                                    label={message.status_label}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">
+                                                {message.provider_status ?? '—'}
+                                            </TableCell>
+                                            <TableCell>{message.segments}</TableCell>
+                                            <TableCell className="pr-4">
+                                                {moment(message.submitted_at)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {emailReport !== null && (
+                    <Card className="py-4">
+                        <CardHeader>
+                            <CardTitle>Email delivery</CardTitle>
+                            <CardDescription>
+                                Delivery rate, bounces and complaints come from
+                                the feedback the mail server posts back.{' '}
+                                <Link
+                                    href={`${urls.reports.email}?campaign=${campaign.id}`}
+                                    className="text-brand underline-offset-4 hover:underline"
+                                >
+                                    Open the delivery report
+                                </Link>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid gap-4">
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Submitted
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {emailReport.totals.messages.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Delivery rate
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {emailReport.totals.delivery_rate === null
+                                            ? '—'
+                                            : `${emailReport.totals.delivery_rate}%`}
+                                    </p>
+                                    <p className="text-muted-foreground text-xs">
+                                        {emailReport.totals.delivered.toLocaleString()}{' '}
+                                        delivered
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Awaiting feedback
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {emailReport.totals.pending.toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="rounded-lg border p-3">
+                                    <p className="text-muted-foreground text-xs">
+                                        Bounces & complaints
+                                    </p>
+                                    <p className="text-xl font-semibold tabular-nums">
+                                        {(
+                                            emailReport.totals.bounced +
+                                            emailReport.totals.complained
+                                        ).toLocaleString()}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Recipient</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Provider</TableHead>
+                                        <TableHead className="pr-4">
+                                            Submitted
+                                        </TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {emailReport.recent.length === 0 && (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={4}
+                                                className="text-muted-foreground py-6 text-center"
+                                            >
+                                                <span className="inline-flex items-center gap-2">
+                                                    <Mail className="size-4" />
+                                                    No emails have been submitted
+                                                    for this campaign yet.
+                                                </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {emailReport.recent.map((message) => (
+                                        <TableRow key={message.id}>
+                                            <TableCell>
+                                                <p className="font-medium">
+                                                    {message.contact ?? message.to}
+                                                </p>
+                                                <p className="text-muted-foreground font-mono text-xs">
+                                                    {message.to}
+                                                </p>
+                                            </TableCell>
+                                            <TableCell>
+                                                <StatusBadge
+                                                    status={message.status}
+                                                    label={message.status_label}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">
+                                                {message.provider_status ?? '—'}
+                                            </TableCell>
+                                            <TableCell className="pr-4">
+                                                {moment(message.submitted_at)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                )}
+
                 <Card className="py-4">
                     <CardHeader>
                         <CardTitle>Version history</CardTitle>
@@ -723,7 +1010,11 @@ export default function CampaignsShow({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="pl-4">Contact</TableHead>
-                                    <TableHead>Phone</TableHead>
+                                    <TableHead>
+                                        {campaign.channel === 'email'
+                                            ? 'Email'
+                                            : 'Phone'}
+                                    </TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Attempts</TableHead>
                                     <TableHead>Sent</TableHead>
@@ -749,11 +1040,15 @@ export default function CampaignsShow({
                                                 {recipient.name ?? 'Unknown'}
                                             </span>
                                             <span className="text-muted-foreground block text-xs">
-                                                {recipient.phone ?? '—'}
+                                                {campaign.channel === 'email'
+                                                    ? (recipient.email ?? '—')
+                                                    : (recipient.phone ?? '—')}
                                             </span>
                                         </TableCell>
                                         <TableCell>
-                                            {recipient.phone ?? '—'}
+                                            {campaign.channel === 'email'
+                                                ? (recipient.email ?? '—')
+                                                : (recipient.phone ?? '—')}
                                         </TableCell>
                                         <TableCell>
                                             <StatusBadge

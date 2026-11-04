@@ -77,4 +77,24 @@ class CampaignContact extends Model
     {
         return $this->hasMany(VoiceCall::class);
     }
+
+    /**
+     * The messages submitted to this recipient, one row per attempt.
+     *
+     * @return HasMany<SmsMessage, $this>
+     */
+    public function smsMessages(): HasMany
+    {
+        return $this->hasMany(SmsMessage::class);
+    }
+
+    /**
+     * The emails submitted to this recipient, one row per attempt.
+     *
+     * @return HasMany<EmailMessage, $this>
+     */
+    public function emailMessages(): HasMany
+    {
+        return $this->hasMany(EmailMessage::class);
+    }
 }

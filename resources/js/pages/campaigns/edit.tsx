@@ -15,6 +15,9 @@ type EditableCampaign = {
     sender_id: number | null;
     caller_id: number | null;
     sms_message: string | null;
+    email_subject: string | null;
+    email_body: string | null;
+    email_format: string | null;
     voice_script: string | null;
     voice_recording_path: string | null;
     voice_max_duration_seconds: number | null;
@@ -51,6 +54,9 @@ function initialValues(campaign: EditableCampaign): Partial<CampaignFormValues> 
         sender_id: text(campaign.sender_id),
         caller_id: text(campaign.caller_id),
         sms_message: text(campaign.sms_message),
+        email_subject: text(campaign.email_subject),
+        email_body: text(campaign.email_body),
+        email_format: campaign.email_format ?? 'html',
         voice_script: text(campaign.voice_script),
         voice_max_duration_seconds: text(
             campaign.voice_max_duration_seconds,

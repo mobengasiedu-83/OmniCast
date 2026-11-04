@@ -115,6 +115,39 @@ answers `202` for an unknown reference, `403` for a missing/incorrect signature 
 unknown event, so a switch retry can never move a call that this platform did not dial. Call logs and
 per-campaign call reports are available at `/reports/voice`.
 
+## SMS broadcasting (phase 9)
+
+An SMS campaign submits one message per recipient through an `SmsGateway`. The driver is
+`sms.driver` (platform setting) over `config/sms.php`:
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `SMS_BROADCAST_DRIVER` | `log` | `log` writes to `storage/logs/sms.log`, `txtconnect` uses the TxtConnect API, `generic_json` posts to any JSON aggregator, `kannel` posts to a Kannel bearerbox that holds the SMPP bind |
+| `SMS_BROADCAST_ENABLED` | `false` | Live drivers refuse every message while this is off; `log` always submits |
+| `SMS_BROADCAST_GLOBAL_CPS` | `0` | Reserved for the Phase 12 throttle; read but not enforced yet |
+| `SMS_TOKEN` / `SMS_ENDPOINT` | — / TxtConnect dev endpoint | TxtConnect bearer token and endpoint (shared with the signup OTP flow) |
+| `SMS_GENERIC_ENDPOINT` / `_TOKEN` / `_USERNAME` / `_PASSWORD` | — | Generic JSON aggregator: bearer token when set, otherwise HTTP basic |
+| `SMS_KANNEL_URL` / `_USERNAME` / `_PASSWORD` / `_DLR_MASK` | — / — / — / `31` | Kannel `sendsms` URL, credentials and receipt mask |
+| `SMS_WEBHOOK_SECRET` | — | Shared secret for delivery receipts; when empty every receipt is refused |
+
+Every message is written to `sms_messages` before the provider is contacted, with the sender ID, the
+GSM-7/Unicode encoding, the billable segment count and the per-segment cost, so a campaign's spend can
+be reconciled against the message log. Receipts come back on `POST /webhooks/sms` (signed with
+`X-Omnicast-Signature: hash_hmac('sha256', $rawBody, SMS_WEBHOOK_SECRET)`) or on `GET /webhooks/sms`
+for Kannel, whose per-message `dlr-url` carries `reference` and `sig = hash_hmac('sha256', $reference,
+SMS_WEBHOOK_SECRET)`:
+
+```json
+{ "reference": "01H…", "status": "DELIVRD", "message_id": "TC-991", "event_id": "receipt-1" }
+```
+
+`status` accepts the carrier tokens OmniCast understands (`DELIVRD`, `UNDELIV`, `EXPIRED`, `REJECTD`,
+`FAILED`, `ACCEPTD`, …). The endpoint answers `202` for an unknown reference, `403` for a
+missing/incorrect signature and `422` for an unmapped status. A delivered receipt promotes the
+recipient to `Delivered`; an undelivered, expired or rejected one reopens the campaign and re-queues
+the resend until `max_retries` is spent. Delivery reports are at `/reports/sms`, and each campaign
+shows its own message log and delivery rate.
+
 ## Verification commands
 
 ```bash

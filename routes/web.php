@@ -8,9 +8,11 @@ use App\Http\Controllers\ContactComplianceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactDndController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmailWebhookController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SenderIdController;
 use App\Http\Controllers\Settings\ClientSettingsController;
+use App\Http\Controllers\SmsWebhookController;
 use App\Http\Controllers\VoiceWebhookController;
 use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +28,10 @@ Route::post('stop-messages/{contact}', [ContactDndController::class, 'store'])
     ->name('contacts.dnd.request.store');
 
 Route::post('webhooks/voice', VoiceWebhookController::class)->name('webhooks.voice');
+
+Route::match(['get', 'post'], 'webhooks/sms', SmsWebhookController::class)->name('webhooks.sms');
+
+Route::match(['get', 'post'], 'webhooks/email', EmailWebhookController::class)->name('webhooks.email');
 
 Route::middleware('guest')->group(function (): void {
     Route::redirect('register', 'register-client')->name('register');
@@ -116,6 +122,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/voice', [ReportController::class, 'voice'])->name('reports.voice');
+    Route::get('reports/sms', [ReportController::class, 'sms'])->name('reports.sms');
+    Route::get('reports/email', [ReportController::class, 'email'])->name('reports.email');
 });
 
 require __DIR__.'/admin.php';

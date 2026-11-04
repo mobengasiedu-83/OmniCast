@@ -3,8 +3,10 @@ import {
     Fingerprint,
     KeyRound,
     LayoutDashboard,
+    Mail,
     MailPlus,
     Megaphone,
+    MessageSquareText,
     MonitorSmartphone,
     FileText,
     ClipboardCheck,
@@ -63,6 +65,16 @@ const messagingNavItems: NavItem[] = [
         title: 'Voice calls',
         href: urls.reports.voice,
         icon: PhoneCall,
+    },
+    {
+        title: 'SMS messages',
+        href: urls.reports.sms,
+        icon: MessageSquareText,
+    },
+    {
+        title: 'Email messages',
+        href: urls.reports.email,
+        icon: Mail,
     },
 ];
 

@@ -98,6 +98,7 @@ class CampaignReadiness
     {
         return match ($channel) {
             Channel::Sms, Channel::MultiChannel => SenderIdChannel::Sms,
+            Channel::Email => SenderIdChannel::Email,
             Channel::Voice => null,
         };
     }

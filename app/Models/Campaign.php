@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CampaignAudioStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
+use App\Enums\EmailFormat;
 use App\Enums\SmsEncoding;
 use Database\Factories\CampaignFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -33,6 +34,9 @@ use Illuminate\Support\Carbon;
  * @property int|null $caller_id
  * @property string|null $sms_message
  * @property SmsEncoding|null $sms_encoding
+ * @property string|null $email_subject
+ * @property string|null $email_body
+ * @property EmailFormat $email_format
  * @property string|null $voice_script
  * @property string|null $voice_recording_path
  * @property int $voice_max_duration_seconds
@@ -71,7 +75,8 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'reference', 'idempotency_key', 'client_id', 'duplicated_from_id', 'name', 'channel', 'status', 'current_version',
     'contact_list_id', 'contact_segment_id', 'sender_id', 'caller_id',
-    'sms_message', 'sms_encoding', 'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
+    'sms_message', 'sms_encoding', 'email_subject', 'email_body', 'email_format',
+    'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
     'ivr_enabled', 'ivr_prompt', 'ivr_timeout_seconds', 'ivr_max_attempts', 'ivr_options',
     'audio_status', 'audio_reviewed_at', 'audio_reviewed_by', 'audio_rejection_reason',
     'estimated_recipients', 'estimated_sms_parts', 'estimated_cost',
@@ -97,6 +102,7 @@ class Campaign extends Model
             'status' => CampaignStatus::class,
             'audio_status' => CampaignAudioStatus::class,
             'sms_encoding' => SmsEncoding::class,
+            'email_format' => EmailFormat::class,
             'current_version' => 'integer',
             'estimated_recipients' => 'integer',
             'estimated_sms_parts' => 'integer',
@@ -224,6 +230,26 @@ class Campaign extends Model
     public function voiceCalls(): HasMany
     {
         return $this->hasMany(VoiceCall::class);
+    }
+
+    /**
+     * Every message this campaign has submitted, including resends.
+     *
+     * @return HasMany<SmsMessage, $this>
+     */
+    public function smsMessages(): HasMany
+    {
+        return $this->hasMany(SmsMessage::class);
+    }
+
+    /**
+     * Every email this campaign has submitted, including resends.
+     *
+     * @return HasMany<EmailMessage, $this>
+     */
+    public function emailMessages(): HasMany
+    {
+        return $this->hasMany(EmailMessage::class);
     }
 
     /**

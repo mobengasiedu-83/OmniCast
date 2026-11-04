@@ -31,6 +31,7 @@ enum ClientService: string
         return match ($channel) {
             Channel::Sms => self::Sms,
             Channel::Voice => self::Voice,
+            Channel::Email => self::Email,
             Channel::MultiChannel => null,
         };
     }

@@ -16,7 +16,9 @@ use App\Models\SenderId;
 use App\Services\CampaignReadiness;
 use App\Services\CampaignService;
 use App\Services\ContactSegmentQuery;
+use App\Services\EmailMessageReport;
 use App\Services\PlatformConfiguration;
+use App\Services\SmsMessageReport;
 use App\Services\VoiceCallReport;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
@@ -35,6 +37,8 @@ class CampaignController extends Controller
         protected CampaignReadiness $readiness,
         protected PlatformConfiguration $configuration,
         protected VoiceCallReport $voiceReport,
+        protected SmsMessageReport $smsReport,
+        protected EmailMessageReport $emailReport,
     ) {}
 
     /**
@@ -126,13 +130,14 @@ class CampaignController extends Controller
             ->pluck('total', 'status');
 
         $recipients = $campaign->campaignContacts()
-            ->with('contact:id,first_name,last_name,phone')
+            ->with('contact:id,first_name,last_name,phone,email')
             ->orderBy('id')
             ->paginate(20)
             ->through(fn ($campaignContact): array => [
                 'id' => $campaignContact->id,
                 'name' => $campaignContact->contact?->full_name,
                 'phone' => $campaignContact->contact?->phone,
+                'email' => $campaignContact->contact?->email,
                 'status' => $campaignContact->status->value,
                 'status_label' => $campaignContact->status->label(),
                 'attempts' => $campaignContact->attempts,
@@ -161,6 +166,9 @@ class CampaignController extends Controller
             'campaign' => [
                 ...$this->summary($campaign),
                 'sms_message' => $campaign->sms_message,
+                'email_subject' => $campaign->email_subject,
+                'email_body' => $campaign->email_body,
+                'email_format' => $campaign->email_format->value,
                 'voice_script' => $campaign->voice_script,
                 'voice_recording_path' => $campaign->voice_recording_path,
                 'voice_max_duration_seconds' => $campaign->voice_max_duration_seconds,
@@ -200,6 +208,12 @@ class CampaignController extends Controller
             'voiceReport' => $campaign->channel->requiresVoiceContent()
                 ? $this->voiceReport->forCampaign($campaign, 8)
                 : null,
+            'smsReport' => $campaign->channel->requiresSmsContent()
+                ? $this->smsReport->forCampaign($campaign, 8)
+                : null,
+            'emailReport' => $campaign->channel->requiresEmailContent()
+                ? $this->emailReport->forCampaign($campaign, 8)
+                : null,
             'abilities' => [
                 'update' => Gate::allows('update', $campaign),
                 'submit' => Gate::allows('submit', $campaign),
@@ -232,6 +246,9 @@ class CampaignController extends Controller
                 'sender_id' => $campaign->sender_id,
                 'caller_id' => $campaign->caller_id,
                 'sms_message' => $campaign->sms_message,
+                'email_subject' => $campaign->email_subject,
+                'email_body' => $campaign->email_body,
+                'email_format' => $campaign->email_format->value,
                 'voice_script' => $campaign->voice_script,
                 'voice_recording_path' => $campaign->voice_recording_path,
                 'voice_max_duration_seconds' => $campaign->voice_max_duration_seconds,

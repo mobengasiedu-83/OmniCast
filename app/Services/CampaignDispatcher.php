@@ -2,15 +2,19 @@
 
 namespace App\Services;
 
+use App\Contracts\EmailGateway;
 use App\Contracts\SmsGateway;
 use App\Contracts\VoiceGateway;
 use App\Enums\CampaignContactStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
+use App\Enums\EmailFormat;
 use App\Enums\ReservationStatus;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
+use App\Services\Email\OutboundEmail;
+use App\Services\Sms\OutboundSms;
 use App\Services\Voice\VoiceCall as VoiceCallData;
 use Illuminate\Support\Collection;
 
@@ -22,6 +26,7 @@ class CampaignDispatcher
     public function __construct(
         protected SmsGateway $sms,
         protected VoiceGateway $voice,
+        protected EmailGateway $email,
         protected CampaignCostEstimator $costs,
         protected SmsSegmenter $segmenter,
         protected WalletService $wallet,
@@ -30,6 +35,8 @@ class CampaignDispatcher
         protected CampaignReadiness $readiness,
         protected VoiceIvr $ivr,
         protected VoiceCallTracker $tracker,
+        protected SmsTracker $smsTracker,
+        protected EmailTracker $emailTracker,
     ) {}
 
     /**
@@ -82,20 +89,27 @@ class CampaignDispatcher
 
         $smsPartCost = $this->costs->smsPartCost($campaign->client);
         $voiceCallCost = $this->costs->voiceCallCost($campaign->client);
+        $emailRecipientCost = $this->costs->emailRecipientCost($campaign->client);
         $smsParts = $campaign->channel->requiresSmsContent()
             ? max($this->segmenter->segmentsFor((string) $campaign->sms_message), 1)
             : 0;
 
-        $costPerRecipient = round(($smsParts * $smsPartCost) + ($campaign->channel->requiresVoiceContent() ? $voiceCallCost : 0), 4);
+        $smsCostPerRecipient = round($smsParts * $smsPartCost, 4);
+        $costPerRecipient = round(
+            $smsCostPerRecipient
+            + ($campaign->channel->requiresVoiceContent() ? $voiceCallCost : 0)
+            + ($campaign->channel->requiresEmailContent() ? $emailRecipientCost : 0),
+            4,
+        );
 
         $spend = (float) $campaign->campaignContacts()->sum('cost');
 
         $campaign->campaignContacts()
             ->with('contact')
             ->whereIn('status', [CampaignContactStatus::Pending->value, CampaignContactStatus::Queued->value])
-            ->chunkById(200, function (Collection $rows) use ($campaign, $costPerRecipient, &$spend): void {
+            ->chunkById(200, function (Collection $rows) use ($campaign, $costPerRecipient, $smsCostPerRecipient, $emailRecipientCost, &$spend): void {
                 foreach ($rows as $row) {
-                    $this->dispatchTo($campaign, $row, $costPerRecipient, $spend);
+                    $this->dispatchTo($campaign, $row, $costPerRecipient, $smsCostPerRecipient, $emailRecipientCost, $spend);
                 }
             });
 
@@ -111,7 +125,7 @@ class CampaignDispatcher
     /**
      * Send the campaign to a single contact and record the outcome.
      */
-    protected function dispatchTo(Campaign $campaign, CampaignContact $row, float $costPerRecipient, float &$spend): void
+    protected function dispatchTo(Campaign $campaign, CampaignContact $row, float $costPerRecipient, float $smsCostPerRecipient, float $emailCostPerRecipient, float &$spend): void
     {
         $contact = $row->contact;
 
@@ -145,19 +159,18 @@ class CampaignDispatcher
             }
 
             $delivered = match ($channel) {
-                Channel::Sms => $this->sms->send(
-                    $contact->phone,
-                    $campaign->senderId->name ?? 'OMNICAST',
-                    (string) $campaign->sms_message,
-                ),
+                Channel::Sms => $this->sendSms($campaign, $row, $contact, $smsCostPerRecipient),
                 Channel::Voice => $this->callVoice($campaign, $row, $contact, $costPerRecipient),
+                Channel::Email => $this->sendEmail($campaign, $row, $contact, $emailCostPerRecipient),
                 default => false,
             };
 
             if (! $delivered) {
-                $failure = $channel === Channel::Voice
-                    ? 'The switch did not accept the call.'
-                    : 'The gateway rejected the message.';
+                $failure = match ($channel) {
+                    Channel::Voice => 'The switch did not accept the call.',
+                    Channel::Email => 'The mail server rejected the message.',
+                    default => 'The gateway rejected the message.',
+                };
                 break;
             }
         }
@@ -191,6 +204,95 @@ class CampaignDispatcher
             'failed_at' => $exhausted ? $now : null,
             'error_message' => $failure,
         ])->save();
+    }
+
+    /**
+     * Log the message, then ask the provider to deliver it.
+     *
+     * The row is written before the submission so a receipt that arrives faster
+     * than the provider response can still be matched to its message.
+     */
+    protected function sendSms(Campaign $campaign, CampaignContact $recipient, Contact $contact, float $cost): bool
+    {
+        $to = trim((string) $contact->phone);
+        $from = trim((string) ($campaign->senderId?->name ?? 'OMNICAST'));
+
+        if ($to === '' || $from === '') {
+            return false;
+        }
+
+        $body = (string) $campaign->sms_message;
+
+        $message = $this->smsTracker->start(
+            $campaign,
+            $recipient,
+            $this->sms->name(),
+            $from,
+            $to,
+            $body,
+            $this->segmenter->encodingFor($body),
+            $this->segmenter->segmentsFor($body),
+            $cost,
+        );
+
+        $result = $this->sms->send(new OutboundSms(
+            reference: $message->reference,
+            to: $to,
+            from: $from,
+            body: $body,
+            encoding: $message->encoding,
+            segments: $message->segments,
+        ));
+
+        $this->smsTracker->submitted($message, $result);
+
+        return $result->accepted;
+    }
+
+    /**
+     * Log the email, then ask the transport to deliver it.
+     *
+     * The row is written before the submission so a bounce that arrives faster
+     * than the transport response can still be matched to its message.
+     */
+    protected function sendEmail(Campaign $campaign, CampaignContact $recipient, Contact $contact, float $cost): bool
+    {
+        $to = trim((string) $contact->email);
+        $from = trim((string) ($campaign->senderId?->name ?? config('email.from.address')));
+        $fromName = trim((string) ($campaign->client?->name ?? config('email.from.name')));
+        $subject = trim((string) $campaign->email_subject);
+        $body = (string) $campaign->email_body;
+
+        if ($to === '' || $from === '' || $body === '') {
+            return false;
+        }
+
+        $message = $this->emailTracker->start(
+            $campaign,
+            $recipient,
+            $this->email->name(),
+            $from,
+            $fromName === '' ? null : $fromName,
+            $to,
+            $subject,
+            $body,
+            $campaign->email_format ?? EmailFormat::Html,
+            $cost,
+        );
+
+        $result = $this->email->send(new OutboundEmail(
+            reference: $message->reference,
+            to: $to,
+            from: $from,
+            subject: $subject,
+            body: $body,
+            format: $message->format,
+            fromName: $message->from_name,
+        ));
+
+        $this->emailTracker->submitted($message, $result);
+
+        return $result->accepted;
     }
 
     /**

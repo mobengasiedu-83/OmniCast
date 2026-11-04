@@ -32,6 +32,8 @@ class ContactEligibility
 
         return $query
             ->where('contacts.dnd', false)
+            ->whereNotNull($identifierColumn)
+            ->where($identifierColumn, '<>', '')
             ->whereNotExists(function ($suppressions) use ($channel, $identifierColumn): void {
                 $suppressions->selectRaw('1')->from('contact_suppressions as active_suppression')
                     ->whereIn('active_suppression.channel', [$channel, ContactSuppression::ALL_CHANNELS])
@@ -53,6 +55,10 @@ class ContactEligibility
     {
         if ($contact->dnd) {
             return ['eligible' => false, 'reason' => 'dnd', 'suppression_id' => null];
+        }
+
+        if (! $this->hasIdentifier($contact, $channel)) {
+            return ['eligible' => false, 'reason' => 'missing_address', 'suppression_id' => null];
         }
 
         $suppression = $this->suppressionFor($contact, $channel);
@@ -112,6 +118,7 @@ class ContactEligibility
                     : ($suppressions->get($channel.':'.$key) ?? $suppressions->get(ContactSuppression::ALL_CHANNELS.':'.$key));
                 $reason = match (true) {
                     (bool) $contact->dnd => 'dnd',
+                    ! $this->hasIdentifier($contact, $channel) => 'missing_address',
                     $suppression instanceof ContactSuppression => 'suppressed',
                     default => null,
                 };
@@ -125,6 +132,16 @@ class ContactEligibility
         }
 
         return $snapshots;
+    }
+
+    /**
+     * Whether the contact has an identifier the channel can deliver to.
+     */
+    protected function hasIdentifier(Contact $contact, string $channel): bool
+    {
+        $identifier = $channel === 'email' ? $contact->email : $contact->phone;
+
+        return $identifier !== null && trim((string) $identifier) !== '';
     }
 
     /**

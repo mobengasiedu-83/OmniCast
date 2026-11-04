@@ -20,7 +20,8 @@ class CampaignCostEstimator
      * Estimate the cost of broadcasting to the given number of recipients.
      *
      * Multi-channel campaigns are billed for both the SMS and the voice leg. Voice is
-     * estimated as a single billed call per recipient, matching our per-call rates.
+     * estimated as a single billed call per recipient, matching our per-call rates,
+     * and an email broadcast is billed once per recipient.
      *
      * @return array{
      *     recipients: int,
@@ -28,6 +29,7 @@ class CampaignCostEstimator
      *     encoding: SmsEncoding|null,
      *     unit_price: float|null,
      *     voice_unit_price: float|null,
+     *     email_unit_price: float|null,
      *     estimated_cost: float
      * }
      */
@@ -61,8 +63,13 @@ class CampaignCostEstimator
             ? $this->rates->unitPrice($client, Channel::Voice, $destination)
             : null;
 
+        $emailUnitPrice = $channel->requiresEmailContent()
+            ? $this->rates->unitPrice($client, Channel::Email, $destination)
+            : null;
+
         $smsCost = $smsUnitPrice === null ? 0.0 : $smsUnitPrice * $parts * $recipients;
         $voiceCost = $voiceUnitPrice === null ? 0.0 : $voiceUnitPrice * $recipients;
+        $emailCost = $emailUnitPrice === null ? 0.0 : $emailUnitPrice * $recipients;
 
         return [
             'recipients' => $recipients,
@@ -70,7 +77,8 @@ class CampaignCostEstimator
             'encoding' => $encoding,
             'unit_price' => $smsUnitPrice,
             'voice_unit_price' => $voiceUnitPrice,
-            'estimated_cost' => round($smsCost + $voiceCost, 2),
+            'email_unit_price' => $emailUnitPrice,
+            'estimated_cost' => round($smsCost + $voiceCost + $emailCost, 2),
         ];
     }
 
@@ -88,5 +96,13 @@ class CampaignCostEstimator
     public function voiceCallCost(Client $client, string $destination = 'GH'): float
     {
         return $this->rates->unitPrice($client, Channel::Voice, $destination) ?? 0.0;
+    }
+
+    /**
+     * The cost of a single email, used for per-recipient billing during dispatch.
+     */
+    public function emailRecipientCost(Client $client, string $destination = 'GH'): float
+    {
+        return $this->rates->unitPrice($client, Channel::Email, $destination) ?? 0.0;
     }
 }

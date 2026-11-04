@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Contracts\EmailGateway;
 use App\Contracts\SmsGateway;
 use App\Contracts\VoiceGateway;
 use App\Models\User;
 use App\Policies\RolePolicy;
-use App\Services\LogSmsGateway;
+use App\Services\Email\EmailGatewayManager;
 use App\Services\PlatformConfiguration;
+use App\Services\Sms\SmsGatewayManager;
 use App\Services\Voice\AmiTransport;
 use App\Services\Voice\StreamAmiTransport;
 use App\Services\Voice\VoiceGatewayManager;
@@ -32,7 +34,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(SmsGateway::class, LogSmsGateway::class);
+        $this->app->bind(
+            SmsGateway::class,
+            fn (): SmsGateway => $this->app->make(SmsGatewayManager::class)->driver(),
+        );
+        $this->app->bind(
+            EmailGateway::class,
+            fn (): EmailGateway => $this->app->make(EmailGatewayManager::class)->driver(),
+        );
         $this->app->bind(AmiTransport::class, StreamAmiTransport::class);
         $this->app->bind(
             VoiceGateway::class,

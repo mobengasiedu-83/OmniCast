@@ -70,6 +70,29 @@ return [
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
         ],
 
+        /*
+        |----------------------------------------------------------------------
+        | Email broadcast transport
+        |----------------------------------------------------------------------
+        |
+        | Campaign email is submitted through this mailer, kept separate from the
+        | default one so a bulk broadcast can point at a different mail server
+        | than transactional mail. A relay that needs no authentication and no
+        | TLS leaves the username, password and scheme empty.
+        |
+        */
+
+        'broadcast' => [
+            'transport' => 'smtp',
+            'scheme' => env('MAIL_BROADCAST_SCHEME'),
+            'host' => env('MAIL_BROADCAST_HOST', '127.0.0.1'),
+            'port' => (int) env('MAIL_BROADCAST_PORT', 2525),
+            'username' => env('MAIL_BROADCAST_USERNAME'),
+            'password' => env('MAIL_BROADCAST_PASSWORD'),
+            'timeout' => (int) env('MAIL_BROADCAST_TIMEOUT', 15),
+            'local_domain' => env('MAIL_BROADCAST_EHLO_DOMAIN', env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST))),
+        ],
+
         'log' => [
             'transport' => 'log',
             'channel' => env('MAIL_LOG_CHANNEL'),

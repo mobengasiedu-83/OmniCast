@@ -9,8 +9,12 @@ use App\Enums\Permission;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
+use App\Models\EmailMessage;
+use App\Models\SmsMessage;
 use App\Models\User;
 use App\Models\VoiceCall;
+use App\Services\EmailMessageReport;
+use App\Services\SmsMessageReport;
 use App\Services\VoiceCallReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -165,6 +169,98 @@ class ReportController extends Controller
             'campaigns' => Campaign::query()
                 ->forUser($user)
                 ->whereIn('channel', [Channel::Voice->value, Channel::MultiChannel->value])
+                ->latest('id')
+                ->limit(100)
+                ->get(['id', 'reference', 'name'])
+                ->map(fn (Campaign $campaign): array => [
+                    'id' => $campaign->id,
+                    'name' => $campaign->name,
+                    'reference' => $campaign->reference,
+                ])
+                ->all(),
+            'clients' => $this->selectableClients($request),
+        ]);
+    }
+
+    /**
+     * Show the SMS delivery report for a date range.
+     *
+     * Delivery rate and the reason a message failed come from the receipts the
+     * network posts through the signed webhook, so the report reflects what the
+     * carrier confirmed rather than what the dispatcher handed it.
+     */
+    public function sms(Request $request, SmsMessageReport $reports): Response
+    {
+        abort_unless($request->user()->can(Permission::ViewReports->value), 403);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $to = Carbon::parse($request->string('to')->toString() ?: null)->endOfDay();
+        $from = Carbon::parse($request->string('from')->toString() ?: null)->startOfDay();
+        $campaignId = $request->integer('campaign');
+
+        $messages = SmsMessage::query()
+            ->forUser($user)
+            ->whereBetween('created_at', [$from, $to])
+            ->when($campaignId > 0, fn (Builder $query) => $query->where('campaign_id', $campaignId));
+
+        return Inertia::render('reports/sms', [
+            'filters' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'campaign' => $campaignId > 0 ? $campaignId : null,
+            ],
+            'report' => $reports->forQuery($messages, 25),
+            'campaigns' => Campaign::query()
+                ->forUser($user)
+                ->whereIn('channel', [Channel::Sms->value, Channel::MultiChannel->value])
+                ->latest('id')
+                ->limit(100)
+                ->get(['id', 'reference', 'name'])
+                ->map(fn (Campaign $campaign): array => [
+                    'id' => $campaign->id,
+                    'name' => $campaign->name,
+                    'reference' => $campaign->reference,
+                ])
+                ->all(),
+            'clients' => $this->selectableClients($request),
+        ]);
+    }
+
+    /**
+     * Show the email delivery report for a date range.
+     *
+     * SMTP reports nothing on its own, so the delivery rate, bounces and
+     * complaints come from the feedback the mail server posts through the signed
+     * webhook.
+     */
+    public function email(Request $request, EmailMessageReport $reports): Response
+    {
+        abort_unless($request->user()->can(Permission::ViewReports->value), 403);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $to = Carbon::parse($request->string('to')->toString() ?: null)->endOfDay();
+        $from = Carbon::parse($request->string('from')->toString() ?: null)->startOfDay();
+        $campaignId = $request->integer('campaign');
+
+        $messages = EmailMessage::query()
+            ->forUser($user)
+            ->whereBetween('created_at', [$from, $to])
+            ->when($campaignId > 0, fn (Builder $query) => $query->where('campaign_id', $campaignId));
+
+        return Inertia::render('reports/email', [
+            'filters' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'campaign' => $campaignId > 0 ? $campaignId : null,
+            ],
+            'report' => $reports->forQuery($messages, 25),
+            'campaigns' => Campaign::query()
+                ->forUser($user)
+                ->where('channel', Channel::Email->value)
                 ->latest('id')
                 ->limit(100)
                 ->get(['id', 'reference', 'name'])

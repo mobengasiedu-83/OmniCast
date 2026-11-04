@@ -50,6 +50,7 @@ type PageProps = {
 const reasonLabels: Record<string, string> = {
     dnd: 'Number is on the DND list',
     suppressed: 'Number or address is on the DND registry',
+    missing_address: 'No address on file for this channel',
 };
 
 function moment(value: string | null): string {

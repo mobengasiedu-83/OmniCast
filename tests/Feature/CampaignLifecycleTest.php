@@ -17,6 +17,8 @@ use App\Models\ContactSuppression;
 use App\Models\SenderId;
 use App\Services\CampaignDispatcher;
 use App\Services\CampaignService;
+use App\Services\Sms\OutboundSms;
+use App\Services\Sms\SmsDispatchResult;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
 
@@ -234,9 +236,14 @@ it('retries failed recipients until the retry budget is spent', function (): voi
 
     $this->app->bind(SmsGateway::class, fn (): SmsGateway => new class implements SmsGateway
     {
-        public function send(string $to, string $from, string $body): bool
+        public function send(OutboundSms $message): SmsDispatchResult
         {
-            return false;
+            return SmsDispatchResult::rejected('The gateway rejected the message.');
+        }
+
+        public function name(): string
+        {
+            return 'fake';
         }
     });
 
