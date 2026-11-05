@@ -9,6 +9,7 @@ import {
     ShieldCheck,
     UserRound,
 } from 'lucide-react';
+import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -70,6 +71,23 @@ export default function ContactsShow({
     dndRequestUrl,
 }: PageProps) {
     const channels = Object.keys(eligibility);
+    const confirm = useConfirm();
+
+    const remove = async (): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Delete ${contact.name}?`,
+            description:
+                'The DND registry keeps the number blocked if it is imported again.',
+            confirmLabel: 'Delete contact',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        router.delete(urls.contacts.destroy(contact.id));
+    };
 
     const toggleDnd = (): void => {
         router.post(
@@ -142,7 +160,7 @@ export default function ContactsShow({
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                    <UserRound className="text-brand size-4" />
+                                    <UserRound className="size-4 text-brand" />
                                     Profile
                                 </CardTitle>
                                 <CardDescription>
@@ -154,7 +172,7 @@ export default function ContactsShow({
                             <CardContent className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                                 {profile.map((field) => (
                                     <div key={field.label} className="min-w-0">
-                                        <p className="text-muted-foreground text-xs">
+                                        <p className="text-xs text-muted-foreground">
                                             {field.label}
                                         </p>
                                         <p className="truncate text-sm font-medium">
@@ -165,11 +183,10 @@ export default function ContactsShow({
                             </CardContent>
                         </Card>
 
-
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                    <ShieldCheck className="text-brand size-4" />
+                                    <ShieldCheck className="size-4 text-brand" />
                                     Channel eligibility
                                 </CardTitle>
                                 <CardDescription>
@@ -192,12 +209,12 @@ export default function ContactsShow({
                                             </span>
 
                                             {snapshot?.eligible ? (
-                                                <span className="text-success flex items-center gap-1.5 text-xs font-medium">
+                                                <span className="flex items-center gap-1.5 text-xs font-medium text-success">
                                                     <CheckCircle2 className="size-3.5" />
                                                     Eligible
                                                 </span>
                                             ) : (
-                                                <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                                                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                                     <Ban className="size-3.5" />
                                                     {reasonLabels[
                                                         snapshot?.reason ?? ''
@@ -212,11 +229,10 @@ export default function ContactsShow({
                     </div>
 
                     <div className="flex flex-col gap-4">
-
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                    <Ban className="text-brand size-4" />
+                                    <Ban className="size-4 text-brand" />
                                     Do not disturb
                                 </CardTitle>
                                 <CardDescription>
@@ -227,7 +243,7 @@ export default function ContactsShow({
 
                             <CardContent className="flex flex-col gap-3">
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="text-muted-foreground text-xs">
+                                    <span className="text-xs text-muted-foreground">
                                         Status
                                     </span>
                                     {contact.dnd ? (
@@ -243,7 +259,7 @@ export default function ContactsShow({
 
                                 {contact.dnd_at !== null && (
                                     <div className="flex items-center justify-between gap-2">
-                                        <span className="text-muted-foreground text-xs">
+                                        <span className="text-xs text-muted-foreground">
                                             Since
                                         </span>
                                         <span className="text-sm">
@@ -270,8 +286,6 @@ export default function ContactsShow({
                             </CardContent>
                         </Card>
 
-
-
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-sm font-medium">
@@ -281,7 +295,7 @@ export default function ContactsShow({
 
                             <CardContent className="flex flex-col gap-3 text-sm">
                                 <div>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Lists
                                     </p>
                                     <div className="mt-1 flex flex-wrap gap-1">
@@ -303,7 +317,7 @@ export default function ContactsShow({
                                 </div>
 
                                 <div>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Tags
                                     </p>
                                     <div className="mt-1 flex flex-wrap gap-1">
@@ -327,19 +341,7 @@ export default function ContactsShow({
                                 {can.delete && (
                                     <Button
                                         variant="destructive"
-                                        onClick={() => {
-                                            if (
-                                                window.confirm(
-                                                    `Delete ${contact.name}? The DND registry keeps the number blocked if it is imported again.`,
-                                                )
-                                            ) {
-                                                router.delete(
-                                                    urls.contacts.destroy(
-                                                        contact.id,
-                                                    ),
-                                                );
-                                            }
-                                        }}
+                                        onClick={() => void remove()}
                                     >
                                         Delete contact
                                     </Button>
@@ -361,7 +363,7 @@ export default function ContactsShow({
                                 </CardHeader>
 
                                 <CardContent className="flex flex-col gap-2">
-                                    <p className="text-muted-foreground bg-muted/50 max-h-20 overflow-y-auto rounded-md p-2 font-mono text-xs break-all">
+                                    <p className="max-h-20 overflow-y-auto rounded-md bg-muted/50 p-2 font-mono text-xs break-all text-muted-foreground">
                                         {dndRequestUrl}
                                     </p>
                                     <Button
@@ -380,12 +382,11 @@ export default function ContactsShow({
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                            <Megaphone className="text-brand size-4" />
+                            <Megaphone className="size-4 text-brand" />
                             Campaign history
                         </CardTitle>
                         <CardDescription>
-                            The last 10 campaigns this contact was included
-                            in.
+                            The last 10 campaigns this contact was included in.
                         </CardDescription>
                     </CardHeader>
 
@@ -425,15 +426,15 @@ export default function ContactsShow({
                                                     href={urls.campaigns.show(
                                                         campaign.id,
                                                     )}
-                                                    className="hover:text-brand font-medium hover:underline"
+                                                    className="font-medium hover:text-brand hover:underline"
                                                 >
                                                     {campaign.name}
                                                 </Link>
-                                                <span className="text-muted-foreground block font-mono text-xs">
+                                                <span className="block font-mono text-xs text-muted-foreground">
                                                     {campaign.reference}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground text-xs uppercase">
+                                            <TableCell className="text-xs text-muted-foreground uppercase">
                                                 {campaign.channel}
                                             </TableCell>
                                             <TableCell className="pr-6">
@@ -468,4 +469,3 @@ ContactsShow.layout = {
         },
     ],
 };
-

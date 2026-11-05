@@ -33,9 +33,9 @@ class Wallet extends Model
     protected function casts(): array
     {
         return [
-            'balance' => 'decimal:2',
-            'reserved_balance' => 'decimal:2',
-            'low_balance_threshold' => 'decimal:2',
+            'balance' => 'decimal:4',
+            'reserved_balance' => 'decimal:4',
+            'low_balance_threshold' => 'decimal:4',
         ];
     }
 
@@ -68,7 +68,7 @@ class Wallet extends Model
      */
     public function availableBalance(): float
     {
-        return round((float) $this->balance - (float) $this->reserved_balance, 2);
+        return round((float) $this->balance - (float) $this->reserved_balance, 4);
     }
 
     /**
@@ -76,7 +76,7 @@ class Wallet extends Model
      */
     public function canCover(float $amount): bool
     {
-        return $this->availableBalance() >= round($amount, 2);
+        return $this->availableBalance() >= round($amount, 4);
     }
 
     /**

@@ -68,7 +68,8 @@ class TxtConnectSmsGateway implements SmsGateway
             return SmsDispatchResult::rejected('The TxtConnect gateway rejected the message.');
         }
 
-        $providerMessageId = $response->json('data.message_id')
+        $providerMessageId = $response->json('messageId')
+            ?? $response->json('data.message_id')
             ?? $response->json('data.uid')
             ?? $response->json('data.id');
 

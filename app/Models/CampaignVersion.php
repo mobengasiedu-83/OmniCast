@@ -46,7 +46,7 @@ class CampaignVersion extends Model
             'status' => CampaignStatus::class,
             'snapshot' => 'array',
             'audience_size' => 'integer',
-            'estimated_cost' => 'decimal:2',
+            'estimated_cost' => 'decimal:4',
             'frozen_at' => 'datetime',
         ];
     }

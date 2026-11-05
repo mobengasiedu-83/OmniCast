@@ -11,6 +11,7 @@ import {
     X,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import Field from '@/components/form-field';
 import InputError from '@/components/input-error';
@@ -94,6 +95,7 @@ export default function AdminInvitationsIndex({
 }: PageProps) {
     const [search, setSearch] = useState(filters.search);
     const [inviteOpen, setInviteOpen] = useState(false);
+    const confirm = useConfirm();
 
     const inviteForm = useForm<InviteFormValues>({
         email: '',
@@ -149,8 +151,15 @@ export default function AdminInvitationsIndex({
         );
     };
 
-    const remove = (invitation: InvitationRow): void => {
-        if (!window.confirm(`Delete the invitation for ${invitation.email}?`)) {
+    const remove = async (invitation: InvitationRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: 'Delete this invitation?',
+            description: `The invite link sent to ${invitation.email} stops working straight away.`,
+            confirmLabel: 'Delete invitation',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -210,7 +219,7 @@ export default function AdminInvitationsIndex({
                             className="flex flex-1 items-center gap-2 sm:flex-none"
                         >
                             <div className="relative w-full sm:w-72">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(event) =>
@@ -234,7 +243,9 @@ export default function AdminInvitationsIndex({
                         <Select
                             value={filters.status || 'all'}
                             onValueChange={(value) =>
-                                apply({ status: value === 'all' ? null : value })
+                                apply({
+                                    status: value === 'all' ? null : value,
+                                })
                             }
                         >
                             <SelectTrigger className="w-44">
@@ -270,7 +281,6 @@ export default function AdminInvitationsIndex({
                         )}
                     </CardContent>
                 </Card>
-
 
                 <Card className="overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/60 py-3">
@@ -324,7 +334,7 @@ export default function AdminInvitationsIndex({
                                                     {invitation.name ??
                                                         invitation.email}
                                                 </p>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {invitation.email}
                                                     {invitation.inviter
                                                         ? ` · invited by ${invitation.inviter}`
@@ -341,7 +351,6 @@ export default function AdminInvitationsIndex({
                                                     'Platform staff'}
                                             </TableCell>
 
-
                                             <TableCell>
                                                 <StatusBadge
                                                     status={invitation.status}
@@ -351,7 +360,7 @@ export default function AdminInvitationsIndex({
                                                 />
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {formatDate(
                                                     invitation.expires_at,
                                                 )}
@@ -393,7 +402,7 @@ export default function AdminInvitationsIndex({
                                                             size="sm"
                                                             className="text-destructive hover:text-destructive"
                                                             onClick={() =>
-                                                                remove(
+                                                                void remove(
                                                                     invitation,
                                                                 )
                                                             }
@@ -413,7 +422,6 @@ export default function AdminInvitationsIndex({
                 </Card>
 
                 <Pagination paginator={invitations} noun="invitations" />
-
 
                 <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
                     <DialogContent className="sm:max-w-lg">
@@ -493,7 +501,9 @@ export default function AdminInvitationsIndex({
                                 <div className="grid gap-2">
                                     <Label>Organisation</Label>
                                     <Select
-                                        value={inviteForm.data.client_id || 'none'}
+                                        value={
+                                            inviteForm.data.client_id || 'none'
+                                        }
                                         onValueChange={(value) =>
                                             inviteForm.setData(
                                                 'client_id',
@@ -523,7 +533,6 @@ export default function AdminInvitationsIndex({
                                     />
                                 </div>
                             </div>
-
 
                             <DialogFooter className="gap-2">
                                 <Button
@@ -560,4 +569,3 @@ AdminInvitationsIndex.layout = {
         },
     ],
 };
-

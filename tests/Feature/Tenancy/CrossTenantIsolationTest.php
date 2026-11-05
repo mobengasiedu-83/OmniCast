@@ -57,10 +57,13 @@ it('hides another tenant campaign from the directory and the detail page', funct
 });
 
 it('refuses to update or delete another tenant campaign', function (): void {
+    $senderA = SenderId::factory()->for($this->clientA)->sms()->approved()->create();
+
     $this->actingAs($this->userA)
         ->put(route('campaigns.update', $this->campaignB), [
             'name' => 'Hijacked',
             'channel' => 'sms',
+            'sender_id' => $senderA->id,
             'sms_message' => 'Hijacked body.',
             'schedule_type' => 'now',
         ])

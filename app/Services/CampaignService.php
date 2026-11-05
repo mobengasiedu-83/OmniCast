@@ -4,13 +4,16 @@ namespace App\Services;
 
 use App\Enums\CampaignAudioStatus;
 use App\Enums\CampaignStatus;
+use App\Enums\Channel;
 use App\Enums\ReservationStatus;
+use App\Exceptions\InsufficientWalletBalance;
 use App\Jobs\DispatchCampaignJob;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\User;
 use App\Services\Delivery\QueueTopology;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -28,6 +31,7 @@ class CampaignService
         protected CampaignVersionRecorder $versions,
         protected CampaignReadiness $readiness,
         protected QueueTopology $queues,
+        protected RateResolver $rates,
     ) {}
 
     /**
@@ -143,8 +147,9 @@ class CampaignService
             $this->audience->build($campaign);
             $this->refreshEstimate($campaign);
             $this->quota->assertAvailable($campaign);
+            $this->warnAboutUnpricedServices($campaign);
 
-            $this->wallet->reserve($campaign, (float) $campaign->estimated_cost, $user);
+            $this->holdFunds($campaign, (float) $campaign->estimated_cost, $user);
 
             $campaign->forceFill([
                 'status' => CampaignStatus::PendingApproval,
@@ -284,6 +289,8 @@ class CampaignService
             return $campaign;
         });
 
+        $this->holdFunds($campaign, $this->outstandingEstimate($campaign));
+
         $job = DispatchCampaignJob::dispatch($campaign->id)
             ->onQueue($this->queues->queueForCampaign($campaign));
 
@@ -306,6 +313,56 @@ class CampaignService
         $this->releaseReservation($campaign, 'Funds released after campaign cancellation');
 
         return $campaign;
+    }
+
+    /**
+     * Hold the money the campaign is about to spend.
+     *
+     * The deduction starts here: the wallet keeps the estimate held until the
+     * dispatcher debits each delivered unit. A tenant who cannot cover the
+     * estimate is told so instead of receiving a failed campaign.
+     */
+    private function holdFunds(Campaign $campaign, float $amount, ?User $user = null): void
+    {
+        try {
+            $this->wallet->startBilling($campaign, $amount, $user);
+        } catch (InsufficientWalletBalance) {
+            throw ValidationException::withMessages([
+                'campaign' => 'The wallet balance cannot cover the estimated GHS '.number_format($amount, 2).'. Top up the wallet and try again.',
+            ]);
+        }
+    }
+
+    /**
+     * Tell the platform team when a service has no price to bill it at.
+     *
+     * The price list lives on the client card and, failing that, on the platform
+     * default cards, so an unpriced channel means nobody configured a rate for
+     * it and the campaign would deliver for free.
+     */
+    private function warnAboutUnpricedServices(Campaign $campaign): void
+    {
+        $unpriced = $this->rates->unpriced($campaign->client, $campaign->channel->deliveryChannels());
+
+        if ($unpriced === []) {
+            return;
+        }
+
+        Log::warning('Campaign was submitted without a billing rate for '.implode(', ', array_map(
+            fn (Channel $channel): string => $channel->label(),
+            $unpriced,
+        )).'.', [
+            'campaign' => $campaign->reference,
+            'client_id' => $campaign->client_id,
+        ]);
+    }
+
+    /**
+     * What the campaign still has to be billed, less what it has already spent.
+     */
+    private function outstandingEstimate(Campaign $campaign): float
+    {
+        return round(max((float) $campaign->estimated_cost - $this->wallet->chargedFor($campaign), 0.0), WalletService::PRECISION);
     }
 
     /**

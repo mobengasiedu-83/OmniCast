@@ -5,6 +5,8 @@ namespace App\Http\Requests\Campaign;
 use App\Enums\Channel;
 use App\Enums\EmailFormat;
 use App\Enums\Permission;
+use App\Enums\SenderIdChannel;
+use App\Enums\SenderIdStatus;
 use App\Models\Client;
 use App\Services\PlatformConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
@@ -43,6 +45,8 @@ class CampaignRequest extends FormRequest
         $requiresSms = $channel?->requiresSmsContent() ?? false;
         $requiresVoice = ($channel?->requiresVoiceContent() ?? false) && blank($this->input('voice_recording_path'));
         $requiresEmail = $channel?->requiresEmailContent() ?? false;
+        $senderChannel = $requiresEmail ? SenderIdChannel::Email : SenderIdChannel::Sms;
+        $requiresApprovedSender = $requiresSms || $requiresEmail;
 
         return [
             'client_id' => [Rule::requiredIf($this->user()?->isPlatformUser() ?? false), 'integer', Rule::exists('clients', 'id')],
@@ -50,7 +54,19 @@ class CampaignRequest extends FormRequest
             'channel' => ['required', Rule::enum(Channel::class)],
             'contact_list_id' => ['nullable', 'integer', Rule::exists('contact_lists', 'id')->where('client_id', $clientId)],
             'contact_segment_id' => ['nullable', 'integer', Rule::exists('contact_segments', 'id')->where('client_id', $clientId)],
-            'sender_id' => ['nullable', 'integer', Rule::exists('sender_ids', 'id')->where('client_id', $clientId)],
+            'sender_id' => [
+                Rule::requiredIf($requiresSms),
+                'nullable',
+                'integer',
+                Rule::exists('sender_ids', 'id')->where(function ($query) use ($clientId, $requiresApprovedSender, $senderChannel): void {
+                    $query->where('client_id', $clientId)->whereNull('deleted_at');
+
+                    if ($requiresApprovedSender) {
+                        $query->where('channel', $senderChannel->value)
+                            ->where('status', SenderIdStatus::Approved->value);
+                    }
+                }),
+            ],
             'caller_id' => ['nullable', 'integer', Rule::exists('caller_ids', 'id')->where('client_id', $clientId)],
             'sms_message' => [Rule::requiredIf($requiresSms), 'nullable', 'string', 'max:1600'],
             'email_subject' => [Rule::requiredIf($requiresEmail), 'nullable', 'string', 'max:255'],
@@ -72,6 +88,19 @@ class CampaignRequest extends FormRequest
             'max_retries' => ['nullable', 'integer', 'min:1', 'max:10'],
             'retry_delay_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
             'notes' => ['nullable', 'string', 'max:2000'],
+        ];
+    }
+
+    /**
+     * Say plainly which sender ID an operator has to pick.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'sender_id.required' => 'Select an approved SMS sender ID — a campaign is never sent under a platform default.',
+            'sender_id.exists' => 'Choose a sender ID that is approved for this channel and issued to this client.',
         ];
     }
 

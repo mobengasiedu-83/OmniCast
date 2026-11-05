@@ -74,7 +74,7 @@ class ApprovalController extends Controller
                 'client:id,name',
                 'contactList:id,name',
                 'contactSegment:id,name',
-                'senderId:id,name,channel,status',
+                'senderId:id,client_id,name,channel,status',
             ])
             ->when($channel !== '', fn (Builder $builder) => $builder->where('channel', $channel));
 
@@ -118,7 +118,7 @@ class ApprovalController extends Controller
             ->awaitingApproval()
             ->awaitingAudioReview()
             ->forUser($user)
-            ->with(['client:id,name', 'senderId:id,name,channel,status']);
+            ->with(['client:id,name', 'senderId:id,client_id,name,channel,status']);
 
         return [
             'total' => (clone $query)->count(),

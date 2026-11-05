@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     CheckCircle2,
     Mail,
@@ -7,6 +7,7 @@ import {
     PhoneCall,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useConfirm, type ConfirmOptions } from '@/components/confirm-dialog';
 import PageHeader from '@/components/page-header';
 import Pagination from '@/components/pagination';
 import StatusBadge from '@/components/status-badge';
@@ -103,13 +104,34 @@ export default function CampaignsShow({
         'campaign',
     );
     const [reason, setReason] = useState('');
+    const { errors } = usePage<{ errors: Record<string, string> }>().props;
+    const confirm = useConfirm();
 
-    const act = (url: string, confirmation?: string): void => {
-        if (confirmation && !window.confirm(confirmation)) {
+    const act = async (
+        url: string,
+        confirmation?: ConfirmOptions,
+    ): Promise<void> => {
+        if (confirmation && !(await confirm(confirmation))) {
             return;
         }
 
         router.post(url, {}, { preserveScroll: true });
+    };
+
+    const remove = async (): Promise<void> => {
+        const confirmed = await confirm({
+            title: 'Delete this draft campaign?',
+            description:
+                'The campaign leaves the workspace and its audience snapshot is dropped.',
+            confirmLabel: 'Delete campaign',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        router.delete(urls.campaigns.destroy(campaign.id));
     };
 
     const openReject = (kind: 'campaign' | 'audio'): void => {
@@ -173,125 +195,160 @@ export default function CampaignsShow({
                     description={`${campaign.reference} · ${campaign.channel_label} · ${campaign.audience}`}
                     actions={
                         <div className="flex flex-wrap items-center gap-2">
-                        {abilities.duplicate && (
-                            <Button
-                                variant="outline"
-                                onClick={() =>
-                                    act(
-                                        urls.campaigns.duplicate(campaign.id),
-                                        'Duplicate this campaign into a new draft?',
-                                    )
-                                }
-                            >
-                                Duplicate
-                            </Button>
-                        )}
-                        {abilities.update && (
-                            <Button variant="outline" asChild>
-                                <Link href={urls.campaigns.edit(campaign.id)}>
-                                    Edit
-                                </Link>
-                            </Button>
-                        )}
-                        {abilities.submit && (
-                            <Button
-                                onClick={() =>
-                                    act(
-                                        urls.campaigns.submit(campaign.id),
-                                        review.requires_campaign_approval
-                                            ? 'Submit this campaign for approval? The estimated cost will be reserved.'
-                                            : 'Submit this campaign? The estimated cost will be reserved and it launches once every asset is approved.',
-                                    )
-                                }
-                            >
-                                {review.requires_campaign_approval
-                                    ? 'Submit for approval'
-                                    : 'Submit campaign'}
-                            </Button>
-                        )}
-                        {abilities.approve && (
-                            <>
-                                {review.requires_campaign_approval && (
-                                    <Button
-                                        onClick={() =>
-                                            act(urls.campaigns.approve(campaign.id))
-                                        }
-                                    >
-                                        Approve
-                                    </Button>
-                                )}
-                                <Button
-                                    variant="outline"
-                                    onClick={() => openReject('campaign')}
-                                >
-                                    Reject
-                                </Button>
-                            </>
-                        )}
-                        {abilities.review_audio && (
-                            <>
+                            {abilities.duplicate && (
                                 <Button
                                     variant="outline"
                                     onClick={() =>
-                                        act(
-                                            urls.campaigns.approveAudio(campaign.id),
-                                            'Approve the voice audio for this campaign?',
+                                        void act(
+                                            urls.campaigns.duplicate(
+                                                campaign.id,
+                                            ),
+                                            {
+                                                title: 'Duplicate this campaign?',
+                                                description:
+                                                    'A new draft is created with the same audience and copy so you can change it before sending.',
+                                                confirmLabel:
+                                                    'Duplicate campaign',
+                                            },
                                         )
                                     }
                                 >
-                                    Approve audio
+                                    Duplicate
                                 </Button>
+                            )}
+                            {abilities.update && (
+                                <Button variant="outline" asChild>
+                                    <Link
+                                        href={urls.campaigns.edit(campaign.id)}
+                                    >
+                                        Edit
+                                    </Link>
+                                </Button>
+                            )}
+                            {abilities.submit && (
+                                <Button
+                                    onClick={() =>
+                                        void act(
+                                            urls.campaigns.submit(campaign.id),
+                                            review.requires_campaign_approval
+                                                ? {
+                                                      title: 'Submit this campaign for approval?',
+                                                      description:
+                                                          'The estimated cost is reserved now and stays held until a reviewer approves it.',
+                                                      confirmLabel:
+                                                          'Submit for approval',
+                                                  }
+                                                : {
+                                                      title: 'Submit this campaign?',
+                                                      description:
+                                                          'The estimated cost is reserved now and delivery starts once every asset is approved.',
+                                                      confirmLabel:
+                                                          'Submit campaign',
+                                                  },
+                                        )
+                                    }
+                                >
+                                    {review.requires_campaign_approval
+                                        ? 'Submit for approval'
+                                        : 'Submit campaign'}
+                                </Button>
+                            )}
+                            {abilities.approve && (
+                                <>
+                                    {review.requires_campaign_approval && (
+                                        <Button
+                                            onClick={() =>
+                                                void act(
+                                                    urls.campaigns.approve(
+                                                        campaign.id,
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            Approve
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => openReject('campaign')}
+                                    >
+                                        Reject
+                                    </Button>
+                                </>
+                            )}
+                            {abilities.review_audio && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            void act(
+                                                urls.campaigns.approveAudio(
+                                                    campaign.id,
+                                                ),
+                                                {
+                                                    title: 'Approve the voice audio?',
+                                                    description:
+                                                        'Voice delivery unblocks as soon as this audio is approved.',
+                                                    confirmLabel:
+                                                        'Approve audio',
+                                                },
+                                            )
+                                        }
+                                    >
+                                        Approve audio
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => openReject('audio')}
+                                    >
+                                        Reject audio
+                                    </Button>
+                                </>
+                            )}
+                            {abilities.launch && (
+                                <Button
+                                    onClick={() =>
+                                        void act(
+                                            urls.campaigns.launch(campaign.id),
+                                            {
+                                                title: 'Launch this campaign now?',
+                                                description:
+                                                    'Delivery starts immediately and each message sent is charged to the wallet.',
+                                                confirmLabel: 'Launch campaign',
+                                            },
+                                        )
+                                    }
+                                >
+                                    Launch
+                                </Button>
+                            )}
+                            {abilities.cancel && (
                                 <Button
                                     variant="outline"
-                                    onClick={() => openReject('audio')}
-                                >
-                                    Reject audio
-                                </Button>
-                            </>
-                        )}
-                        {abilities.launch && (
-                            <Button
-                                onClick={() =>
-                                    act(
-                                        urls.campaigns.launch(campaign.id),
-                                        'Launch this campaign now?',
-                                    )
-                                }
-                            >
-                                Launch
-                            </Button>
-                        )}
-                        {abilities.cancel && (
-                            <Button
-                                variant="outline"
-                                onClick={() =>
-                                    act(
-                                        urls.campaigns.cancel(campaign.id),
-                                        'Cancel this campaign and release its held funds?',
-                                    )
-                                }
-                            >
-                                Cancel
-                            </Button>
-                        )}
-                        {abilities.delete && (
-                            <Button
-                                variant="destructive"
-                                onClick={() => {
-                                    if (
-                                        window.confirm(
-                                            'Delete this draft campaign?',
+                                    onClick={() =>
+                                        void act(
+                                            urls.campaigns.cancel(campaign.id),
+                                            {
+                                                title: 'Cancel this campaign?',
+                                                description:
+                                                    'Held funds are released back to the wallet and nothing is sent.',
+                                                confirmLabel: 'Cancel campaign',
+                                                tone: 'danger',
+                                            },
                                         )
-                                    ) {
-                                        router.delete(
-                                            urls.campaigns.destroy(campaign.id),
-                                        );
                                     }
-                                }}
-                            >
-                                Delete
-                            </Button>
-                        )}
+                                >
+                                    Cancel
+                                </Button>
+                            )}
+                            {abilities.delete && (
+                                <Button
+                                    variant="destructive"
+                                    onClick={() => void remove()}
+                                >
+                                    Delete
+                                </Button>
+                            )}
                         </div>
                     }
                 />
@@ -304,7 +361,7 @@ export default function CampaignsShow({
                             style={{ animationDelay: `${index * 60}ms` }}
                         >
                             <CardContent className="space-y-1 px-4">
-                                <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                     {metric.label}
                                 </p>
                                 <p className="text-lg font-semibold tabular-nums">
@@ -327,17 +384,17 @@ export default function CampaignsShow({
                         <CardContent className="grid gap-4">
                             {campaign.sms_message && (
                                 <div className="space-y-1.5">
-                                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                    <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                         SMS
                                     </p>
-                                    <p className="bg-signal-soft/70 ring-signal/25 max-w-md rounded-2xl rounded-tl-sm p-3 text-sm whitespace-pre-wrap ring-1">
+                                    <p className="max-w-md rounded-2xl rounded-tl-sm bg-signal-soft/70 p-3 text-sm whitespace-pre-wrap ring-1 ring-signal/25">
                                         {campaign.sms_message}
                                     </p>
                                 </div>
                             )}
                             {campaign.email_subject && (
                                 <div className="space-y-1.5">
-                                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                    <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                         Email subject
                                     </p>
                                     <p className="text-sm font-medium">
@@ -347,14 +404,14 @@ export default function CampaignsShow({
                             )}
                             {campaign.email_body && (
                                 <div className="space-y-1.5">
-                                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                    <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                         Email body ·{' '}
                                         {campaign.email_format === 'text'
                                             ? 'plain text'
                                             : 'HTML'}
                                     </p>
                                     {campaign.email_format === 'text' ? (
-                                        <p className="bg-brand-soft/70 ring-brand/20 max-w-md rounded-2xl rounded-tl-sm p-3 text-sm whitespace-pre-wrap ring-1">
+                                        <p className="max-w-md rounded-2xl rounded-tl-sm bg-brand-soft/70 p-3 text-sm whitespace-pre-wrap ring-1 ring-brand/20">
                                             {campaign.email_body}
                                         </p>
                                     ) : (
@@ -362,17 +419,17 @@ export default function CampaignsShow({
                                             title="Email body preview"
                                             sandbox=""
                                             srcDoc={campaign.email_body}
-                                            className="ring-border h-64 w-full max-w-md rounded-2xl ring-1"
+                                            className="h-64 w-full max-w-md rounded-2xl ring-1 ring-border"
                                         />
                                     )}
                                 </div>
                             )}
                             {campaign.voice_script && (
                                 <div className="space-y-1.5">
-                                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                    <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                         Voice script
                                     </p>
-                                    <p className="bg-brand-soft/70 ring-brand/20 max-w-md rounded-2xl rounded-tl-sm p-3 text-sm whitespace-pre-wrap ring-1">
+                                    <p className="max-w-md rounded-2xl rounded-tl-sm bg-brand-soft/70 p-3 text-sm whitespace-pre-wrap ring-1 ring-brand/20">
                                         {campaign.voice_script}
                                     </p>
                                 </div>
@@ -380,10 +437,10 @@ export default function CampaignsShow({
                             {!campaign.sms_message &&
                                 !campaign.email_body &&
                                 !campaign.voice_script && (
-                                <p className="text-muted-foreground text-sm">
-                                    No copy captured yet.
-                                </p>
-                            )}
+                                    <p className="text-sm text-muted-foreground">
+                                        No copy captured yet.
+                                    </p>
+                                )}
                         </CardContent>
                     </Card>
 
@@ -459,6 +516,11 @@ export default function CampaignsShow({
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-3 text-sm">
+                        {errors.campaign && (
+                            <p className="rounded-lg bg-destructive-soft p-2 text-xs text-destructive">
+                                {errors.campaign}
+                            </p>
+                        )}
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="text-muted-foreground">
                                 Campaign review
@@ -487,7 +549,7 @@ export default function CampaignsShow({
                                         status={review.audio_status}
                                         label={review.audio_status_label}
                                     />
-                                    <span className="text-muted-foreground text-xs">
+                                    <span className="text-xs text-muted-foreground">
                                         {review.audio_reviewer
                                             ? `${review.audio_reviewer} · ${moment(review.audio_reviewed_at)}`
                                             : 'Awaiting a reviewer'}
@@ -496,12 +558,12 @@ export default function CampaignsShow({
                             </div>
                         )}
                         {review.audio_rejection_reason && (
-                            <p className="bg-destructive-soft text-destructive rounded-lg p-2 text-xs">
+                            <p className="rounded-lg bg-destructive-soft p-2 text-xs text-destructive">
                                 {review.audio_rejection_reason}
                             </p>
                         )}
                         {review.blockers.length === 0 ? (
-                            <p className="text-success flex items-center gap-2 text-sm">
+                            <p className="flex items-center gap-2 text-sm text-success">
                                 <CheckCircle2 className="size-4" />
                                 Every launch gate is cleared.
                             </p>
@@ -510,12 +572,12 @@ export default function CampaignsShow({
                                 {review.blockers.map((blocker) => (
                                     <li
                                         key={blocker.key}
-                                        className="bg-warning-soft/60 ring-warning/25 rounded-lg p-2 ring-1"
+                                        className="rounded-lg bg-warning-soft/60 p-2 ring-1 ring-warning/25"
                                     >
-                                        <p className="text-warning-foreground text-xs font-semibold dark:text-warning">
+                                        <p className="text-xs font-semibold text-warning-foreground dark:text-warning">
                                             {blocker.label}
                                         </p>
-                                        <p className="text-muted-foreground mt-0.5 text-xs">
+                                        <p className="mt-0.5 text-xs text-muted-foreground">
                                             {blocker.detail}
                                         </p>
                                     </li>
@@ -543,7 +605,7 @@ export default function CampaignsShow({
                         <CardContent className="grid gap-4">
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Dialled
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -551,7 +613,7 @@ export default function CampaignsShow({
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Answer rate
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -559,13 +621,13 @@ export default function CampaignsShow({
                                             ? '—'
                                             : `${voiceReport.totals.answer_rate}%`}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {voiceReport.totals.answered.toLocaleString()}{' '}
                                         answered
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Average talk time
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -581,13 +643,13 @@ export default function CampaignsShow({
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Opt-outs
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
                                         {voiceReport.totals.opt_outs.toLocaleString()}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Pressed the opt-out key
                                     </p>
                                 </div>
@@ -628,7 +690,7 @@ export default function CampaignsShow({
                                         <TableRow>
                                             <TableCell
                                                 colSpan={6}
-                                                className="text-muted-foreground py-6 text-center"
+                                                className="py-6 text-center text-muted-foreground"
                                             >
                                                 <span className="inline-flex items-center gap-2">
                                                     <PhoneCall className="size-4" />
@@ -644,7 +706,7 @@ export default function CampaignsShow({
                                                 <p className="font-medium">
                                                     {call.contact ?? call.to}
                                                 </p>
-                                                <p className="text-muted-foreground font-mono text-xs">
+                                                <p className="font-mono text-xs text-muted-foreground">
                                                     {call.to}
                                                 </p>
                                             </TableCell>
@@ -705,19 +767,19 @@ export default function CampaignsShow({
                         <CardContent className="grid gap-4">
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Submitted
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
                                         {smsReport.totals.messages.toLocaleString()}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {smsReport.totals.segments.toLocaleString()}{' '}
                                         segments
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Delivery rate
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -725,13 +787,13 @@ export default function CampaignsShow({
                                             ? '—'
                                             : `${smsReport.totals.delivery_rate}%`}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {smsReport.totals.delivered.toLocaleString()}{' '}
                                         delivered
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Awaiting receipts
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -739,7 +801,7 @@ export default function CampaignsShow({
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Not delivered
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -770,7 +832,7 @@ export default function CampaignsShow({
                                         <TableRow>
                                             <TableCell
                                                 colSpan={5}
-                                                className="text-muted-foreground py-6 text-center"
+                                                className="py-6 text-center text-muted-foreground"
                                             >
                                                 <span className="inline-flex items-center gap-2">
                                                     <MessageSquareText className="size-4" />
@@ -785,9 +847,10 @@ export default function CampaignsShow({
                                         <TableRow key={message.id}>
                                             <TableCell>
                                                 <p className="font-medium">
-                                                    {message.contact ?? message.to}
+                                                    {message.contact ??
+                                                        message.to}
                                                 </p>
-                                                <p className="text-muted-foreground font-mono text-xs">
+                                                <p className="font-mono text-xs text-muted-foreground">
                                                     {message.to}
                                                 </p>
                                             </TableCell>
@@ -800,7 +863,9 @@ export default function CampaignsShow({
                                             <TableCell className="font-mono text-xs">
                                                 {message.provider_status ?? '—'}
                                             </TableCell>
-                                            <TableCell>{message.segments}</TableCell>
+                                            <TableCell>
+                                                {message.segments}
+                                            </TableCell>
                                             <TableCell className="pr-4">
                                                 {moment(message.submitted_at)}
                                             </TableCell>
@@ -830,7 +895,7 @@ export default function CampaignsShow({
                         <CardContent className="grid gap-4">
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Submitted
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -838,21 +903,22 @@ export default function CampaignsShow({
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Delivery rate
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
-                                        {emailReport.totals.delivery_rate === null
+                                        {emailReport.totals.delivery_rate ===
+                                        null
                                             ? '—'
                                             : `${emailReport.totals.delivery_rate}%`}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {emailReport.totals.delivered.toLocaleString()}{' '}
                                         delivered
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Awaiting feedback
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -860,7 +926,7 @@ export default function CampaignsShow({
                                     </p>
                                 </div>
                                 <div className="rounded-lg border p-3">
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Bounces & complaints
                                     </p>
                                     <p className="text-xl font-semibold tabular-nums">
@@ -888,12 +954,13 @@ export default function CampaignsShow({
                                         <TableRow>
                                             <TableCell
                                                 colSpan={4}
-                                                className="text-muted-foreground py-6 text-center"
+                                                className="py-6 text-center text-muted-foreground"
                                             >
                                                 <span className="inline-flex items-center gap-2">
                                                     <Mail className="size-4" />
-                                                    No emails have been submitted
-                                                    for this campaign yet.
+                                                    No emails have been
+                                                    submitted for this campaign
+                                                    yet.
                                                 </span>
                                             </TableCell>
                                         </TableRow>
@@ -902,9 +969,10 @@ export default function CampaignsShow({
                                         <TableRow key={message.id}>
                                             <TableCell>
                                                 <p className="font-medium">
-                                                    {message.contact ?? message.to}
+                                                    {message.contact ??
+                                                        message.to}
                                                 </p>
-                                                <p className="text-muted-foreground font-mono text-xs">
+                                                <p className="font-mono text-xs text-muted-foreground">
                                                     {message.to}
                                                 </p>
                                             </TableCell>
@@ -957,7 +1025,7 @@ export default function CampaignsShow({
                                     <TableRow>
                                         <TableCell
                                             colSpan={7}
-                                            className="text-muted-foreground py-6 text-center"
+                                            className="py-6 text-center text-muted-foreground"
                                         >
                                             Versions appear when the campaign is
                                             submitted for approval.
@@ -981,7 +1049,7 @@ export default function CampaignsShow({
                                         <TableCell>
                                             {money(version.estimated_cost)}
                                         </TableCell>
-                                        <TableCell className="text-muted-foreground font-mono text-xs">
+                                        <TableCell className="font-mono text-xs text-muted-foreground">
                                             {version.fingerprint.slice(0, 12)}
                                         </TableCell>
                                         <TableCell>
@@ -1002,14 +1070,17 @@ export default function CampaignsShow({
                         <CardTitle>Recipients</CardTitle>
                         <CardDescription>
                             {recipients.total} recipient
-                            {recipients.total === 1 ? '' : 's'} on this campaign.
+                            {recipients.total === 1 ? '' : 's'} on this
+                            campaign.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="px-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="pl-4">Contact</TableHead>
+                                    <TableHead className="pl-4">
+                                        Contact
+                                    </TableHead>
                                     <TableHead>
                                         {campaign.channel === 'email'
                                             ? 'Email'
@@ -1018,7 +1089,9 @@ export default function CampaignsShow({
                                     <TableHead>Status</TableHead>
                                     <TableHead>Attempts</TableHead>
                                     <TableHead>Sent</TableHead>
-                                    <TableHead className="pr-4">Error</TableHead>
+                                    <TableHead className="pr-4">
+                                        Error
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1026,7 +1099,7 @@ export default function CampaignsShow({
                                     <TableRow>
                                         <TableCell
                                             colSpan={6}
-                                            className="text-muted-foreground py-6 text-center"
+                                            className="py-6 text-center text-muted-foreground"
                                         >
                                             Recipients appear once the campaign
                                             is launched.
@@ -1039,7 +1112,7 @@ export default function CampaignsShow({
                                             <span className="font-medium">
                                                 {recipient.name ?? 'Unknown'}
                                             </span>
-                                            <span className="text-muted-foreground block text-xs">
+                                            <span className="block text-xs text-muted-foreground">
                                                 {campaign.channel === 'email'
                                                     ? (recipient.email ?? '—')
                                                     : (recipient.phone ?? '—')}
@@ -1114,7 +1187,8 @@ export default function CampaignsShow({
                             disabled={reason.trim() === ''}
                             onClick={reject}
                         >
-                            Reject {rejectKind === 'audio' ? 'audio' : 'campaign'}
+                            Reject{' '}
+                            {rejectKind === 'audio' ? 'audio' : 'campaign'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

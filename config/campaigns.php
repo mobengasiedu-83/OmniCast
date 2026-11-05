@@ -26,8 +26,6 @@ return [
     |
     */
 
-    'require_approved_sender_id' => filter_var(env('CAMPAIGNS_REQUIRE_APPROVED_SENDER_ID', true), FILTER_VALIDATE_BOOL),
-
     'require_approved_audio' => filter_var(env('CAMPAIGNS_REQUIRE_APPROVED_AUDIO', true), FILTER_VALIDATE_BOOL),
 
 ];

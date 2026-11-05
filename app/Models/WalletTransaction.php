@@ -40,8 +40,8 @@ class WalletTransaction extends Model
     {
         return [
             'type' => WalletTransactionType::class,
-            'amount' => 'decimal:2',
-            'balance_after' => 'decimal:2',
+            'amount' => 'decimal:4',
+            'balance_after' => 'decimal:4',
             'metadata' => 'array',
         ];
     }

@@ -43,6 +43,30 @@ it('submits over txtconnect with its bearer token and reads the provider id', fu
         && $request->hasHeader('Authorization', 'Bearer secret-token'));
 });
 
+it('reads the txtconnect message id from the top level envelope', function (): void {
+    config()->set('sms.driver', 'txtconnect');
+    config()->set('sms.txtconnect.endpoint', 'https://sms.test/send');
+    config()->set('sms.txtconnect.token', 'secret-token');
+
+    Http::fake([
+        'sms.test/*' => Http::response([
+            'messageId' => 'S1793888983_kKHw',
+            'msg' => 'Sms send Successful',
+            'data' => ['status_code' => '000', 'message' => 'success', 'in_error' => false],
+        ]),
+    ]);
+
+    $result = app(SmsGateway::class)->send(new OutboundSms(
+        reference: 'SM-7',
+        to: '+233244000001',
+        from: 'OmniCast',
+        body: 'Test SMS 000',
+    ));
+
+    expect($result->accepted)->toBeTrue()
+        ->and($result->providerMessageId)->toBe('S1793888983_kKHw');
+});
+
 it('treats a txtconnect envelope flagged in error as a rejection', function (): void {
     config()->set('sms.driver', 'txtconnect');
     config()->set('sms.txtconnect.endpoint', 'https://sms.test/send');

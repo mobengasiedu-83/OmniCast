@@ -13,6 +13,7 @@ enum BillingUnit: string
     case RoundedMinute = 'rounded_minute';
     case PerSuccessfulCall = 'per_successful_call';
     case PerSmsPart = 'per_sms_part';
+    case PerEmail = 'per_email';
     case FixedCampaign = 'fixed_campaign';
 
     public function label(): string
@@ -24,6 +25,7 @@ enum BillingUnit: string
             self::RoundedMinute => 'Rounded Minute',
             self::PerSuccessfulCall => 'Per Successful Call',
             self::PerSmsPart => 'Per SMS Part',
+            self::PerEmail => 'Per Email',
             self::FixedCampaign => 'Fixed Campaign',
         };
     }

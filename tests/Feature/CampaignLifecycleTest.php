@@ -5,7 +5,6 @@ use App\Enums\CampaignContactStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
 use App\Enums\ReservationStatus;
-use App\Exceptions\InsufficientWalletBalance;
 use App\Jobs\DispatchCampaignJob;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
@@ -93,7 +92,7 @@ it('refuses to submit when the wallet cannot cover the estimate', function (): v
     $campaign = ($this->draft)();
 
     expect(fn () => $this->service->submit($campaign, $this->user))
-        ->toThrow(InsufficientWalletBalance::class);
+        ->toThrow(ValidationException::class, 'The wallet balance cannot cover the estimated GHS 0.40.');
 
     expect($campaign->refresh()->status)->toBe(CampaignStatus::Draft)
         ->and(BillingReservation::query()->count())->toBe(0)

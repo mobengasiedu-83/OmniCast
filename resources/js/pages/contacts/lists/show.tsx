@@ -14,6 +14,7 @@ import {
     Users,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import InputError from '@/components/input-error';
 import PageHeader from '@/components/page-header';
@@ -105,6 +106,7 @@ export default function ContactListShow({
     const [search, setSearch] = useState(filters.search);
     const [candidateSearch, setCandidateSearch] = useState(addSearch);
     const [selected, setSelected] = useState<number[]>([]);
+    const confirm = useConfirm();
 
     /** Keep the member filters and the add-contact search in sync in the URL. */
     const visit = (overrides: Record<string, string | null>): void => {
@@ -163,12 +165,15 @@ export default function ContactListShow({
         );
     };
 
-    const removeContact = (member: ContactListMember): void => {
-        if (
-            !window.confirm(
-                `Remove ${member.name} from ${list.name}? The contact stays in the book.`,
-            )
-        ) {
+    const removeContact = async (member: ContactListMember): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Remove ${member.name}?`,
+            description: `The contact stays in the book, just not in ${list.name}.`,
+            confirmLabel: 'Remove from list',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -178,12 +183,15 @@ export default function ContactListShow({
         });
     };
 
-    const archive = (): void => {
-        if (
-            !window.confirm(
-                `Archive ${list.name}? Contacts stay in the book and in their other lists.`,
-            )
-        ) {
+    const archive = async (): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Archive ${list.name}?`,
+            description: 'Contacts stay in the book and in their other lists.',
+            confirmLabel: 'Archive list',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -192,7 +200,9 @@ export default function ContactListShow({
 
     const toggleCandidate = (id: number, checked: boolean): void => {
         setSelected((current) =>
-            checked ? [...current, id] : current.filter((value) => value !== id),
+            checked
+                ? [...current, id]
+                : current.filter((value) => value !== id),
         );
     };
 
@@ -224,7 +234,10 @@ export default function ContactListShow({
                             </Button>
 
                             {can.delete && (
-                                <Button variant="ghost" onClick={archive}>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => void archive()}
+                                >
                                     <Trash2 className="text-destructive" />
                                     Delete list
                                 </Button>
@@ -265,8 +278,8 @@ export default function ContactListShow({
                 </div>
 
                 {flash?.import && (
-                    <Card className="border-success/30 bg-success-soft gap-0 py-3">
-                        <CardContent className="text-success flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-sm">
+                    <Card className="gap-0 border-success/30 bg-success-soft py-3">
+                        <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-sm text-success">
                             <span className="flex items-center gap-2 font-medium">
                                 <Upload className="size-4" />
                                 Upload complete
@@ -287,7 +300,7 @@ export default function ContactListShow({
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                    <ListChecks className="text-brand size-4" />
+                                    <ListChecks className="size-4 text-brand" />
                                     List details
                                 </CardTitle>
                                 <CardDescription>
@@ -339,9 +352,7 @@ export default function ContactListShow({
                                             disabled={!can.update}
                                         />
                                         <InputError
-                                            message={
-                                                details.errors.description
-                                            }
+                                            message={details.errors.description}
                                         />
                                     </div>
 
@@ -356,7 +367,7 @@ export default function ContactListShow({
                                         </Button>
                                     )}
 
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Updated {formatDate(list.updated_at)} ·{' '}
                                         {list.campaigns_count}{' '}
                                         {list.campaigns_count === 1
@@ -370,7 +381,7 @@ export default function ContactListShow({
                         <Card id="contacts-upload">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                    <FileUp className="text-brand size-4" />
+                                    <FileUp className="size-4 text-brand" />
                                     Upload contacts
                                 </CardTitle>
                                 <CardDescription>
@@ -396,8 +407,8 @@ export default function ContactListShow({
                                                 onChange={(event) =>
                                                     upload.setData(
                                                         'file',
-                                                        event.target.files?.[0] ??
-                                                            null,
+                                                        event.target
+                                                            .files?.[0] ?? null,
                                                     )
                                                 }
                                             />
@@ -438,7 +449,7 @@ export default function ContactListShow({
                                         </div>
                                     </form>
                                 ) : (
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Your role cannot import contacts.
                                     </p>
                                 )}

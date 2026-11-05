@@ -12,7 +12,9 @@ use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
 use App\Models\ContactList;
+use App\Models\PlatformSetting;
 use App\Models\SenderId;
+use App\Models\SmsMessage;
 use App\Services\CampaignDispatcher;
 use App\Services\CampaignReadiness;
 use App\Services\CampaignService;
@@ -89,6 +91,39 @@ it('only accepts a sender id issued for the channel the campaign broadcasts on',
         ->and($issues[0]['key'])->toBe('sender_channel')
         ->and(fn () => $this->service->submit($campaign, $this->user))
         ->toThrow(ValidationException::class);
+});
+
+it('does not treat a sender id the client owns as belonging to another client', function (): void {
+    $campaign = ($this->draft)();
+
+    $preloaded = Campaign::query()
+        ->with('senderId:id,name,channel,status')
+        ->findOrFail($campaign->id);
+
+    expect($this->readiness->issues($preloaded))->toBe([]);
+});
+
+it('renders the campaign detail page without a sender readiness blocker', function (): void {
+    $campaign = ($this->draft)();
+
+    $this->actingAs($this->user)
+        ->get(route('campaigns.show', $campaign))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('campaigns/show')
+            ->where('review.blockers', []),
+        );
+});
+
+it('blocks a campaign pointed at a sender id issued to another client', function (): void {
+    $foreign = SenderId::factory()->sms()->approved()->create();
+    $campaign = ($this->draft)();
+
+    $campaign->forceFill(['sender_id' => $foreign->id])->save();
+
+    $issues = $this->readiness->issues($campaign->refresh());
+
+    expect($issues)->toHaveCount(1)
+        ->and($issues[0]['key'])->toBe('sender_client');
 });
 
 it('submits, approves and launches an sms campaign under an approved sender id', function (): void {
@@ -218,6 +253,99 @@ it('fails the recipients when the approved sender id is suspended before dispatc
         ->and($campaign->refresh()->status)->toBe(CampaignStatus::Completed)
         ->and($failed)->toHaveCount(2)
         ->and($failed->first()->error_message)->toContain('Sender ID');
+});
+
+it('refuses to launch a campaign whose sender id was cleared after approval', function (): void {
+    $campaign = ($this->draft)();
+    $this->service->submit($campaign, $this->user);
+    $this->service->approve($campaign->refresh(), $this->reviewer);
+
+    $campaign->refresh()->forceFill(['sender_id' => null])->save();
+
+    expect(fn () => $this->service->launch($campaign->refresh()))
+        ->toThrow(ValidationException::class);
+
+    expect($campaign->refresh()->status)->toBe(CampaignStatus::Approved)
+        ->and($campaign->refresh()->launched_at)->toBeNull();
+});
+
+it('never sends under a platform default when the sender id disappears before dispatch', function (): void {
+    $campaign = ($this->draft)();
+    $this->service->submit($campaign, $this->user);
+    $this->service->approve($campaign->refresh(), $this->reviewer);
+    $this->service->launch($campaign->refresh());
+
+    $campaign->refresh()->forceFill(['sender_id' => null])->save();
+
+    $stillRetrying = app(CampaignDispatcher::class)->run($campaign->refresh());
+
+    expect($stillRetrying)->toBeFalse()
+        ->and(SmsMessage::query()->where('campaign_id', $campaign->id)->count())->toBe(0)
+        ->and(CampaignContact::query()
+            ->where('campaign_id', $campaign->id)
+            ->where('status', CampaignContactStatus::Failed->value)
+            ->count())->toBe(2);
+});
+
+it('keeps the sender id gate even when a platform setting waives sender approval', function (): void {
+    PlatformSetting::query()->create([
+        'group' => 'campaigns',
+        'key' => 'require_approved_sender_id',
+        'value' => 'false',
+    ]);
+
+    $pending = SenderId::factory()->for($this->client)->sms()->create();
+    $campaign = ($this->draft)(['sender_id' => $pending->id]);
+
+    $issues = $this->readiness->issues($campaign);
+
+    expect($issues)->toHaveCount(1)
+        ->and($issues[0]['key'])->toBe('sender_status')
+        ->and(fn () => $this->service->submit($campaign, $this->user))
+        ->toThrow(ValidationException::class);
+});
+
+it('refuses a sender id issued to another client', function (): void {
+    $foreign = SenderId::factory()->sms()->approved()->create();
+    $campaign = ($this->draft)(['sender_id' => $foreign->id]);
+
+    $issues = $this->readiness->issues($campaign);
+
+    expect($issues)->toHaveCount(1)
+        ->and($issues[0]['key'])->toBe('sender_client')
+        ->and(fn () => $this->service->submit($campaign, $this->user))
+        ->toThrow(ValidationException::class);
+});
+
+it('rejects an sms campaign saved without a sender id', function (): void {
+    $this->actingAs($this->user)
+        ->post(route('campaigns.store'), [
+            'name' => 'No sender',
+            'channel' => Channel::Sms->value,
+            'contact_list_id' => $this->list->id,
+            'sms_message' => 'Your statement is ready.',
+            'schedule_type' => 'now',
+        ])
+        ->assertSessionHasErrors('sender_id');
+
+    expect(Campaign::query()->where('name', 'No sender')->exists())->toBeFalse();
+});
+
+it('rejects an sms campaign saved under a sender id that is not approved', function (): void {
+    $pending = SenderId::factory()->for($this->client)->sms()->create();
+
+    $this->actingAs($this->user)
+        ->post(route('campaigns.store'), [
+            'name' => 'Pending sender',
+            'channel' => Channel::Sms->value,
+            'contact_list_id' => $this->list->id,
+            'sender_id' => $pending->id,
+            'sms_message' => 'Your statement is ready.',
+            'schedule_type' => 'now',
+        ])
+        ->assertSessionHasErrors('sender_id');
+
+    expect(Campaign::query()->where('name', 'Pending sender')->exists())->toBeFalse();
 });
 
 it('shows the review queues to a compliance reviewer', function (): void {

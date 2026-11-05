@@ -64,17 +64,6 @@ class PlatformConfiguration
     }
 
     /**
-     * Whether a campaign needs its sender ID approved before it may run.
-     */
-    public function senderIdApprovalRequired(?Client $client = null): bool
-    {
-        return filter_var(
-            $this->resolve('campaigns', 'require_approved_sender_id', config('campaigns.require_approved_sender_id', true), $client),
-            FILTER_VALIDATE_BOOL,
-        );
-    }
-
-    /**
      * Whether voice audio needs a reviewer before the campaign may run.
      */
     public function audioApprovalRequired(?Client $client = null): bool

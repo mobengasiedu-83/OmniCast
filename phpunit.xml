@@ -37,6 +37,11 @@
         <env name="PULSE_ENABLED" value="false" force="true"/>
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>
         <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
+        <!-- SMS transport is pinned so a suite run can never post to the live
+             provider: the shell or .env may point SMS_BROADCAST_DRIVER at
+             txtconnect while the developer is testing deliveries by hand. -->
+        <env name="SMS_BROADCAST_DRIVER" value="log" force="true"/>
+        <env name="SMS_BROADCAST_ENABLED" value="true" force="true"/>
         <server name="APP_ENV" value="testing"/>
         <server name="APP_URL" value="http://localhost"/>
         <server name="APP_MAINTENANCE_DRIVER" value="file"/>
@@ -56,5 +61,7 @@
         <server name="PULSE_ENABLED" value="false"/>
         <server name="TELESCOPE_ENABLED" value="false"/>
         <server name="NIGHTWATCH_ENABLED" value="false"/>
+        <server name="SMS_BROADCAST_DRIVER" value="log"/>
+        <server name="SMS_BROADCAST_ENABLED" value="true"/>
     </php>
 </phpunit>

@@ -117,7 +117,7 @@ class CampaignController extends Controller
         $campaign->load([
             'client:id,name,timezone',
             'contactList:id,name',
-            'senderId:id,name,channel,status',
+            'senderId:id,client_id,name,channel,status',
             'callerId:id,number,label',
             'creator:id,name',
             'approver:id,name',

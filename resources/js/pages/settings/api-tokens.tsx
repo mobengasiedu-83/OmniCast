@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { Copy, KeyRound, Plus, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ export default function AccountApiTokens({
     newToken,
 }: PageProps) {
     const [copied, setCopied] = useState(false);
+    const confirm = useConfirm();
 
     const form = useForm<{ name: string; abilities: string[] }>({
         name: '',
@@ -53,8 +55,16 @@ export default function AccountApiTokens({
         });
     };
 
-    const revoke = (token: ApiTokenRow): void => {
-        if (!window.confirm(`Revoke the token "${token.name}"?`)) {
+    const revoke = async (token: ApiTokenRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Revoke ${token.name}?`,
+            description:
+                'Any script or integration using this token stops working immediately.',
+            confirmLabel: 'Revoke token',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -118,7 +128,7 @@ export default function AccountApiTokens({
 
                 <CardContent className="divide-y divide-border/60 px-0">
                     {tokens.length === 0 ? (
-                        <p className="text-muted-foreground px-4 py-6 text-sm">
+                        <p className="px-4 py-6 text-sm text-muted-foreground">
                             You have no API tokens yet.
                         </p>
                     ) : (
@@ -131,7 +141,7 @@ export default function AccountApiTokens({
                                     <p className="text-sm font-medium">
                                         {token.name}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Created{' '}
                                         {token.created_at
                                             ? new Date(
@@ -159,7 +169,7 @@ export default function AccountApiTokens({
                                         variant="ghost"
                                         size="sm"
                                         className="text-destructive hover:text-destructive"
-                                        onClick={() => revoke(token)}
+                                        onClick={() => void revoke(token)}
                                     >
                                         <Trash2 />
                                         Revoke
@@ -170,7 +180,6 @@ export default function AccountApiTokens({
                     )}
                 </CardContent>
             </Card>
-
 
             <form onSubmit={submit} className="space-y-4">
                 <Heading
@@ -190,7 +199,7 @@ export default function AccountApiTokens({
                         placeholder="Reporting pipeline"
                     />
                     {form.errors.name && (
-                        <p className="text-destructive text-sm">
+                        <p className="text-sm text-destructive">
                             {form.errors.name}
                         </p>
                     )}
@@ -228,4 +237,3 @@ AccountApiTokens.layout = {
         },
     ],
 };
-

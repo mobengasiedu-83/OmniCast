@@ -1,6 +1,13 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { CheckCircle2, ClipboardCheck, Megaphone, ShieldX, Volume2 } from 'lucide-react';
+import {
+    CheckCircle2,
+    ClipboardCheck,
+    Megaphone,
+    ShieldX,
+    Volume2,
+} from 'lucide-react';
 import { useState } from 'react';
+import { useConfirm, type ConfirmOptions } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
 import StatCard from '@/components/stat-card';
@@ -97,6 +104,7 @@ export default function ApprovalsIndex({
     );
     const [decision, setDecision] = useState<Decision | null>(null);
     const rejectForm = useForm({ reason: '' });
+    const confirm = useConfirm();
 
     const filterChannels: SelectOption[] = [
         ...campaignChannels,
@@ -134,15 +142,22 @@ export default function ApprovalsIndex({
             : []),
     ];
 
-    const approve = (url: string, confirmation: string): void => {
-        if (!window.confirm(confirmation)) {
+    const approve = async (
+        url: string,
+        confirmation: ConfirmOptions,
+    ): Promise<void> => {
+        if (!(await confirm(confirmation))) {
             return;
         }
 
         router.post(url, {}, { preserveScroll: true });
     };
 
-    const openReject = (kind: Decision['kind'], id: number, name: string): void => {
+    const openReject = (
+        kind: Decision['kind'],
+        id: number,
+        name: string,
+    ): void => {
         rejectForm.reset();
         rejectForm.clearErrors();
         setDecision({ kind, id, name });
@@ -249,7 +264,7 @@ export default function ApprovalsIndex({
                     />
                 </div>
 
-                <div className="bg-muted/50 flex flex-wrap gap-1 rounded-xl p-1">
+                <div className="flex flex-wrap gap-1 rounded-xl bg-muted/50 p-1">
                     {tabs.map((item) => (
                         <Button
                             key={item.key}
@@ -285,71 +300,131 @@ export default function ApprovalsIndex({
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="pl-4">Campaign</TableHead>
+                                            <TableHead className="pl-4">
+                                                Campaign
+                                            </TableHead>
                                             <TableHead>Channel</TableHead>
                                             <TableHead>Sender</TableHead>
                                             <TableHead>Recipients</TableHead>
                                             <TableHead>Estimate</TableHead>
                                             <TableHead>Blockers</TableHead>
                                             <TableHead>Submitted</TableHead>
-                                            <TableHead className="pr-4 text-right">Decision</TableHead>
+                                            <TableHead className="pr-4 text-right">
+                                                Decision
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-{queues.campaigns?.items.map((campaign) => (
-    <TableRow key={campaign.id}>
-        <TableCell className="pl-4">
-            <Link
-                href={urls.campaigns.show(campaign.id)}
-                className="font-medium hover:underline"
-            >
-                {campaign.name}
-            </Link>
-            <span className="text-muted-foreground block text-xs">
-                {campaign.reference} · {campaign.client ?? 'Platform'}
-            </span>
-        </TableCell>
-        <TableCell>{campaign.channel_label}</TableCell>
-        <TableCell>{campaign.sender ?? '—'}</TableCell>
-        <TableCell className="tabular-nums">{campaign.recipients}</TableCell>
-        <TableCell className="tabular-nums">{money(campaign.estimated_cost)}</TableCell>
-        <TableCell>
-            {campaign.blockers.length === 0 ? (
-                <StatusBadge status="approved" label="Ready" />
-            ) : (
-                <div className="flex flex-wrap gap-1">
-                    {campaign.blockers.map((blocker) => (
-                        <StatusBadge key={blocker} status="rejected" label={blocker} />
-                    ))}
-                </div>
-            )}
-        </TableCell>
-        <TableCell>{moment(campaign.submitted_at)}</TableCell>
-        <TableCell className="pr-4">
-            <div className="flex justify-end gap-2">
-                <Button
-                    size="sm"
-                    disabled={campaign.blockers.length > 0}
-                    onClick={() =>
-                        approve(
-                            urls.campaigns.approve(campaign.id),
-                            `Approve ${campaign.name}?`,
-                        )
-                    }
-                >
-                    Approve
-                </Button>
-                <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openReject('campaign', campaign.id, campaign.name)}
-                >
-                    Reject
-                </Button>
-            </div>
-        </TableCell>
-    </TableRow>
-))}
+                                        {queues.campaigns?.items.map(
+                                            (campaign) => (
+                                                <TableRow key={campaign.id}>
+                                                    <TableCell className="pl-4">
+                                                        <Link
+                                                            href={urls.campaigns.show(
+                                                                campaign.id,
+                                                            )}
+                                                            className="font-medium hover:underline"
+                                                        >
+                                                            {campaign.name}
+                                                        </Link>
+                                                        <span className="block text-xs text-muted-foreground">
+                                                            {campaign.reference}{' '}
+                                                            ·{' '}
+                                                            {campaign.client ??
+                                                                'Platform'}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {campaign.channel_label}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {campaign.sender ?? '—'}
+                                                    </TableCell>
+                                                    <TableCell className="tabular-nums">
+                                                        {campaign.recipients}
+                                                    </TableCell>
+                                                    <TableCell className="tabular-nums">
+                                                        {money(
+                                                            campaign.estimated_cost,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {campaign.blockers
+                                                            .length === 0 ? (
+                                                            <StatusBadge
+                                                                status="approved"
+                                                                label="Ready"
+                                                            />
+                                                        ) : (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {campaign.blockers.map(
+                                                                    (
+                                                                        blocker,
+                                                                    ) => (
+                                                                        <StatusBadge
+                                                                            key={
+                                                                                blocker
+                                                                            }
+                                                                            status="rejected"
+                                                                            label={
+                                                                                blocker
+                                                                            }
+                                                                        />
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {moment(
+                                                            campaign.submitted_at,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="pr-4">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button
+                                                                size="sm"
+                                                                disabled={
+                                                                    campaign
+                                                                        .blockers
+                                                                        .length >
+                                                                    0
+                                                                }
+                                                                onClick={() =>
+                                                                    void approve(
+                                                                        urls.campaigns.approve(
+                                                                            campaign.id,
+                                                                        ),
+                                                                        {
+                                                                            title: `Approve ${campaign.name}?`,
+                                                                            description:
+                                                                                'The campaign leaves the review queue and sends once every launch gate is clear.',
+                                                                            confirmLabel:
+                                                                                'Approve campaign',
+                                                                        },
+                                                                    )
+                                                                }
+                                                            >
+                                                                Approve
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    openReject(
+                                                                        'campaign',
+                                                                        campaign.id,
+                                                                        campaign.name,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Reject
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ),
+                                        )}
                                     </TableBody>
                                 </Table>
                             )}
@@ -362,8 +437,8 @@ export default function ApprovalsIndex({
                         <CardHeader>
                             <CardTitle>Voice audio queue</CardTitle>
                             <CardDescription>
-                                Every voice campaign plays one approved recording
-                                or script from the platform DID.
+                                Every voice campaign plays one approved
+                                recording or script from the platform DID.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="px-0">
@@ -377,78 +452,125 @@ export default function ApprovalsIndex({
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="pl-4">Campaign</TableHead>
+                                            <TableHead className="pl-4">
+                                                Campaign
+                                            </TableHead>
                                             <TableHead>Audio</TableHead>
                                             <TableHead>Duration</TableHead>
-                                            <TableHead>Other blockers</TableHead>
+                                            <TableHead>
+                                                Other blockers
+                                            </TableHead>
                                             <TableHead>Submitted</TableHead>
-                                            <TableHead className="pr-4 text-right">Decision</TableHead>
+                                            <TableHead className="pr-4 text-right">
+                                                Decision
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-{queues.audio?.items.map((campaign) => (
-    <TableRow key={campaign.id}>
-        <TableCell className="pl-4">
-            <Link
-                href={urls.campaigns.show(campaign.id)}
-                className="font-medium hover:underline"
-            >
-                {campaign.name}
-            </Link>
-            <span className="text-muted-foreground block text-xs">
-                {campaign.reference} · {campaign.client ?? 'Platform'}
-            </span>
-        </TableCell>
-        <TableCell className="max-w-xs">
-            {campaign.voice_recording_path ? (
-                <span className="font-mono text-xs break-all">
-                    {campaign.voice_recording_path}
-                </span>
-            ) : (
-                <span className="text-sm whitespace-pre-wrap">
-                    {campaign.voice_script ?? 'No audio captured'}
-                </span>
-            )}
-        </TableCell>
-        <TableCell className="tabular-nums">
-            {campaign.voice_max_duration_seconds}s
-        </TableCell>
-        <TableCell>
-            {campaign.blockers.length === 0 ? (
-                <span className="text-muted-foreground text-sm">—</span>
-            ) : (
-                <div className="flex flex-wrap gap-1">
-                    {campaign.blockers.map((blocker) => (
-                        <StatusBadge key={blocker} status="rejected" label={blocker} />
-                    ))}
-                </div>
-            )}
-        </TableCell>
-        <TableCell>{moment(campaign.submitted_at)}</TableCell>
-        <TableCell className="pr-4">
-            <div className="flex justify-end gap-2">
-                <Button
-                    size="sm"
-                    onClick={() =>
-                        approve(
-                            urls.campaigns.approveAudio(campaign.id),
-                            `Approve the audio for ${campaign.name}?`,
-                        )
-                    }
-                >
-                    Approve audio
-                </Button>
-                <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openReject('audio', campaign.id, campaign.name)}
-                >
-                    Reject
-                </Button>
-            </div>
-        </TableCell>
-    </TableRow>
-))}
+                                        {queues.audio?.items.map((campaign) => (
+                                            <TableRow key={campaign.id}>
+                                                <TableCell className="pl-4">
+                                                    <Link
+                                                        href={urls.campaigns.show(
+                                                            campaign.id,
+                                                        )}
+                                                        className="font-medium hover:underline"
+                                                    >
+                                                        {campaign.name}
+                                                    </Link>
+                                                    <span className="block text-xs text-muted-foreground">
+                                                        {campaign.reference} ·{' '}
+                                                        {campaign.client ??
+                                                            'Platform'}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="max-w-xs">
+                                                    {campaign.voice_recording_path ? (
+                                                        <span className="font-mono text-xs break-all">
+                                                            {
+                                                                campaign.voice_recording_path
+                                                            }
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-sm whitespace-pre-wrap">
+                                                            {campaign.voice_script ??
+                                                                'No audio captured'}
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="tabular-nums">
+                                                    {
+                                                        campaign.voice_max_duration_seconds
+                                                    }
+                                                    s
+                                                </TableCell>
+                                                <TableCell>
+                                                    {campaign.blockers
+                                                        .length === 0 ? (
+                                                        <span className="text-sm text-muted-foreground">
+                                                            —
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {campaign.blockers.map(
+                                                                (blocker) => (
+                                                                    <StatusBadge
+                                                                        key={
+                                                                            blocker
+                                                                        }
+                                                                        status="rejected"
+                                                                        label={
+                                                                            blocker
+                                                                        }
+                                                                    />
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {moment(
+                                                        campaign.submitted_at,
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="pr-4">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                void approve(
+                                                                    urls.campaigns.approveAudio(
+                                                                        campaign.id,
+                                                                    ),
+                                                                    {
+                                                                        title: `Approve the audio for ${campaign.name}?`,
+                                                                        description:
+                                                                            'Voice delivery unblocks as soon as this audio is approved.',
+                                                                        confirmLabel:
+                                                                            'Approve audio',
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            Approve audio
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                openReject(
+                                                                    'audio',
+                                                                    campaign.id,
+                                                                    campaign.name,
+                                                                )
+                                                            }
+                                                        >
+                                                            Reject
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
                                     </TableBody>
                                 </Table>
                             )}
@@ -461,8 +583,8 @@ export default function ApprovalsIndex({
                         <CardHeader>
                             <CardTitle>Sender ID review queue</CardTitle>
                             <CardDescription>
-                                SMS brands, email from addresses and voice caller
-                                numbers waiting for verification.
+                                SMS brands, email from addresses and voice
+                                caller numbers waiting for verification.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="px-0">
@@ -476,52 +598,89 @@ export default function ApprovalsIndex({
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="pl-4">Identity</TableHead>
+                                            <TableHead className="pl-4">
+                                                Identity
+                                            </TableHead>
                                             <TableHead>Channel</TableHead>
                                             <TableHead>Client</TableHead>
                                             <TableHead>Requester</TableHead>
                                             <TableHead>Requested</TableHead>
-                                            <TableHead className="pr-4 text-right">Decision</TableHead>
+                                            <TableHead className="pr-4 text-right">
+                                                Decision
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-{queues.sender_ids?.items.map((senderId) => (
-    <TableRow key={senderId.id}>
-        <TableCell className="pl-4">
-            <span className="font-medium">{senderId.name}</span>
-            <span className="text-muted-foreground block text-xs">
-                {senderId.identifier_label}
-                {senderId.country ? ` · ${senderId.country}` : ''}
-            </span>
-        </TableCell>
-        <TableCell>{senderId.channel_label}</TableCell>
-        <TableCell>{senderId.client ?? 'Platform'}</TableCell>
-        <TableCell>{senderId.requester ?? '—'}</TableCell>
-        <TableCell>{moment(senderId.requested_at)}</TableCell>
-        <TableCell className="pr-4">
-            <div className="flex justify-end gap-2">
-                <Button
-                    size="sm"
-                    onClick={() =>
-                        approve(
-                            urls.senderIds.approve(senderId.id),
-                            `Approve ${senderId.name} for ${senderId.channel_label}?`,
-                        )
-                    }
-                >
-                    Approve
-                </Button>
-                <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openReject('sender', senderId.id, senderId.name)}
-                >
-                    Reject
-                </Button>
-            </div>
-        </TableCell>
-    </TableRow>
-))}
+                                        {queues.sender_ids?.items.map(
+                                            (senderId) => (
+                                                <TableRow key={senderId.id}>
+                                                    <TableCell className="pl-4">
+                                                        <span className="font-medium">
+                                                            {senderId.name}
+                                                        </span>
+                                                        <span className="block text-xs text-muted-foreground">
+                                                            {
+                                                                senderId.identifier_label
+                                                            }
+                                                            {senderId.country
+                                                                ? ` · ${senderId.country}`
+                                                                : ''}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {senderId.channel_label}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {senderId.client ??
+                                                            'Platform'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {senderId.requester ??
+                                                            '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {moment(
+                                                            senderId.requested_at,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="pr-4">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    void approve(
+                                                                        urls.senderIds.approve(
+                                                                            senderId.id,
+                                                                        ),
+                                                                        {
+                                                                            title: `Approve ${senderId.name}?`,
+                                                                            description: `The client can send on ${senderId.channel_label} with this sender ID straight away.`,
+                                                                            confirmLabel:
+                                                                                'Approve sender ID',
+                                                                        },
+                                                                    )
+                                                                }
+                                                            >
+                                                                Approve
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    openReject(
+                                                                        'sender',
+                                                                        senderId.id,
+                                                                        senderId.name,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Reject
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ),
+                                        )}
                                     </TableBody>
                                 </Table>
                             )}
@@ -538,8 +697,8 @@ export default function ApprovalsIndex({
                     <DialogHeader>
                         <DialogTitle>Reject {decision?.name}</DialogTitle>
                         <DialogDescription>
-                            The requester sees this reason and can fix the record
-                            before submitting it again.
+                            The requester sees this reason and can fix the
+                            record before submitting it again.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-1.5">
@@ -554,7 +713,7 @@ export default function ApprovalsIndex({
                             placeholder="Explain what needs to change"
                         />
                         {rejectForm.errors.reason && (
-                            <p className="text-destructive text-xs">
+                            <p className="text-xs text-destructive">
                                 {rejectForm.errors.reason}
                             </p>
                         )}
@@ -591,4 +750,3 @@ ApprovalsIndex.layout = {
         },
     ],
 };
-

@@ -72,10 +72,13 @@ it('blocks a campaign on a channel the tenant is not entitled to', function (): 
 it('allows a channel that has no configured entitlement', function (): void {
     [$client, , $user] = clientWithWallet();
 
+    $sender = SenderId::factory()->for($client)->sms()->approved()->create();
+
     $this->actingAs($user)
         ->post(route('campaigns.store'), [
             'name' => 'Allowed reminder',
             'channel' => 'sms',
+            'sender_id' => $sender->id,
             'sms_message' => 'Your order is ready for collection.',
             'schedule_type' => 'now',
         ])

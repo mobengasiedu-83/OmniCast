@@ -110,6 +110,9 @@ export default function CampaignForm({
     const senderOptions = options.senderIds.filter(
         (sender) => sender.channel === senderChannel,
     );
+    const missingSmsSender =
+        requiresSms &&
+        (senderOptions.length === 0 || form.data.sender_id === '');
     const needsClient = options.clients.length > 0;
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
@@ -281,12 +284,20 @@ export default function CampaignForm({
                                 }
                             >
                                 <SelectTrigger id="sender_id">
-                                    <SelectValue placeholder="Default sender" />
+                                    <SelectValue
+                                        placeholder={
+                                            requiresSms
+                                                ? 'Select an approved sender ID'
+                                                : 'Default sender'
+                                        }
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">
-                                        Use the default sender
-                                    </SelectItem>
+                                    {!requiresSms && (
+                                        <SelectItem value="none">
+                                            Use the default sender
+                                        </SelectItem>
+                                    )}
                                     {senderOptions.map((sender) => (
                                         <SelectItem
                                             key={sender.id}
@@ -301,6 +312,14 @@ export default function CampaignForm({
                                 <p className="text-muted-foreground text-xs">
                                     No approved {senderChannel} sender ID yet —
                                     request one under Sender IDs.
+                                    {requiresSms &&
+                                        ' An SMS campaign cannot launch without an approved sender ID.'}
+                                </p>
+                            )}
+                            {requiresSms && senderOptions.length > 0 && (
+                                <p className="text-muted-foreground text-xs">
+                                    Every SMS goes out under this approved
+                                    sender ID — never a platform default.
                                 </p>
                             )}
                             <InputError message={form.errors.sender_id} />
@@ -813,7 +832,10 @@ export default function CampaignForm({
                 <Button variant="outline" asChild>
                     <Link href={cancelHref}>Cancel</Link>
                 </Button>
-                <Button type="submit" disabled={form.processing}>
+                <Button
+                    type="submit"
+                    disabled={form.processing || missingSmsSender}
+                >
                     {form.processing ? 'Saving…' : submitLabel}
                 </Button>
             </div>

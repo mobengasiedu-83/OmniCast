@@ -154,6 +154,7 @@ it('reuses the draft when the same idempotency key is submitted twice', function
     $payload = [
         'name' => 'Idempotent reminder',
         'channel' => 'sms',
+        'sender_id' => $this->sender->id,
         'sms_message' => 'Pick up your parcel.',
         'schedule_type' => 'now',
         'idempotency_key' => 'form-7f3c1b',
@@ -179,6 +180,7 @@ it('keeps the original idempotency key when a draft is edited', function (): voi
         ->put(route('campaigns.update', $campaign), [
             'name' => 'Renamed reminder',
             'channel' => 'sms',
+            'sender_id' => $this->sender->id,
             'sms_message' => 'Updated copy.',
             'schedule_type' => 'now',
             'idempotency_key' => 'edit-key',

@@ -34,9 +34,9 @@ class BillingReservation extends Model
     {
         return [
             'status' => ReservationStatus::class,
-            'amount' => 'decimal:2',
-            'captured_amount' => 'decimal:2',
-            'released_amount' => 'decimal:2',
+            'amount' => 'decimal:4',
+            'captured_amount' => 'decimal:4',
+            'released_amount' => 'decimal:4',
         ];
     }
 
@@ -69,6 +69,6 @@ class BillingReservation extends Model
      */
     public function heldAmount(): float
     {
-        return round((float) $this->amount - (float) $this->captured_amount - (float) $this->released_amount, 2);
+        return round((float) $this->amount - (float) $this->captured_amount - (float) $this->released_amount, 4);
     }
 }

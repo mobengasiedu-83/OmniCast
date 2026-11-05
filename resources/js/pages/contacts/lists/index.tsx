@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import ClientFilter from '@/components/client-filter';
+import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import InputError from '@/components/input-error';
 import PageHeader from '@/components/page-header';
@@ -71,6 +72,7 @@ export default function ContactListsIndex({
 }: PageProps) {
     const form = useForm({ name: '', description: '' });
     const [search, setSearch] = useState(filters.search);
+    const confirm = useConfirm();
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
@@ -95,12 +97,16 @@ export default function ContactListsIndex({
     };
 
     /** Archiving keeps the contacts; only the grouping goes away. */
-    const archive = (list: ContactListSummary): void => {
-        if (
-            !window.confirm(
-                `Archive "${list.name}"? The contacts stay in the book and in their other lists.`,
-            )
-        ) {
+    const archive = async (list: ContactListSummary): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Archive ${list.name}?`,
+            description:
+                'The contacts stay in the book and in their other lists.',
+            confirmLabel: 'Archive list',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -177,7 +183,7 @@ export default function ContactListsIndex({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Plus className="text-brand size-4" />
+                                <Plus className="size-4 text-brand" />
                                 New list
                             </CardTitle>
                             <CardDescription>
@@ -192,9 +198,7 @@ export default function ContactListsIndex({
                                 className="flex flex-col gap-3"
                             >
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="list-name">
-                                        List name
-                                    </Label>
+                                    <Label htmlFor="list-name">List name</Label>
                                     <Input
                                         id="list-name"
                                         value={form.data.name}
@@ -246,7 +250,7 @@ export default function ContactListsIndex({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Search className="text-brand size-4" />
+                                <Search className="size-4 text-brand" />
                                 Find a list
                             </CardTitle>
                             <CardDescription>
@@ -261,7 +265,7 @@ export default function ContactListsIndex({
                                 className="flex items-end gap-2"
                             >
                                 <div className="relative w-full">
-                                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                     <Input
                                         value={search}
                                         onChange={(event) =>
@@ -286,7 +290,7 @@ export default function ContactListsIndex({
                             {lists.length}{' '}
                             {lists.length === 1 ? 'list' : 'lists'}
                         </CardTitle>
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground">
                             Open a list to upload contacts into it
                         </p>
                     </CardHeader>
@@ -345,14 +349,14 @@ export default function ContactListsIndex({
                                                 >
                                                     {list.name}
                                                 </Link>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {list.description ??
                                                         'No description'}
                                                 </p>
                                             </TableCell>
 
                                             {clients.length > 0 && (
-                                                <TableCell className="text-muted-foreground text-xs">
+                                                <TableCell className="text-xs text-muted-foreground">
                                                     {list.client ?? '—'}
                                                 </TableCell>
                                             )}
@@ -361,11 +365,11 @@ export default function ContactListsIndex({
                                                 {list.contacts_count}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {list.campaigns_count}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {formatDate(list.updated_at)}
                                             </TableCell>
 
@@ -389,7 +393,7 @@ export default function ContactListsIndex({
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() =>
-                                                            archive(list)
+                                                            void archive(list)
                                                         }
                                                     >
                                                         <Trash2 className="text-destructive" />

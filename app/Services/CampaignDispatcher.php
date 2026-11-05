@@ -10,6 +10,8 @@ use App\Enums\CampaignStatus;
 use App\Enums\Channel;
 use App\Enums\EmailFormat;
 use App\Enums\ReservationStatus;
+use App\Exceptions\InsufficientWalletBalance;
+use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
@@ -20,7 +22,8 @@ use App\Services\Voice\VoiceCall as VoiceCallData;
 use Illuminate\Support\Collection;
 
 /**
- * Sends a campaign to its audience, bills the client and closes the campaign out.
+ * Sends a campaign to its audience, bills the client for every unit it delivers
+ * and closes the campaign out.
  */
 class CampaignDispatcher
 {
@@ -54,15 +57,8 @@ class CampaignDispatcher
             fn (Channel $channel): bool => ! $this->configuration->channelEnabled($channel->value, $campaign->client),
         );
         if ($disabledChannels !== []) {
-            $campaign->campaignContacts()
-                ->whereIn('status', [CampaignContactStatus::Pending->value, CampaignContactStatus::Queued->value])
-                ->update([
-                    'status' => CampaignContactStatus::Failed->value,
-                    'failed_at' => now(),
-                    'error_message' => 'Delivery was disabled by platform settings.',
-                ]);
-            $spend = (float) $campaign->campaignContacts()->sum('cost');
-            $this->finalize($campaign, $spend);
+            $this->failPending($campaign, 'Delivery was disabled by platform settings.');
+            $this->finalize($campaign);
 
             return false;
         }
@@ -77,14 +73,17 @@ class CampaignDispatcher
         $blockers = $this->readiness->issues($campaign);
 
         if ($blockers !== []) {
-            $campaign->campaignContacts()
-                ->whereIn('status', [CampaignContactStatus::Pending->value, CampaignContactStatus::Queued->value])
-                ->update([
-                    'status' => CampaignContactStatus::Failed->value,
-                    'failed_at' => now(),
-                    'error_message' => 'Delivery blocked: '.$blockers[0]['label'].'.',
-                ]);
-            $this->finalize($campaign, (float) $campaign->campaignContacts()->sum('cost'));
+            $this->failPending($campaign, 'Delivery blocked: '.$blockers[0]['label'].'.');
+            $this->finalize($campaign);
+
+            return false;
+        }
+
+        $reservation = $this->startBilling($campaign);
+
+        if ($reservation === false) {
+            $this->failPending($campaign, 'Delivery blocked: the wallet cannot cover this campaign.');
+            $this->finalize($campaign);
 
             return false;
         }
@@ -95,46 +94,77 @@ class CampaignDispatcher
         $smsParts = $campaign->channel->requiresSmsContent()
             ? max($this->segmenter->segmentsFor((string) $campaign->sms_message), 1)
             : 0;
+        $smsCostPerRecipient = round($smsParts * $smsPartCost, WalletService::PRECISION);
 
-        $smsCostPerRecipient = round($smsParts * $smsPartCost, 4);
-        $costPerRecipient = round(
-            $smsCostPerRecipient
-            + ($campaign->channel->requiresVoiceContent() ? $voiceCallCost : 0)
-            + ($campaign->channel->requiresEmailContent() ? $emailRecipientCost : 0),
-            4,
-        );
-
-        $spend = (float) $campaign->campaignContacts()->sum('cost');
+        $spend = $this->wallet->chargedFor($campaign);
+        $broke = false;
 
         $campaign->campaignContacts()
             ->with('contact')
             ->whereIn('status', [CampaignContactStatus::Pending->value, CampaignContactStatus::Queued->value])
-            ->chunkById(200, function (Collection $rows) use ($campaign, $costPerRecipient, $smsCostPerRecipient, $emailRecipientCost, &$spend): void {
+            ->chunkById(200, function (Collection $rows) use ($campaign, $reservation, $smsCostPerRecipient, $voiceCallCost, $emailRecipientCost, &$spend, &$broke): void {
                 foreach ($rows as $row) {
-                    $this->dispatchTo($campaign, $row, $costPerRecipient, $smsCostPerRecipient, $emailRecipientCost, $spend);
+                    if (! $this->dispatchTo($campaign, $reservation, $row, $smsCostPerRecipient, $voiceCallCost, $emailRecipientCost, $spend)) {
+                        $broke = true;
+
+                        return;
+                    }
                 }
             });
+
+        if ($broke) {
+            $this->failPending($campaign, 'Delivery stopped: the wallet cannot cover the rest of this campaign.');
+            $this->finalize($campaign);
+
+            return false;
+        }
 
         if ($this->awaitingRetry($campaign)) {
             return true;
         }
 
-        $this->finalize($campaign, $spend);
+        $this->finalize($campaign);
 
         return false;
     }
 
     /**
-     * Send the campaign to a single contact and record the outcome.
+     * Open the hold the campaign is billed against before the first send.
+     *
+     * @return BillingReservation|false|null the hold, false when the wallet cannot cover it, or null when no rate applies
      */
-    protected function dispatchTo(Campaign $campaign, CampaignContact $row, float $costPerRecipient, float $smsCostPerRecipient, float $emailCostPerRecipient, float &$spend): void
+    protected function startBilling(Campaign $campaign): BillingReservation|false|null
     {
+        $remaining = round(max((float) $campaign->estimated_cost - $this->wallet->chargedFor($campaign), 0.0), WalletService::PRECISION);
+
+        try {
+            return $this->wallet->startBilling($campaign, $remaining);
+        } catch (InsufficientWalletBalance) {
+            return false;
+        }
+    }
+
+    /**
+     * Send the campaign to a single contact, bill every unit it consumed and
+     * record the outcome.
+     *
+     * @return bool whether the campaign may carry on to the next recipient
+     */
+    protected function dispatchTo(
+        Campaign $campaign,
+        ?BillingReservation $reservation,
+        CampaignContact $row,
+        float $smsCostPerRecipient,
+        float $voiceCallCost,
+        float $emailCostPerRecipient,
+        float &$spend,
+    ): bool {
         $contact = $row->contact;
 
         if (! $contact instanceof Contact) {
             $row->forceFill(['status' => CampaignContactStatus::Skipped])->save();
 
-            return;
+            return true;
         }
 
         $channelDecisions = $this->eligibility->snapshot(
@@ -149,22 +179,40 @@ class CampaignDispatcher
         if (! collect($channelDecisions)->contains(fn (array $decision): bool => $decision['eligible'])) {
             $row->forceFill(['status' => CampaignContactStatus::Skipped])->save();
 
-            return;
+            return true;
         }
 
         $delivered = true;
         $failure = 'The gateway rejected the message.';
+        $charged = 0.0;
 
         foreach ($campaign->channel->deliveryChannels() as $channel) {
             if (! ($channelDecisions[$channel->value]['eligible'] ?? false)) {
                 continue;
             }
 
+            $unitCost = match ($channel) {
+                Channel::Sms => $smsCostPerRecipient,
+                Channel::Voice => $voiceCallCost,
+                Channel::Email => $emailCostPerRecipient,
+                default => 0.0,
+            };
+
+            if (! $this->canAfford($reservation, $unitCost)) {
+                $row->forceFill([
+                    'status' => CampaignContactStatus::Failed,
+                    'failed_at' => now(),
+                    'error_message' => 'The wallet balance cannot cover this '.strtolower($channel->label()).'.',
+                ])->save();
+
+                return false;
+            }
+
             $this->pacer->await($channel, $campaign->client);
 
             $delivered = match ($channel) {
                 Channel::Sms => $this->sendSms($campaign, $row, $contact, $smsCostPerRecipient),
-                Channel::Voice => $this->callVoice($campaign, $row, $contact, $costPerRecipient),
+                Channel::Voice => $this->callVoice($campaign, $row, $contact, $voiceCallCost),
                 Channel::Email => $this->sendEmail($campaign, $row, $contact, $emailCostPerRecipient),
                 default => false,
             };
@@ -176,6 +224,11 @@ class CampaignDispatcher
                     default => 'The gateway rejected the message.',
                 };
                 break;
+            }
+
+            if ($this->charge($campaign, $reservation, $channel, $unitCost, $row)) {
+                $charged = round($charged + $unitCost, WalletService::PRECISION);
+                $spend = round($spend + $unitCost, WalletService::PRECISION);
             }
         }
 
@@ -191,12 +244,10 @@ class CampaignDispatcher
                 'delivered_at' => $now,
                 'failed_at' => null,
                 'error_message' => null,
-                'cost' => $costPerRecipient,
+                'cost' => $charged,
             ])->save();
 
-            $spend = round($spend + $costPerRecipient, 4);
-
-            return;
+            return true;
         }
 
         $exhausted = $attempts >= max($campaign->max_retries, 1);
@@ -207,7 +258,39 @@ class CampaignDispatcher
             'last_attempt_at' => $now,
             'failed_at' => $exhausted ? $now : null,
             'error_message' => $failure,
+            'cost' => $charged,
         ])->save();
+
+        return true;
+    }
+
+    /**
+     * Whether the campaign can pay for the next billable unit.
+     */
+    protected function canAfford(?BillingReservation $reservation, float $unitCost): bool
+    {
+        if ($unitCost <= 0 || $reservation === null) {
+            return true;
+        }
+
+        return $this->wallet->canAfford($reservation, $unitCost);
+    }
+
+    /**
+     * Apply one billable unit to the wallet the campaign is running on.
+     */
+    protected function charge(Campaign $campaign, ?BillingReservation $reservation, Channel $channel, float $unitCost, CampaignContact $row): bool
+    {
+        if ($unitCost <= 0 || $reservation === null) {
+            return false;
+        }
+
+        return $this->wallet->spend(
+            $reservation,
+            $unitCost,
+            sprintf('%s to %s for %s', $channel->label(), $row->contact?->phone ?? $row->contact?->email ?? 'contact', $campaign->reference),
+            ['channel' => $channel->value, 'campaign_contact_id' => $row->id],
+        );
     }
 
     /**
@@ -218,8 +301,9 @@ class CampaignDispatcher
      */
     protected function sendSms(Campaign $campaign, CampaignContact $recipient, Contact $contact, float $cost): bool
     {
+        $sender = $campaign->senderId;
+        $from = trim((string) $sender?->name);
         $to = trim((string) $contact->phone);
-        $from = trim((string) ($campaign->senderId?->name ?? 'OMNICAST'));
 
         if ($to === '' || $from === '') {
             return false;
@@ -347,30 +431,38 @@ class CampaignDispatcher
     }
 
     /**
-     * Close the campaign, capture the real spend and release the unused reservation.
+     * Fail every recipient that has not been sent to yet.
      */
-    protected function finalize(Campaign $campaign, float $spend): void
+    protected function failPending(Campaign $campaign, string $message): void
     {
+        $campaign->campaignContacts()
+            ->whereIn('status', [CampaignContactStatus::Pending->value, CampaignContactStatus::Queued->value])
+            ->update([
+                'status' => CampaignContactStatus::Failed->value,
+                'failed_at' => now(),
+                'error_message' => $message,
+            ]);
+    }
+
+    /**
+     * Close the campaign, settle the ledger and give back the unused hold.
+     */
+    protected function finalize(Campaign $campaign): void
+    {
+        $charged = $this->wallet->chargedFor($campaign);
+
         $campaign->forceFill([
             'status' => CampaignStatus::Completed,
             'completed_at' => now(),
-            'actual_cost' => round($spend, 2),
+            'actual_cost' => $charged,
+            'reserved_amount' => 0,
         ])->save();
 
-        $reservation = $campaign->reservations()
+        $campaign->reservations()
             ->where('status', ReservationStatus::Held->value)
-            ->latest('id')
-            ->first();
-
-        if ($reservation === null) {
-            return;
-        }
-
-        $this->wallet->capture($reservation, round($spend, 2), 'Campaign spend for '.$campaign->name);
-
-        $this->wallet->release(
-            $reservation->refresh(),
-            'Unused funds released for '.$campaign->name,
-        );
+            ->get()
+            ->each(function (BillingReservation $reservation) use ($campaign): void {
+                $this->wallet->release($reservation, 'Unused funds released for '.$campaign->name);
+            });
     }
 }

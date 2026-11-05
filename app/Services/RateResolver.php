@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\Channel;
 use App\Models\Client;
 use App\Models\Rate;
+use App\Models\RateCard;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -44,10 +45,27 @@ class RateResolver
     }
 
     /**
+     * The channels of a campaign that have no price for the client.
+     *
+     * A service the platform has no rate for would broadcast for free, so the
+     * caller is told which ones are unpriced before it starts.
+     *
+     * @param  list<Channel>  $channels
+     * @return list<Channel>
+     */
+    public function unpriced(Client $client, array $channels, string $destination = 'GH'): array
+    {
+        return array_values(array_filter(
+            $channels,
+            fn (Channel $channel): bool => $this->unitPrice($client, $channel, $destination) === null,
+        ));
+    }
+
+    /**
      * Constrain the rate card query to the given client scope (or the platform default).
      *
-     * @param  Builder<\App\Models\RateCard>  $query
-     * @return Builder<\App\Models\RateCard>
+     * @param  Builder<RateCard>  $query
+     * @return Builder<RateCard>
      */
     protected function constrainRateCard(Builder $query, ?int $clientId): Builder
     {
