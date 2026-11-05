@@ -250,7 +250,7 @@ export default function EmailReport({ filters, report, campaigns }: PageProps) {
                                             <p className="font-medium">
                                                 {message.contact ?? message.to}
                                             </p>
-                                            <p className="text-muted-foreground text-xs">
+                                            <p className="text-xs text-muted-foreground">
                                                 {message.subject}
                                             </p>
                                         </TableCell>
@@ -263,7 +263,9 @@ export default function EmailReport({ filters, report, campaigns }: PageProps) {
                                         <TableCell className="font-mono text-xs">
                                             {message.provider_status ?? '—'}
                                         </TableCell>
-                                        <TableCell>{message.attempts}</TableCell>
+                                        <TableCell>
+                                            {message.attempts}
+                                        </TableCell>
                                         <TableCell>
                                             {moment(message.submitted_at)}
                                         </TableCell>

@@ -1,5 +1,14 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { CheckCircle2, Fingerprint, Pencil, Plus, Search, ShieldX, Trash2, X } from 'lucide-react';
+import {
+    CheckCircle2,
+    Fingerprint,
+    Pencil,
+    Plus,
+    Search,
+    ShieldX,
+    Trash2,
+    X,
+} from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
@@ -9,7 +18,13 @@ import Pagination from '@/components/pagination';
 import StatCard from '@/components/stat-card';
 import StatusBadge from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -20,16 +35,44 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { urls } from '@/lib/urls';
-import type { ClientOption, Paginated, SelectOption, SenderIdRow } from '@/types';
+import type {
+    ClientOption,
+    Paginated,
+    SelectOption,
+    SenderIdRow,
+} from '@/types';
 
 type PageProps = {
     senderIds: Paginated<SenderIdRow>;
-    filters: { search: string; channel: string; status: string; client_id: number | null };
-    stats: { total: number; pending: number; approved: number; rejected: number };
+    filters: {
+        search: string;
+        channel: string;
+        status: string;
+        client_id: number | null;
+    };
+    stats: {
+        total: number;
+        pending: number;
+        approved: number;
+        rejected: number;
+    };
     channels: SelectOption[];
     statuses: SelectOption[];
     clients: ClientOption[];
@@ -40,13 +83,26 @@ function formatDate(value: string | null): string {
     return value ? new Date(value).toLocaleDateString() : '—';
 }
 
-export default function SenderIdsIndex({ senderIds, filters, stats, channels, statuses, clients, can }: PageProps) {
+export default function SenderIdsIndex({
+    senderIds,
+    filters,
+    stats,
+    channels,
+    statuses,
+    clients,
+    can,
+}: PageProps) {
     const [search, setSearch] = useState(filters.search);
     const [rejecting, setRejecting] = useState<SenderIdRow | null>(null);
     const rejectForm = useForm({ reason: '' });
     const confirm = useConfirm();
 
-    const hasFilters = Boolean(filters.search || filters.channel || filters.status || filters.client_id);
+    const hasFilters = Boolean(
+        filters.search ||
+        filters.channel ||
+        filters.status ||
+        filters.client_id,
+    );
 
     const apply = (overrides: Record<string, string | null>): void => {
         router.get(
@@ -73,7 +129,11 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
     };
 
     const approve = (senderId: SenderIdRow): void => {
-        router.post(urls.senderIds.approve(senderId.id), {}, { preserveScroll: true });
+        router.post(
+            urls.senderIds.approve(senderId.id),
+            {},
+            { preserveScroll: true },
+        );
     };
 
     const openReject = (senderId: SenderIdRow): void => {
@@ -139,41 +199,76 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                 />
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <StatCard title="All identities" value={stats.total} icon={Fingerprint} />
-                    <StatCard title="Awaiting review" value={stats.pending} tone="warning" />
-                    <StatCard title="Approved" value={stats.approved} tone="success" />
-                    <StatCard title="Rejected" value={stats.rejected} tone="danger" />
+                    <StatCard
+                        title="All identities"
+                        value={stats.total}
+                        icon={Fingerprint}
+                    />
+                    <StatCard
+                        title="Awaiting review"
+                        value={stats.pending}
+                        tone="warning"
+                    />
+                    <StatCard
+                        title="Approved"
+                        value={stats.approved}
+                        tone="success"
+                    />
+                    <StatCard
+                        title="Rejected"
+                        value={stats.rejected}
+                        tone="danger"
+                    />
                 </div>
 
                 <Card className="py-3">
                     <CardContent className="flex flex-wrap items-center gap-2 px-4">
-                        <form onSubmit={submit} className="flex flex-1 items-center gap-2 sm:flex-none">
+                        <form
+                            onSubmit={submit}
+                            className="flex flex-1 items-center gap-2 sm:flex-none"
+                        >
                             <div className="relative w-full sm:w-64">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
                                     placeholder="Search identity or use case"
                                     className="pl-8"
                                 />
                             </div>
 
-                            <Button type="submit" variant="secondary" size="icon" aria-label="Search sender IDs">
+                            <Button
+                                type="submit"
+                                variant="secondary"
+                                size="icon"
+                                aria-label="Search sender IDs"
+                            >
                                 <Search />
                             </Button>
                         </form>
 
                         <Select
                             value={filters.channel || 'all'}
-                            onValueChange={(value) => apply({ channel: value === 'all' ? null : value })}
+                            onValueChange={(value) =>
+                                apply({
+                                    channel: value === 'all' ? null : value,
+                                })
+                            }
                         >
                             <SelectTrigger className="w-40">
                                 <SelectValue placeholder="All channels" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All channels</SelectItem>
+                                <SelectItem value="all">
+                                    All channels
+                                </SelectItem>
                                 {channels.map((channel) => (
-                                    <SelectItem key={channel.value} value={channel.value}>
+                                    <SelectItem
+                                        key={channel.value}
+                                        value={channel.value}
+                                    >
                                         {channel.label}
                                     </SelectItem>
                                 ))}
@@ -182,15 +277,24 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
 
                         <Select
                             value={filters.status || 'all'}
-                            onValueChange={(value) => apply({ status: value === 'all' ? null : value })}
+                            onValueChange={(value) =>
+                                apply({
+                                    status: value === 'all' ? null : value,
+                                })
+                            }
                         >
                             <SelectTrigger className="w-44">
                                 <SelectValue placeholder="All statuses" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All statuses</SelectItem>
+                                <SelectItem value="all">
+                                    All statuses
+                                </SelectItem>
                                 {statuses.map((status) => (
-                                    <SelectItem key={status.value} value={status.value}>
+                                    <SelectItem
+                                        key={status.value}
+                                        value={status.value}
+                                    >
                                         {status.label}
                                     </SelectItem>
                                 ))}
@@ -199,16 +303,30 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
 
                         {clients.length > 0 && (
                             <Select
-                                value={filters.client_id ? String(filters.client_id) : 'all'}
-                                onValueChange={(value) => apply({ client_id: value === 'all' ? null : value })}
+                                value={
+                                    filters.client_id
+                                        ? String(filters.client_id)
+                                        : 'all'
+                                }
+                                onValueChange={(value) =>
+                                    apply({
+                                        client_id:
+                                            value === 'all' ? null : value,
+                                    })
+                                }
                             >
                                 <SelectTrigger className="w-48">
                                     <SelectValue placeholder="All clients" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All clients</SelectItem>
+                                    <SelectItem value="all">
+                                        All clients
+                                    </SelectItem>
                                     {clients.map((client) => (
-                                        <SelectItem key={client.id} value={String(client.id)}>
+                                        <SelectItem
+                                            key={client.id}
+                                            value={String(client.id)}
+                                        >
                                             {client.name}
                                         </SelectItem>
                                     ))}
@@ -217,7 +335,12 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                         )}
 
                         {hasFilters && (
-                            <Button variant="ghost" size="sm" onClick={clear} className="text-muted-foreground">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={clear}
+                                className="text-muted-foreground"
+                            >
                                 <X />
                                 Clear
                             </Button>
@@ -228,10 +351,12 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                 <Card className="gap-0 overflow-hidden py-0">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/60 py-3">
                         <CardTitle className="text-sm font-medium">
-                            {senderIds.total} {senderIds.total === 1 ? 'sender ID' : 'sender IDs'}
+                            {senderIds.total}{' '}
+                            {senderIds.total === 1 ? 'sender ID' : 'sender IDs'}
                         </CardTitle>
                         <CardDescription className="text-xs">
-                            Page {senderIds.current_page} of {senderIds.last_page}
+                            Page {senderIds.current_page} of{' '}
+                            {senderIds.last_page}
                         </CardDescription>
                     </CardHeader>
 
@@ -257,44 +382,65 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Sender ID</TableHead>
-                                        {clients.length > 0 && <TableHead>Client</TableHead>}
+                                        {clients.length > 0 && (
+                                            <TableHead>Client</TableHead>
+                                        )}
                                         <TableHead>Use case</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead>Requested</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                        <TableHead className="text-right">
+                                            Actions
+                                        </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {senderIds.data.map((senderId) => (
                                         <TableRow key={senderId.id}>
                                             <TableCell>
-                                                <p className="font-medium">{senderId.name}</p>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="font-medium">
+                                                    {senderId.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
                                                     {senderId.channel_label}
-                                                    {senderId.country ? ` · ${senderId.country}` : ''}
-                                                    {senderId.requester ? ` · ${senderId.requester}` : ''}
+                                                    {senderId.country
+                                                        ? ` · ${senderId.country}`
+                                                        : ''}
+                                                    {senderId.requester
+                                                        ? ` · ${senderId.requester}`
+                                                        : ''}
                                                 </p>
                                             </TableCell>
 
                                             {clients.length > 0 && (
-                                                <TableCell className="text-sm">{senderId.client ?? '—'}</TableCell>
+                                                <TableCell className="text-sm">
+                                                    {senderId.client ?? '—'}
+                                                </TableCell>
                                             )}
 
-                                            <TableCell className="text-muted-foreground max-w-64 text-sm">
+                                            <TableCell className="max-w-64 text-sm text-muted-foreground">
                                                 {senderId.purpose ?? '—'}
                                             </TableCell>
 
                                             <TableCell>
-                                                <StatusBadge status={senderId.status} label={senderId.status_label} />
+                                                <StatusBadge
+                                                    status={senderId.status}
+                                                    label={
+                                                        senderId.status_label
+                                                    }
+                                                />
                                                 {senderId.rejection_reason && (
-                                                    <p className="text-muted-foreground mt-1 max-w-56 text-xs">
-                                                        {senderId.rejection_reason}
+                                                    <p className="mt-1 max-w-56 text-xs text-muted-foreground">
+                                                        {
+                                                            senderId.rejection_reason
+                                                        }
                                                     </p>
                                                 )}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
-                                                {formatDate(senderId.requested_at)}
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {formatDate(
+                                                    senderId.requested_at,
+                                                )}
                                             </TableCell>
 
                                             <TableCell>
@@ -304,7 +450,11 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
-                                                                onClick={() => approve(senderId)}
+                                                                onClick={() =>
+                                                                    approve(
+                                                                        senderId,
+                                                                    )
+                                                                }
                                                             >
                                                                 <CheckCircle2 />
                                                                 Approve
@@ -312,7 +462,11 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                onClick={() => openReject(senderId)}
+                                                                onClick={() =>
+                                                                    openReject(
+                                                                        senderId,
+                                                                    )
+                                                                }
                                                             >
                                                                 <ShieldX />
                                                                 Reject
@@ -321,8 +475,16 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                                                     )}
 
                                                     {senderId.can.update && (
-                                                        <Button size="sm" variant="ghost" asChild>
-                                                            <Link href={urls.senderIds.edit(senderId.id)}>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            asChild
+                                                        >
+                                                            <Link
+                                                                href={urls.senderIds.edit(
+                                                                    senderId.id,
+                                                                )}
+                                                            >
                                                                 <Pencil />
                                                                 Edit
                                                             </Link>
@@ -334,7 +496,9 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                                                             size="sm"
                                                             variant="ghost"
                                                             onClick={() =>
-                                                                void withdraw(senderId)
+                                                                void withdraw(
+                                                                    senderId,
+                                                                )
                                                             }
                                                         >
                                                             <Trash2 />
@@ -353,34 +517,59 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
 
                 <Pagination paginator={senderIds} noun="sender IDs" />
 
-                <Dialog open={rejecting !== null} onOpenChange={(open) => !open && setRejecting(null)}>
+                <Dialog
+                    open={rejecting !== null}
+                    onOpenChange={(open) => !open && setRejecting(null)}
+                >
                     <DialogContent>
                         <form onSubmit={submitReject} className="grid gap-4">
                             <DialogHeader>
-                                <DialogTitle>Reject {rejecting?.name}</DialogTitle>
+                                <DialogTitle>
+                                    Reject {rejecting?.name}
+                                </DialogTitle>
                                 <DialogDescription>
-                                    The client sees this reason and can correct the request before resubmitting it.
+                                    The client sees this reason and can correct
+                                    the request before resubmitting it.
                                 </DialogDescription>
                             </DialogHeader>
 
                             <div className="grid gap-1.5">
-                                <Label htmlFor="reason">Reason for rejection</Label>
+                                <Label htmlFor="reason">
+                                    Reason for rejection
+                                </Label>
                                 <Textarea
                                     id="reason"
                                     rows={3}
                                     value={rejectForm.data.reason}
-                                    onChange={(event) => rejectForm.setData('reason', event.target.value)}
+                                    onChange={(event) =>
+                                        rejectForm.setData(
+                                            'reason',
+                                            event.target.value,
+                                        )
+                                    }
                                     placeholder="Explain what compliance needs the client to change."
                                 />
-                                <InputError message={rejectForm.errors.reason} />
+                                <InputError
+                                    message={rejectForm.errors.reason}
+                                />
                             </div>
 
                             <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setRejecting(null)}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setRejecting(null)}
+                                >
                                     Cancel
                                 </Button>
-                                <Button type="submit" variant="destructive" disabled={rejectForm.processing}>
-                                    {rejectForm.processing ? 'Rejecting…' : 'Reject request'}
+                                <Button
+                                    type="submit"
+                                    variant="destructive"
+                                    disabled={rejectForm.processing}
+                                >
+                                    {rejectForm.processing
+                                        ? 'Rejecting…'
+                                        : 'Reject request'}
                                 </Button>
                             </DialogFooter>
                         </form>

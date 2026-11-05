@@ -34,7 +34,8 @@ export const urls = {
             path(`/campaigns/${campaign}/audio/reject`),
         launch: (campaign: number) => path(`/campaigns/${campaign}/launch`),
         cancel: (campaign: number) => path(`/campaigns/${campaign}/cancel`),
-        duplicate: (campaign: number) => path(`/campaigns/${campaign}/duplicate`),
+        duplicate: (campaign: number) =>
+            path(`/campaigns/${campaign}/duplicate`),
     },
     contacts: {
         index: path('/contacts'),
@@ -121,11 +122,18 @@ export const urls = {
         settings: {
             index: path('/admin/settings'),
             plans: path('/admin/settings/plans'),
-            assignPlan: (client: number) => path(`/admin/settings/plans/${client}`),
+            assignPlan: (client: number) =>
+                path(`/admin/settings/plans/${client}`),
+        },
+        packages: {
+            index: path('/admin/packages'),
+            update: (packageKey: string) =>
+                path(`/admin/packages/${packageKey}`),
         },
         payments: {
             index: path('/admin/payments'),
-            verify: (payment: number) => path(`/admin/payments/${payment}/verify`),
+            verify: (payment: number) =>
+                path(`/admin/payments/${payment}/verify`),
         },
         invoices: {
             index: path('/admin/invoices'),
@@ -138,19 +146,29 @@ export const urls = {
             index: path('/admin/clients'),
             show: (client: number) => path(`/admin/clients/${client}`),
             update: (client: number) => path(`/admin/clients/${client}`),
-            activate: (client: number) => path(`/admin/clients/${client}/activate`),
-            suspend: (client: number) => path(`/admin/clients/${client}/suspend`),
-            reactivate: (client: number) => path(`/admin/clients/${client}/reactivate`),
-            archive: (client: number) => path(`/admin/clients/${client}/archive`),
-            documents: (client: number) => path(`/admin/clients/${client}/documents`),
-            reviewDocument: (client: number, document: number) => path(`/admin/clients/${client}/documents/${document}/review`),
-            deleteDocument: (client: number, document: number) => path(`/admin/clients/${client}/documents/${document}`),
-            entitlements: (client: number) => path(`/admin/clients/${client}/entitlements`),
+            activate: (client: number) =>
+                path(`/admin/clients/${client}/activate`),
+            suspend: (client: number) =>
+                path(`/admin/clients/${client}/suspend`),
+            reactivate: (client: number) =>
+                path(`/admin/clients/${client}/reactivate`),
+            archive: (client: number) =>
+                path(`/admin/clients/${client}/archive`),
+            documents: (client: number) =>
+                path(`/admin/clients/${client}/documents`),
+            reviewDocument: (client: number, document: number) =>
+                path(`/admin/clients/${client}/documents/${document}/review`),
+            deleteDocument: (client: number, document: number) =>
+                path(`/admin/clients/${client}/documents/${document}`),
+            entitlements: (client: number) =>
+                path(`/admin/clients/${client}/entitlements`),
         },
         clientRegistrations: {
             index: path('/admin/client-registrations'),
-            approve: (registration: number) => path(`/admin/client-registrations/${registration}/approve`),
-            reject: (registration: number) => path(`/admin/client-registrations/${registration}/reject`),
+            approve: (registration: number) =>
+                path(`/admin/client-registrations/${registration}/approve`),
+            reject: (registration: number) =>
+                path(`/admin/client-registrations/${registration}/reject`),
         },
         resourceRequests: {
             index: path('/admin/resource-requests'),
@@ -160,7 +178,8 @@ export const urls = {
             store: path('/admin/users'),
             update: (user: number) => path(`/admin/users/${user}`),
             suspend: (user: number) => path(`/admin/users/${user}/suspend`),
-            reactivate: (user: number) => path(`/admin/users/${user}/reactivate`),
+            reactivate: (user: number) =>
+                path(`/admin/users/${user}/reactivate`),
         },
         invitations: {
             index: path('/admin/invitations'),
@@ -232,7 +251,8 @@ export const urls = {
             store: path('/settings/team'),
             resend: (invitation: number) =>
                 path(`/settings/team/${invitation}/resend`),
-            destroy: (invitation: number) => path(`/settings/team/${invitation}`),
+            destroy: (invitation: number) =>
+                path(`/settings/team/${invitation}`),
         },
     },
     invitations: {

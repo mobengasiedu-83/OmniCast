@@ -34,15 +34,15 @@ export default function ContactsDnd({ contact, dndRequestUrl }: PageProps) {
         <>
             <Head title="Stop messages" />
 
-            <div className="bg-background flex min-h-screen items-center justify-center px-4 py-10">
+            <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
                 <div className="w-full max-w-md">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 {alreadyBlocked ? (
-                                    <CheckCircle2 className="text-success size-5" />
+                                    <CheckCircle2 className="size-5 text-success" />
                                 ) : (
-                                    <MailX className="text-brand size-5" />
+                                    <MailX className="size-5 text-brand" />
                                 )}
                                 {alreadyBlocked
                                     ? 'You are on the DND list'
@@ -69,7 +69,9 @@ export default function ContactsDnd({ contact, dndRequestUrl }: PageProps) {
                                     <dt className="text-muted-foreground">
                                         Phone
                                     </dt>
-                                    <dd className="font-mono">{contact.phone}</dd>
+                                    <dd className="font-mono">
+                                        {contact.phone}
+                                    </dd>
                                 </div>
                                 {contact.email !== null && (
                                     <div className="flex items-baseline justify-between gap-4">
@@ -84,7 +86,7 @@ export default function ContactsDnd({ contact, dndRequestUrl }: PageProps) {
                             </dl>
 
                             {alreadyBlocked ? (
-                                <p className="text-muted-foreground flex items-start gap-2 rounded-lg border border-border/60 p-3 text-xs">
+                                <p className="flex items-start gap-2 rounded-lg border border-border/60 p-3 text-xs text-muted-foreground">
                                     <ShieldCheck className="mt-0.5 size-4 shrink-0" />
                                     This decision stays in the DND registry, so
                                     future campaigns cannot reach the number.
@@ -103,7 +105,7 @@ export default function ContactsDnd({ contact, dndRequestUrl }: PageProps) {
                         </CardContent>
                     </Card>
 
-                    <p className="text-muted-foreground mt-4 text-center text-xs">
+                    <p className="mt-4 text-center text-xs text-muted-foreground">
                         Changed your mind? Contact the sender directly and they
                         can remove the number from the DND list.
                     </p>

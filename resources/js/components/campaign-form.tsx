@@ -68,7 +68,10 @@ const ivrActions = [
  * create a second draft.
  */
 function newIdempotencyKey(): string {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    if (
+        typeof crypto !== 'undefined' &&
+        typeof crypto.randomUUID === 'function'
+    ) {
         return crypto.randomUUID();
     }
 
@@ -102,8 +105,7 @@ export default function CampaignForm({
     const requiresSms =
         form.data.channel === 'sms' || form.data.channel === 'multi_channel';
     const requiresVoice =
-        form.data.channel === 'voice' ||
-        form.data.channel === 'multi_channel';
+        form.data.channel === 'voice' || form.data.channel === 'multi_channel';
     const requiresEmail = form.data.channel === 'email';
     const senderChannel =
         form.data.channel === 'multi_channel' ? 'sms' : form.data.channel;
@@ -240,7 +242,7 @@ export default function CampaignForm({
                             </SelectContent>
                         </Select>
                         <InputError message={form.errors.contact_list_id} />
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground">
                             Contacts can sit in several lists. Everyone in the
                             chosen audience is de-duplicated when the campaign
                             is sent, so no number is messaged twice.
@@ -248,15 +250,41 @@ export default function CampaignForm({
                     </div>
 
                     <div className="grid gap-1.5">
-                        <Label htmlFor="contact_segment_id">Saved segment</Label>
-                        <Select value={form.data.contact_segment_id || 'none'} onValueChange={(value) => { form.setData('contact_segment_id', value === 'none' ? '' : value); form.setData('contact_list_id', ''); }}>
-                            <SelectTrigger id="contact_segment_id"><SelectValue placeholder="No saved segment" /></SelectTrigger>
-                            <SelectContent><SelectItem value="none">No saved segment</SelectItem>{options.contactSegments.map((segment) => <SelectItem key={segment.id} value={String(segment.id)}>{segment.name} ({segment.contacts_count})</SelectItem>)}</SelectContent>
+                        <Label htmlFor="contact_segment_id">
+                            Saved segment
+                        </Label>
+                        <Select
+                            value={form.data.contact_segment_id || 'none'}
+                            onValueChange={(value) => {
+                                form.setData(
+                                    'contact_segment_id',
+                                    value === 'none' ? '' : value,
+                                );
+                                form.setData('contact_list_id', '');
+                            }}
+                        >
+                            <SelectTrigger id="contact_segment_id">
+                                <SelectValue placeholder="No saved segment" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">
+                                    No saved segment
+                                </SelectItem>
+                                {options.contactSegments.map((segment) => (
+                                    <SelectItem
+                                        key={segment.id}
+                                        value={String(segment.id)}
+                                    >
+                                        {segment.name} ({segment.contacts_count}
+                                        )
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
                         </Select>
                         <InputError message={form.errors.contact_segment_id} />
                         {options.contactLists.length === 0 &&
                             options.contactSegments.length === 0 && (
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     No saved list or segment yet —{' '}
                                     <Link
                                         href={urls.contacts.audiences}
@@ -309,7 +337,7 @@ export default function CampaignForm({
                                 </SelectContent>
                             </Select>
                             {senderOptions.length === 0 && (
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     No approved {senderChannel} sender ID yet —
                                     request one under Sender IDs.
                                     {requiresSms &&
@@ -317,7 +345,7 @@ export default function CampaignForm({
                                 </p>
                             )}
                             {requiresSms && senderOptions.length > 0 && (
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     Every SMS goes out under this approved
                                     sender ID — never a platform default.
                                 </p>
@@ -329,13 +357,13 @@ export default function CampaignForm({
                     {requiresVoice && (
                         <div className="grid gap-1.5">
                             <Label>Outbound caller ID</Label>
-                            <div className="bg-muted/50 ring-border rounded-lg p-3 ring-1">
+                            <div className="rounded-lg bg-muted/50 p-3 ring-1 ring-border">
                                 {options.outboundCallerId ? (
                                     <>
                                         <p className="font-mono text-xs">
                                             {options.outboundCallerId}
                                         </p>
-                                        <p className="text-muted-foreground mt-1 text-xs">
+                                        <p className="mt-1 text-xs text-muted-foreground">
                                             Every voice campaign dials from the
                                             platform DID. A reviewer approves
                                             the recording or script before
@@ -343,7 +371,7 @@ export default function CampaignForm({
                                         </p>
                                     </>
                                 ) : (
-                                    <p className="text-destructive text-xs">
+                                    <p className="text-xs text-destructive">
                                         No outbound DID is configured. An
                                         operator must set
                                         voice.outbound_caller_id before voice
@@ -381,7 +409,7 @@ export default function CampaignForm({
                                 maxLength={1600}
                                 placeholder="Hello {{first_name}}, your account balance is due…"
                             />
-                            <p className="text-muted-foreground text-xs">
+                            <p className="text-xs text-muted-foreground">
                                 {form.data.sms_message.length} of 1600
                                 characters
                             </p>
@@ -405,7 +433,7 @@ export default function CampaignForm({
                                     maxLength={255}
                                     placeholder="Your October statement is ready"
                                 />
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     {form.data.email_subject.length} of 255
                                     characters
                                 </p>
@@ -426,7 +454,9 @@ export default function CampaignForm({
                                         <SelectValue placeholder="HTML" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="html">HTML</SelectItem>
+                                        <SelectItem value="html">
+                                            HTML
+                                        </SelectItem>
                                         <SelectItem value="text">
                                             Plain text
                                         </SelectItem>
@@ -456,7 +486,7 @@ export default function CampaignForm({
                                             : 'Hello, your October statement is ready…'
                                     }
                                 />
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     {form.data.email_format === 'html'
                                         ? 'Markup is rendered inside the branded broadcast shell, and a plain-text alternative is generated automatically.'
                                         : 'Sent exactly as typed, with no markup.'}
@@ -499,9 +529,7 @@ export default function CampaignForm({
                                     type="number"
                                     min={5}
                                     max={300}
-                                    value={
-                                        form.data.voice_max_duration_seconds
-                                    }
+                                    value={form.data.voice_max_duration_seconds}
                                     onChange={(event) =>
                                         form.setData(
                                             'voice_max_duration_seconds',
@@ -511,8 +539,7 @@ export default function CampaignForm({
                                 />
                                 <InputError
                                     message={
-                                        form.errors
-                                            .voice_max_duration_seconds
+                                        form.errors.voice_max_duration_seconds
                                     }
                                 />
                             </div>
@@ -565,7 +592,7 @@ export default function CampaignForm({
                                             maxLength={1000}
                                             placeholder="Press 1 to hear the message, 2 to hear it again."
                                         />
-                                        <p className="text-muted-foreground text-xs">
+                                        <p className="text-xs text-muted-foreground">
                                             Falls back to the voice script when
                                             left empty.
                                         </p>
@@ -623,8 +650,7 @@ export default function CampaignForm({
                                             />
                                             <InputError
                                                 message={
-                                                    form.errors
-                                                        .ivr_max_attempts
+                                                    form.errors.ivr_max_attempts
                                                 }
                                             />
                                         </div>
@@ -639,14 +665,14 @@ export default function CampaignForm({
                                                 key={digit}
                                                 className="flex items-center gap-2"
                                             >
-                                                <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-md font-mono text-sm font-semibold">
+                                                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted font-mono text-sm font-semibold">
                                                     {digit}
                                                 </span>
                                                 <Select
                                                     value={
-                                                        form.data
-                                                            .ivr_options[digit] ??
-                                                        'none'
+                                                        form.data.ivr_options[
+                                                            digit
+                                                        ] ?? 'none'
                                                     }
                                                     onValueChange={(value) => {
                                                         const next = {
@@ -657,8 +683,7 @@ export default function CampaignForm({
                                                         if (value === 'none') {
                                                             delete next[digit];
                                                         } else {
-                                                            next[digit] =
-                                                                value;
+                                                            next[digit] = value;
                                                         }
 
                                                         form.setData(
@@ -694,7 +719,7 @@ export default function CampaignForm({
                                                 </Select>
                                             </div>
                                         ))}
-                                        <p className="text-muted-foreground text-xs">
+                                        <p className="text-xs text-muted-foreground">
                                             The opt-out key is always on the
                                             menu, so a recipient can leave from
                                             the handset.
@@ -743,9 +768,7 @@ export default function CampaignForm({
 
                     {form.data.schedule_type === 'scheduled' && (
                         <div className="grid gap-1.5">
-                            <Label htmlFor="scheduled_at">
-                                Start time
-                            </Label>
+                            <Label htmlFor="scheduled_at">Start time</Label>
                             <Input
                                 id="scheduled_at"
                                 type="datetime-local"
@@ -806,9 +829,7 @@ export default function CampaignForm({
                                 )
                             }
                         />
-                        <InputError
-                            message={form.errors.retry_delay_minutes}
-                        />
+                        <InputError message={form.errors.retry_delay_minutes} />
                     </div>
 
                     <div className="grid gap-1.5 sm:col-span-2">

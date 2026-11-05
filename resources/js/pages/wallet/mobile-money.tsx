@@ -193,14 +193,14 @@ export default function WalletMobileMoney({
                                                 className={
                                                     form.data.package ===
                                                     pkg.key
-                                                        ? 'border-brand bg-brand/5 rounded-xl border p-3 text-left'
-                                                        : 'hover:border-brand/40 rounded-xl border p-3 text-left'
+                                                        ? 'rounded-xl border border-brand bg-brand/5 p-3 text-left'
+                                                        : 'rounded-xl border p-3 text-left hover:border-brand/40'
                                                 }
                                             >
                                                 <p className="text-sm font-semibold">
                                                     {pkg.name}
                                                 </p>
-                                                <p className="text-muted-foreground text-xs tabular-nums">
+                                                <p className="text-xs text-muted-foreground tabular-nums">
                                                     {money(pkg.price, currency)}
                                                 </p>
                                             </button>
@@ -230,11 +230,15 @@ export default function WalletMobileMoney({
                                             inputMode="tel"
                                             autoComplete="tel"
                                         />
-                                        <InputError message={form.errors.phone} />
+                                        <InputError
+                                            message={form.errors.phone}
+                                        />
                                     </div>
 
                                     <div className="grid gap-1.5">
-                                        <Label htmlFor="provider">Network</Label>
+                                        <Label htmlFor="provider">
+                                            Network
+                                        </Label>
                                         <Select
                                             value={form.data.provider}
                                             onValueChange={(value) =>
@@ -258,18 +262,20 @@ export default function WalletMobileMoney({
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        <InputError message={form.errors.provider} />
+                                        <InputError
+                                            message={form.errors.provider}
+                                        />
                                     </div>
                                 </div>
 
-                                <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-3 rounded-xl p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/40 p-3">
                                     <div>
                                         <p className="text-sm font-medium">
                                             {chosen
                                                 ? `${chosen.name} · ${money(chosen.price, currency)}`
                                                 : 'Choose a package'}
                                         </p>
-                                        <p className="text-muted-foreground text-xs">
+                                        <p className="text-xs text-muted-foreground">
                                             Top ups run from{' '}
                                             {money(limits.min, currency)} to{' '}
                                             {money(limits.max, currency)}.
@@ -297,7 +303,7 @@ export default function WalletMobileMoney({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Clock className="text-brand size-4" />
+                                <Clock className="size-4 text-brand" />
                                 {payment.requires_otp
                                     ? 'Enter the code from the wallet'
                                     : 'Approve the payment on the phone'}
@@ -309,7 +315,10 @@ export default function WalletMobileMoney({
                         </CardHeader>
                         <CardContent className="grid gap-4">
                             <dl className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
-                                <Row label="Package" value={payment.description} />
+                                <Row
+                                    label="Package"
+                                    value={payment.description}
+                                />
                                 <Row
                                     label="Amount"
                                     value={money(
@@ -317,17 +326,27 @@ export default function WalletMobileMoney({
                                         payment.currency,
                                     )}
                                 />
-                                <Row label="Wallet" value={payment.phone ?? '—'} />
+                                <Row
+                                    label="Wallet"
+                                    value={payment.phone ?? '—'}
+                                />
                                 <Row
                                     label="Network"
                                     value={payment.provider_label ?? '—'}
                                 />
-                                <Row label="Reference" value={payment.reference} mono />
-                                <Row label="Status" value={payment.status_label} />
+                                <Row
+                                    label="Reference"
+                                    value={payment.reference}
+                                    mono
+                                />
+                                <Row
+                                    label="Status"
+                                    value={payment.status_label}
+                                />
                             </dl>
 
                             {payment.failure_reason !== null && (
-                                <p className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
+                                <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                                     {payment.failure_reason}
                                 </p>
                             )}
@@ -396,8 +415,16 @@ export default function WalletMobileMoney({
                                         Close checkout
                                     </Button>
                                 ) : (
-                                    <Button type="button" variant="outline" asChild>
-                                        <Link href={urls.wallet.mobileMoney.create}>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        asChild
+                                    >
+                                        <Link
+                                            href={
+                                                urls.wallet.mobileMoney.create
+                                            }
+                                        >
                                             Try again
                                         </Link>
                                     </Button>
@@ -425,7 +452,7 @@ function Row({
 }) {
     return (
         <div className="grid gap-0.5">
-            <dt className="text-muted-foreground text-xs">{label}</dt>
+            <dt className="text-xs text-muted-foreground">{label}</dt>
             <dd className={mono ? 'font-mono text-xs' : 'font-medium'}>
                 {value}
             </dd>
@@ -445,4 +472,3 @@ WalletMobileMoney.layout = {
         },
     ],
 };
-

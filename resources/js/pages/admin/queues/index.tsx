@@ -149,7 +149,7 @@ export default function AdminQueues({
                                             <div className="font-mono text-xs font-medium">
                                                 {queue.name}
                                             </div>
-                                            <div className="text-muted-foreground mt-1 max-w-sm text-xs">
+                                            <div className="mt-1 max-w-sm text-xs text-muted-foreground">
                                                 {queue.purpose}
                                             </div>
                                         </TableCell>
@@ -159,7 +159,7 @@ export default function AdminQueues({
                                                     {queue.supervisor}
                                                 </Badge>
                                             ) : (
-                                                <span className="text-muted-foreground text-xs">
+                                                <span className="text-xs text-muted-foreground">
                                                     Unsupervised
                                                 </span>
                                             )}
@@ -169,7 +169,7 @@ export default function AdminQueues({
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">
                                             {queue.failed > 0 ? (
-                                                <span className="text-destructive font-medium">
+                                                <span className="font-medium text-destructive">
                                                     {queue.failed}
                                                 </span>
                                             ) : (
@@ -178,7 +178,7 @@ export default function AdminQueues({
                                                 </span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-muted-foreground text-xs">
+                                        <TableCell className="text-xs text-muted-foreground">
                                             {queue.tries} tries · backoff{' '}
                                             {queue.backoff} · timeout{' '}
                                             {queue.timeout}
@@ -236,7 +236,7 @@ export default function AdminQueues({
                                             <TableCell className="font-medium">
                                                 {channel.label}
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground font-mono text-xs">
+                                            <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {channel.queue}
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
@@ -263,8 +263,8 @@ export default function AdminQueues({
                             <CardDescription className="text-xs">
                                 Horizon drains the queues and the scheduler is
                                 the heartbeat that releases campaigns and
-                                rescues them, so both have to run for delivery to
-                                progress.
+                                rescues them, so both have to run for delivery
+                                to progress.
                             </CardDescription>
                         </CardHeader>
 
@@ -304,9 +304,9 @@ function Command({
     description: string;
 }) {
     return (
-        <div className="bg-muted/40 rounded-lg border border-border/60 p-2.5">
+        <div className="rounded-lg border border-border/60 bg-muted/40 p-2.5">
             <code className="font-mono text-[0.7rem] break-all">{command}</code>
-            <p className="text-muted-foreground mt-1 text-xs">{description}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
         </div>
     );
 }
@@ -319,4 +319,3 @@ AdminQueues.layout = {
         },
     ],
 };
-

@@ -1,5 +1,10 @@
 import { Head, router } from '@inertiajs/react';
-import { CheckCheck, MessageSquareText, ShieldAlert, Wallet } from 'lucide-react';
+import {
+    CheckCheck,
+    MessageSquareText,
+    ShieldAlert,
+    Wallet,
+} from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
@@ -254,7 +259,7 @@ export default function SmsReport({ filters, report, campaigns }: PageProps) {
                                             <p className="font-medium">
                                                 {message.contact ?? message.to}
                                             </p>
-                                            <p className="text-muted-foreground text-xs">
+                                            <p className="text-xs text-muted-foreground">
                                                 {message.contact
                                                     ? message.to
                                                     : message.reference}
@@ -269,8 +274,12 @@ export default function SmsReport({ filters, report, campaigns }: PageProps) {
                                         <TableCell className="font-mono text-xs">
                                             {message.provider_status ?? '—'}
                                         </TableCell>
-                                        <TableCell>{message.segments}</TableCell>
-                                        <TableCell>{message.attempts}</TableCell>
+                                        <TableCell>
+                                            {message.segments}
+                                        </TableCell>
+                                        <TableCell>
+                                            {message.attempts}
+                                        </TableCell>
                                         <TableCell>
                                             {moment(message.submitted_at)}
                                         </TableCell>

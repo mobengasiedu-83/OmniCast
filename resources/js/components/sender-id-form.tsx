@@ -3,12 +3,28 @@ import { type FormEvent } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { ClientOption, SenderIdChannelOption, SenderIdFormValues } from '@/types';
+import type {
+    ClientOption,
+    SenderIdChannelOption,
+    SenderIdFormValues,
+} from '@/types';
 
 const defaults: SenderIdFormValues = {
     channel: 'sms',
@@ -38,7 +54,9 @@ export default function SenderIdForm({
     const form = useForm<SenderIdFormValues>({ ...defaults, ...initial });
     const confirm = useConfirm();
 
-    const channel = channels.find((option) => option.value === form.data.channel) ?? channels[0];
+    const channel =
+        channels.find((option) => option.value === form.data.channel) ??
+        channels[0];
 
     const send = (): void => {
         if (method === 'put') {
@@ -76,7 +94,9 @@ export default function SenderIdForm({
             title: `${resubmitting ? 'Resubmit' : 'Submit'} "${name}" for approval?`,
             description:
                 'Compliance reviews every sender ID by hand, so approval can take up to 24 hours. You can keep working while it is reviewed, but the sender ID cannot be used in a campaign until it is approved.',
-            confirmLabel: resubmitting ? 'Resubmit for approval' : 'Submit for approval',
+            confirmLabel: resubmitting
+                ? 'Resubmit for approval'
+                : 'Submit for approval',
             cancelLabel: 'Keep editing',
         }).then((confirmed) => {
             if (confirmed) {
@@ -101,8 +121,9 @@ export default function SenderIdForm({
                 <CardHeader>
                     <CardTitle>Sender identity</CardTitle>
                     <CardDescription>
-                        Request a sender ID for SMS, an email from address, or a voice caller number.
-                        Compliance reviews every request before it can be used in a campaign.
+                        Request a sender ID for SMS, an email from address, or a
+                        voice caller number. Compliance reviews every request
+                        before it can be used in a campaign.
                     </CardDescription>
                 </CardHeader>
 
@@ -112,15 +133,25 @@ export default function SenderIdForm({
                             <Label htmlFor="client_id">Client account</Label>
                             <Select
                                 value={form.data.client_id || 'none'}
-                                onValueChange={(value) => form.setData('client_id', value === 'none' ? '' : value)}
+                                onValueChange={(value) =>
+                                    form.setData(
+                                        'client_id',
+                                        value === 'none' ? '' : value,
+                                    )
+                                }
                             >
                                 <SelectTrigger id="client_id">
                                     <SelectValue placeholder="Select a client" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="none">Select a client</SelectItem>
+                                    <SelectItem value="none">
+                                        Select a client
+                                    </SelectItem>
                                     {clients.map((client) => (
-                                        <SelectItem key={client.id} value={String(client.id)}>
+                                        <SelectItem
+                                            key={client.id}
+                                            value={String(client.id)}
+                                        >
                                             {client.name}
                                         </SelectItem>
                                     ))}
@@ -132,13 +163,19 @@ export default function SenderIdForm({
 
                     <div className="grid gap-1.5 sm:col-span-2">
                         <Label htmlFor="channel">Channel</Label>
-                        <Select value={form.data.channel} onValueChange={changeChannel}>
+                        <Select
+                            value={form.data.channel}
+                            onValueChange={changeChannel}
+                        >
                             <SelectTrigger id="channel">
                                 <SelectValue placeholder="Select a channel" />
                             </SelectTrigger>
                             <SelectContent>
                                 {channels.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
+                                    <SelectItem
+                                        key={option.value}
+                                        value={option.value}
+                                    >
                                         {option.label} — {option.description}
                                     </SelectItem>
                                 ))}
@@ -149,9 +186,11 @@ export default function SenderIdForm({
 
                     <div className="grid gap-1.5">
                         <div className="flex items-center justify-between gap-2">
-                            <Label htmlFor="name">{channel?.identifier_label ?? 'Sender ID'}</Label>
+                            <Label htmlFor="name">
+                                {channel?.identifier_label ?? 'Sender ID'}
+                            </Label>
                             {channel && (
-                                <span className="text-muted-foreground text-xs tabular-nums">
+                                <span className="text-xs text-muted-foreground tabular-nums">
                                     {form.data.name.length}/{channel.max_length}
                                 </span>
                             )}
@@ -160,11 +199,17 @@ export default function SenderIdForm({
                             id="name"
                             value={form.data.name}
                             maxLength={channel?.max_length}
-                            onChange={(event) => form.setData('name', event.target.value)}
+                            onChange={(event) =>
+                                form.setData('name', event.target.value)
+                            }
                             placeholder={channel?.placeholder}
                             autoComplete="off"
                         />
-                        {channel && <p className="text-muted-foreground text-xs">{channel.hint}</p>}
+                        {channel && (
+                            <p className="text-xs text-muted-foreground">
+                                {channel.hint}
+                            </p>
+                        )}
                         <InputError message={form.errors.name} />
                     </div>
 
@@ -174,11 +219,18 @@ export default function SenderIdForm({
                             id="country"
                             value={form.data.country}
                             maxLength={2}
-                            disabled={channel ? !channel.requires_country : false}
-                            onChange={(event) => form.setData('country', event.target.value.toUpperCase())}
+                            disabled={
+                                channel ? !channel.requires_country : false
+                            }
+                            onChange={(event) =>
+                                form.setData(
+                                    'country',
+                                    event.target.value.toUpperCase(),
+                                )
+                            }
                             placeholder="GH"
                         />
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground">
                             Two-letter ISO code
                             {channel && !channel.requires_country
                                 ? ' (not required for email senders).'
@@ -193,7 +245,9 @@ export default function SenderIdForm({
                             id="purpose"
                             rows={3}
                             value={form.data.purpose}
-                            onChange={(event) => form.setData('purpose', event.target.value)}
+                            onChange={(event) =>
+                                form.setData('purpose', event.target.value)
+                            }
                             placeholder="Explain the messages this sender ID will be used for."
                         />
                         <InputError message={form.errors.purpose} />

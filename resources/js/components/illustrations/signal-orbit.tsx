@@ -11,7 +11,13 @@ export default function SignalOrbit({ className }: { className?: string }) {
             aria-hidden="true"
             className={cn('text-brand', className)}
         >
-            <circle cx="160" cy="160" r="152" stroke="currentColor" strokeOpacity="0.12" />
+            <circle
+                cx="160"
+                cy="160"
+                r="152"
+                stroke="currentColor"
+                strokeOpacity="0.12"
+            />
             <circle
                 cx="160"
                 cy="160"
@@ -20,7 +26,13 @@ export default function SignalOrbit({ className }: { className?: string }) {
                 strokeOpacity="0.16"
                 strokeDasharray="4 8"
             />
-            <circle cx="160" cy="160" r="76" stroke="currentColor" strokeOpacity="0.2" />
+            <circle
+                cx="160"
+                cy="160"
+                r="76"
+                stroke="currentColor"
+                strokeOpacity="0.2"
+            />
             <circle cx="160" cy="160" r="9" fill="currentColor" />
             <circle
                 cx="160"
@@ -51,9 +63,27 @@ export default function SignalOrbit({ className }: { className?: string }) {
                 strokeLinecap="round"
                 strokeOpacity="0.3"
             />
-            <circle cx="160" cy="8" r="5" fill="currentColor" fillOpacity="0.7" />
-            <circle cx="312" cy="160" r="4" fill="currentColor" fillOpacity="0.5" />
-            <circle cx="86" cy="234" r="3" fill="currentColor" fillOpacity="0.4" />
+            <circle
+                cx="160"
+                cy="8"
+                r="5"
+                fill="currentColor"
+                fillOpacity="0.7"
+            />
+            <circle
+                cx="312"
+                cy="160"
+                r="4"
+                fill="currentColor"
+                fillOpacity="0.5"
+            />
+            <circle
+                cx="86"
+                cy="234"
+                r="3"
+                fill="currentColor"
+                fillOpacity="0.4"
+            />
         </svg>
     );
 }

@@ -8,13 +8,18 @@ import { cn } from '@/lib/utils';
  */
 export default function PoweredBy({ className }: { className?: string }) {
     return (
-        <p className={cn('text-muted-foreground text-[11px] leading-relaxed', className)}>
+        <p
+            className={cn(
+                'text-[11px] leading-relaxed text-muted-foreground',
+                className,
+            )}
+        >
             Powered by{' '}
             <a
                 href="https://sysup360.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-foreground font-semibold underline-offset-4 transition-colors hover:underline"
+                className="font-semibold underline-offset-4 transition-colors hover:text-foreground hover:underline"
             >
                 SysUp360
             </a>

@@ -11,7 +11,11 @@ type PageProps = {
     tenantClientId: number | null;
 };
 
-export default function SenderIdsCreate({ channels, clients, tenantClientId }: PageProps) {
+export default function SenderIdsCreate({
+    channels,
+    clients,
+    tenantClientId,
+}: PageProps) {
     return (
         <>
             <Head title="Request sender ID" />
@@ -28,7 +32,9 @@ export default function SenderIdsCreate({ channels, clients, tenantClientId }: P
                     method="post"
                     channels={channels}
                     clients={clients}
-                    initial={{ client_id: tenantClientId ? String(tenantClientId) : '' }}
+                    initial={{
+                        client_id: tenantClientId ? String(tenantClientId) : '',
+                    }}
                     submitLabel="Submit for review"
                     cancelHref={urls.senderIds.index}
                 />

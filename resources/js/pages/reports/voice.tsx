@@ -276,7 +276,7 @@ export default function VoiceReport({ filters, report, campaigns }: PageProps) {
                                                 <p className="font-medium">
                                                     {call.contact ?? call.to}
                                                 </p>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {call.contact
                                                         ? call.to
                                                         : call.reference}
@@ -340,7 +340,7 @@ export default function VoiceReport({ filters, report, campaigns }: PageProps) {
                                             className="flex items-center justify-between gap-3 rounded-lg border p-2"
                                         >
                                             <span className="flex items-center gap-2">
-                                                <span className="bg-muted flex size-8 items-center justify-center rounded-md font-mono text-sm font-semibold">
+                                                <span className="flex size-8 items-center justify-center rounded-md bg-muted font-mono text-sm font-semibold">
                                                     {digit.digit ?? '?'}
                                                 </span>
                                                 <span className="text-sm">
@@ -348,7 +348,7 @@ export default function VoiceReport({ filters, report, campaigns }: PageProps) {
                                                         'Unmapped key'}
                                                 </span>
                                             </span>
-                                            <span className="text-muted-foreground text-sm tabular-nums">
+                                            <span className="text-sm text-muted-foreground tabular-nums">
                                                 {digit.total}
                                             </span>
                                         </li>
@@ -371,4 +371,3 @@ VoiceReport.layout = {
         },
     ],
 };
-

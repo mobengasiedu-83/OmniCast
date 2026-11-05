@@ -79,7 +79,7 @@ export default function AdminClientReports({
                     title="Client performance"
                     description="Every tenant side by side: delivery, spend and the wallet position behind it."
                     badge={
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                             {period.label}
                         </span>
                     }
@@ -166,7 +166,6 @@ export default function AdminClientReports({
                     />
                 </div>
 
-
                 <Card>
                     <CardHeader>
                         <CardTitle>Per client</CardTitle>
@@ -218,7 +217,6 @@ export default function AdminClientReports({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-
                                     {report.rows.map((row) => (
                                         <TableRow key={row.id}>
                                             <TableCell className="pl-6 font-medium">
@@ -256,7 +254,7 @@ export default function AdminClientReports({
                                             <TableCell className="pr-6 text-right tabular-nums">
                                                 {money(row.balance)}
                                                 {row.reserved > 0 && (
-                                                    <span className="text-muted-foreground block text-xs">
+                                                    <span className="block text-xs text-muted-foreground">
                                                         {money(row.reserved)}{' '}
                                                         reserved
                                                     </span>
@@ -282,4 +280,3 @@ AdminClientReports.layout = {
         },
     ],
 };
-

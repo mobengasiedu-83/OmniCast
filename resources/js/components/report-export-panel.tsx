@@ -85,7 +85,8 @@ export default function ReportExportPanel({
     download: (row: ReportExportRow) => string;
 }) {
     const [report, setReport] = useState(
-        defaultReport && reports.some((option) => option.value === defaultReport)
+        defaultReport &&
+            reports.some((option) => option.value === defaultReport)
             ? defaultReport
             : (reports[0]?.value ?? ''),
     );
@@ -175,7 +176,9 @@ export default function ReportExportPanel({
 
                             {clients && clients.length > 0 && (
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="export-client">Client</Label>
+                                    <Label htmlFor="export-client">
+                                        Client
+                                    </Label>
                                     <Select
                                         value={clientId}
                                         onValueChange={setClientId}
@@ -258,7 +261,7 @@ export default function ReportExportPanel({
                                                 {row.client ?? 'Platform'}
                                             </TableCell>
                                         )}
-                                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                                        <TableCell className="whitespace-nowrap text-muted-foreground">
                                             {row.period}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground capitalize">
@@ -276,7 +279,7 @@ export default function ReportExportPanel({
                                                 label={row.status_label}
                                             />
                                         </TableCell>
-                                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                                        <TableCell className="whitespace-nowrap text-muted-foreground">
                                             {moment(row.created_at)}
                                         </TableCell>
                                         <TableCell className="pr-6 text-right">
@@ -292,7 +295,7 @@ export default function ReportExportPanel({
                                                     </a>
                                                 </Button>
                                             ) : (
-                                                <span className="text-muted-foreground text-xs">
+                                                <span className="text-xs text-muted-foreground">
                                                     {row.expired
                                                         ? 'Pruned'
                                                         : row.error_message
@@ -311,4 +314,3 @@ export default function ReportExportPanel({
         </div>
     );
 }
-

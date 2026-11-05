@@ -53,7 +53,7 @@ export default function ContactReport({
                     title="Contacts"
                     description="Reachability and recipient outcomes for the tenant's audience."
                     badge={
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                             {period.label}
                         </span>
                     }
@@ -187,7 +187,7 @@ export default function ContactReport({
                                                     <p className="font-medium">
                                                         {row.name}
                                                     </p>
-                                                    <p className="text-muted-foreground text-xs">
+                                                    <p className="text-xs text-muted-foreground">
                                                         {row.phone ??
                                                             row.email ??
                                                             '—'}
@@ -244,7 +244,7 @@ export default function ContactReport({
                                             <TableCell>
                                                 {row.phone ?? '—'}
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground pr-4 text-xs">
+                                            <TableCell className="pr-4 text-xs text-muted-foreground">
                                                 {row.dnd_at
                                                     ? new Date(
                                                           row.dnd_at,

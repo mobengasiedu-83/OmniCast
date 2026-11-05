@@ -134,7 +134,7 @@ export default function AdminSessions({
                             className="flex flex-1 items-center gap-2 sm:flex-none"
                         >
                             <div className="relative w-full sm:w-72">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(event) =>
@@ -220,7 +220,7 @@ export default function AdminSessions({
                                                     {session.user_name ??
                                                         'Unknown user'}
                                                 </p>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {session.user_email}
                                                 </p>
                                             </TableCell>
@@ -234,11 +234,11 @@ export default function AdminSessions({
                                                 {session.device}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground font-mono text-xs">
+                                            <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {session.ip_address ?? '—'}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {new Date(
                                                     session.last_active_at,
                                                 ).toLocaleString()}
@@ -285,4 +285,3 @@ AdminSessions.layout = {
         },
     ],
 };
-

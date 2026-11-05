@@ -91,7 +91,12 @@ export default function ContactForm({
 
     const toggleTag = (tagId: number): void => {
         const selected = form.data.tag_ids.includes(tagId);
-        form.setData('tag_ids', selected ? form.data.tag_ids.filter((id) => id !== tagId) : [...form.data.tag_ids, tagId]);
+        form.setData(
+            'tag_ids',
+            selected
+                ? form.data.tag_ids.filter((id) => id !== tagId)
+                : [...form.data.tag_ids, tagId],
+        );
     };
 
     return (
@@ -222,8 +227,21 @@ export default function ContactForm({
                         <InputError message={form.errors.company} />
                     </div>
                     <div className="grid gap-1.5 sm:col-span-2">
-                        <Label htmlFor="custom_fields_json">Custom fields (JSON object)</Label>
-                        <textarea id="custom_fields_json" value={form.data.custom_fields_json} onChange={(event) => form.setData('custom_fields_json', event.target.value)} className="border-input bg-background min-h-24 rounded-md border px-3 py-2 text-sm" placeholder='{"membership":"gold"}' />
+                        <Label htmlFor="custom_fields_json">
+                            Custom fields (JSON object)
+                        </Label>
+                        <textarea
+                            id="custom_fields_json"
+                            value={form.data.custom_fields_json}
+                            onChange={(event) =>
+                                form.setData(
+                                    'custom_fields_json',
+                                    event.target.value,
+                                )
+                            }
+                            className="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            placeholder='{"membership":"gold"}'
+                        />
                         <InputError message={form.errors.custom_fields_json} />
                     </div>
                 </CardContent>
@@ -324,7 +342,7 @@ export default function ContactForm({
                                 <span className="font-medium">
                                     Do not disturb (DND)
                                 </span>
-                                <span className="text-muted-foreground block text-xs">
+                                <span className="block text-xs text-muted-foreground">
                                     Blocks SMS, voice and email for this number
                                     and adds it to the DND registry.
                                 </span>
@@ -335,12 +353,12 @@ export default function ContactForm({
 
                     <div className="grid gap-2">
                         <Label>Contact lists</Label>
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground">
                             A contact can be in more than one list. Duplicates
                             are only removed when a campaign is sent.
                         </p>
                         {contactLists.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">
+                            <p className="text-sm text-muted-foreground">
                                 No contact lists have been created yet.
                             </p>
                         ) : (
@@ -359,7 +377,7 @@ export default function ContactForm({
                                             }
                                         />
                                         <span>{list.name}</span>
-                                        <span className="text-muted-foreground text-xs">
+                                        <span className="text-xs text-muted-foreground">
                                             {list.contacts_count}
                                         </span>
                                     </label>
@@ -370,9 +388,28 @@ export default function ContactForm({
                     </div>
                     <div className="grid gap-2">
                         <Label>Tags</Label>
-                        {tags.length === 0 ? <p className="text-muted-foreground text-sm">Create tags from Audiences.</p> : (
+                        {tags.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                Create tags from Audiences.
+                            </p>
+                        ) : (
                             <div className="grid gap-2 sm:grid-cols-2">
-                                {tags.map((tag) => <label key={tag.id} className="flex items-center gap-2 text-sm"><Checkbox checked={form.data.tag_ids.includes(tag.id)} onCheckedChange={() => toggleTag(tag.id)} /><span>{tag.name}</span></label>)}
+                                {tags.map((tag) => (
+                                    <label
+                                        key={tag.id}
+                                        className="flex items-center gap-2 text-sm"
+                                    >
+                                        <Checkbox
+                                            checked={form.data.tag_ids.includes(
+                                                tag.id,
+                                            )}
+                                            onCheckedChange={() =>
+                                                toggleTag(tag.id)
+                                            }
+                                        />
+                                        <span>{tag.name}</span>
+                                    </label>
+                                ))}
                             </div>
                         )}
                         <InputError message={form.errors.tag_ids} />

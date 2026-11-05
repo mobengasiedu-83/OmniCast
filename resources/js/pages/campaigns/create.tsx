@@ -22,17 +22,17 @@ export default function CampaignsCreate(options: PageProps) {
                 />
 
                 <CampaignForm
-                action={urls.campaigns.store}
-                method="post"
-                options={options}
-                initial={{
-                    client_id:
-                        options.tenantClientId === null
-                            ? ''
-                            : String(options.tenantClientId),
-                }}
-                submitLabel="Save draft"
-                cancelHref={urls.campaigns.index}
+                    action={urls.campaigns.store}
+                    method="post"
+                    options={options}
+                    initial={{
+                        client_id:
+                            options.tenantClientId === null
+                                ? ''
+                                : String(options.tenantClientId),
+                    }}
+                    submitLabel="Save draft"
+                    cancelHref={urls.campaigns.index}
                 />
             </div>
         </>

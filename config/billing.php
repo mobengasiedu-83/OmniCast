@@ -72,7 +72,13 @@ return [
     | a package are worth each other (SMS ≈ GHS 0.04, voice GHS 0.375 a minute and
     | email GHS 0.05 at the published price list).
     |
-    | @var array<string, array{name: string, price: float, popular: bool, tagline: string, units: array<string, int>}>
+    | A package carries `enabled` for its default availability. The platform team
+    | switches it on or off from Admin → Wallet packages, which stores a
+    | `billing.<key>.enabled` platform setting that wins over the default: a
+    | hidden package stays configured but leaves the price list and is refused at
+    | checkout.
+    |
+    | @var array<string, array{name: string, price: float, popular: bool, tagline: string, units: array<string, int>, enabled?: bool}>
     */
     'packages' => (static function (): array {
         $packages = [
@@ -103,6 +109,22 @@ return [
                 'popular' => false,
                 'tagline' => 'High volume across every channel.',
                 'units' => ['sms' => 100000, 'voice' => 10640, 'email' => 79800],
+            ],
+
+            /*
+            | Ten pesewas to prove the live gateway end to end: the sample buys the
+            | Starter allocation for almost nothing, so a real card or mobile money
+            | charge can be settled and refunded without moving real money. It ships
+            | hidden and is switched on from Admin → Wallet packages, so a
+            | production catalogue never sells it by accident.
+            */
+            'sample' => [
+                'name' => 'Sample',
+                'price' => 0.10,
+                'popular' => false,
+                'tagline' => 'Ten-pesewa test top up for the live gateway.',
+                'units' => ['sms' => 1300, 'voice' => 136, 'email' => 1025],
+                'enabled' => false,
             ],
         ];
 

@@ -12,7 +12,11 @@ type PageProps = {
     senderId: SenderIdRow & { client_id: number };
 };
 
-export default function SenderIdsEdit({ channels, clients, senderId }: PageProps) {
+export default function SenderIdsEdit({
+    channels,
+    clients,
+    senderId,
+}: PageProps) {
     return (
         <>
             <Head title={`Edit ${senderId.name}`} />

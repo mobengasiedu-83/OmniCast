@@ -21,7 +21,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        $middleware->validateCsrfTokens(except: ['webhooks/voice', 'webhooks/sms']);
+        /*
+        | A webhook is posted by a provider, not by a browser holding our
+        | session: every one of them is authorised by an HMAC signature over
+        | the raw body instead, so a CSRF token would reject them all.
+        */
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/voice',
+            'webhooks/sms',
+            'webhooks/email',
+            'webhooks/paystack',
+        ]);
 
         $middleware->alias([
             'platform' => EnsurePlatformUser::class,

@@ -102,7 +102,7 @@ export default function Profile({
 
                                         {status ===
                                             'verification-link-sent' && (
-                                            <div className="text-success mt-2 text-sm font-medium">
+                                            <div className="mt-2 text-sm font-medium text-success">
                                                 A new verification link has been
                                                 sent to your email address.
                                             </div>

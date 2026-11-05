@@ -10,7 +10,9 @@ export default function AppLayout({
     breadcrumbs?: BreadcrumbItem[];
     children: React.ReactNode;
 }) {
-    const { clientBranding } = usePage<{ clientBranding?: { primaryColor?: string | null } }>().props;
+    const { clientBranding } = usePage<{
+        clientBranding?: { primaryColor?: string | null };
+    }>().props;
     const color = clientBranding?.primaryColor;
     const brandingStyle: CSSProperties & Record<string, string> = color
         ? {

@@ -346,7 +346,9 @@ export default function ContactAudiences({
                                             <button
                                                 type="button"
                                                 aria-label={`Remove ${tag.name}`}
-                                                onClick={() => void removeTag(tag)}
+                                                onClick={() =>
+                                                    void removeTag(tag)
+                                                }
                                                 className="px-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 ×
@@ -420,7 +422,9 @@ export default function ContactAudiences({
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                onClick={() => void removeList(list)}
+                                                onClick={() =>
+                                                    void removeList(list)
+                                                }
                                             >
                                                 Delete
                                             </Button>
@@ -869,7 +873,9 @@ export default function ContactAudiences({
                                                     size="sm"
                                                     variant="ghost"
                                                     onClick={() =>
-                                                        void removeSegment(segment)
+                                                        void removeSegment(
+                                                            segment,
+                                                        )
                                                     }
                                                 >
                                                     Delete
@@ -882,7 +888,6 @@ export default function ContactAudiences({
                         </div>
                     </CardContent>
                 </Card>
-
             </div>
         </>
     );

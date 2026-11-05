@@ -15,6 +15,7 @@ import {
     Megaphone,
     MessageSquareText,
     MonitorSmartphone,
+    PackageCheck,
     PackagePlus,
     Layers3,
     PhoneCall,
@@ -245,6 +246,11 @@ export function AppSidebar() {
                       title: 'Invoices',
                       href: urls.admin.invoices.index,
                       icon: ReceiptText,
+                  },
+                  {
+                      title: 'Wallet packages',
+                      href: urls.admin.packages.index,
+                      icon: PackageCheck,
                   },
               ]
             : []),

@@ -90,7 +90,7 @@ function GroupRows({ group }: { group: PermissionGroup }) {
             <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableCell
                     colSpan={3}
-                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+                    className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
                 >
                     {group.label}
                 </TableCell>
@@ -101,13 +101,13 @@ function GroupRows({ group }: { group: PermissionGroup }) {
                     <TableCell className="font-medium">
                         {permission.label}
                     </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                         {permission.value}
                     </TableCell>
                     <TableCell>
                         <div className="flex flex-wrap gap-1">
                             {(permission.roles ?? []).length === 0 ? (
-                                <span className="text-muted-foreground text-xs">
+                                <span className="text-xs text-muted-foreground">
                                     Nobody
                                 </span>
                             ) : (

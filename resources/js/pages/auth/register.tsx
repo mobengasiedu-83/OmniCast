@@ -8,11 +8,20 @@ export default function RegisterRedirect() {
         router.visit(create.url());
     }, []);
 
-    return <>
-        <Head title="Client account signup" />
-        <p className="text-sm text-muted-foreground">Opening client account signup…</p>
-        <Button asChild variant="link"><Link href={create()}>Continue</Link></Button>
-    </>;
+    return (
+        <>
+            <Head title="Client account signup" />
+            <p className="text-sm text-muted-foreground">
+                Opening client account signup…
+            </p>
+            <Button asChild variant="link">
+                <Link href={create()}>Continue</Link>
+            </Button>
+        </>
+    );
 }
 
-RegisterRedirect.layout = { title: 'Client account signup', description: 'Create a verified client account' };
+RegisterRedirect.layout = {
+    title: 'Client account signup',
+    description: 'Create a verified client account',
+};

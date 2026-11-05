@@ -20,7 +20,7 @@ export default function AppearanceToggleTab({
     return (
         <div
             className={cn(
-                'bg-muted inline-flex gap-1 rounded-xl p-1',
+                'inline-flex gap-1 rounded-xl bg-muted p-1',
                 className,
             )}
             {...props}

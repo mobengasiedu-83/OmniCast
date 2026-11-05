@@ -15,6 +15,7 @@ use App\Models\EmailMessage;
 use App\Models\SenderId;
 use App\Services\CampaignDispatcher;
 use App\Services\CampaignService;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
@@ -77,6 +78,17 @@ beforeEach(function (): void {
             $body,
         );
     };
+});
+
+it('accepts the webhook without a CSRF token, the way the mail server posts it', function (): void {
+    /*
+     * The receipt is posted by the mail server, not by a browser holding our
+     * session. Laravel skips token checks while the suite runs, so the
+     * exclusion is asserted directly: without it the POST answers 419 in
+     * production and no delivery is ever recorded.
+     */
+    expect(app(PreventRequestForgery::class)->getExcludedPaths())
+        ->toContain('webhooks/email');
 });
 
 it('confirms the delivery on the message and the recipient', function (): void {

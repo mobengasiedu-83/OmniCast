@@ -33,7 +33,9 @@ export default function Login({ status, canResetPassword }: Props) {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email or phone number</Label>
+                                <Label htmlFor="email">
+                                    Email or phone number
+                                </Label>
                                 <Input
                                     id="email"
                                     type="text"
@@ -103,7 +105,7 @@ export default function Login({ status, canResetPassword }: Props) {
             </Form>
 
             {status && (
-                <div className="text-success mb-4 text-center text-sm font-medium">
+                <div className="mb-4 text-center text-sm font-medium text-success">
                     {status}
                 </div>
             )}

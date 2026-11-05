@@ -33,7 +33,10 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { urls } from '@/lib/urls';
-import type { ChannelDeliveryReport as ChannelReport, ClientOption } from '@/types';
+import type {
+    ChannelDeliveryReport as ChannelReport,
+    ClientOption,
+} from '@/types';
 
 type PageProps = {
     filters: {
@@ -108,7 +111,7 @@ export default function AdminChannelReport({
                     title={`${channel.label} report`}
                     description={`Every ${channel.unit.toLowerCase().replace(/s$/, '')} the platform attempted, counted from what the provider confirmed rather than what the dispatcher handed over.`}
                     badge={
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                             {period.label}
                         </span>
                     }
@@ -128,118 +131,120 @@ export default function AdminChannelReport({
 
                 <Card className="py-4">
                     <CardContent>
-
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <StatCard
-                        title={channel.unit}
-                        value={totals.total.toLocaleString()}
-                        description={`${totals.clients} client(s) sent traffic`}
-                        icon={Send}
-                        tone="brand"
-                    />
-                    <StatCard
-                        title="Delivered"
-                        value={totals.delivered.toLocaleString()}
-                        description={
-                            totals.delivery_rate === null
-                                ? 'Nothing attempted yet'
-                                : `${totals.delivery_rate}% of attempts`
-                        }
-                        icon={CheckCheck}
-                        tone="success"
-                    />
-                    <StatCard
-                        title="Failed"
-                        value={totals.failed.toLocaleString()}
-                        description="Rejected, bounced or expired"
-                        icon={TriangleAlert}
-                        tone={totals.failed > 0 ? 'danger' : 'neutral'}
-                    />
-                    <StatCard
-                        title="In flight"
-                        value={totals.pending.toLocaleString()}
-                        description="Handed over, no outcome yet"
-                        icon={Timer}
-                        tone="warning"
-                    />
-                    <StatCard
-                        title="Spend"
-                        value={money(totals.spend)}
-                        description="Charged to the client wallets"
-                        icon={Wallet}
-                        tone="signal"
-                    />
-                    <StatCard
-                        title="Delivery rate"
-                        value={
-                            totals.delivery_rate === null
-                                ? '—'
-                                : `${totals.delivery_rate}%`
-                        }
-                        description={`Against ${totals.total.toLocaleString()} attempt(s)`}
-                        icon={CheckCheck}
-                        tone="signal"
-                    />
-                    <StatCard
-                        title="Clients"
-                        value={totals.clients.toLocaleString()}
-                        description="Accounts with traffic in this window"
-                        icon={Users}
-                        tone="neutral"
-                    />
-                    <StatCard
-                        title="Window"
-                        value={`${period.days}d`}
-                        description={period.label}
-                        icon={Timer}
-                        tone="neutral"
-                    />
-                </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Daily volume</CardTitle>
-                        <CardDescription>
-                            What the platform attempted each day inside the
-                            selected window.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {daily.length === 0 ? (
-                            <EmptyState
-                                icon={Icon}
-                                title={`No ${channel.unit.toLowerCase()} in this window`}
-                                description="Nothing was attempted between these dates."
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <StatCard
+                                title={channel.unit}
+                                value={totals.total.toLocaleString()}
+                                description={`${totals.clients} client(s) sent traffic`}
+                                icon={Send}
+                                tone="brand"
                             />
-                        ) : (
-                            <div className="flex flex-col gap-2.5">
-                                {daily.map((day) => (
-                                    <div
-                                        key={day.date}
-                                        className="flex items-center gap-3"
-                                    >
-                                        <span className="text-muted-foreground w-16 text-xs">
-                                            {day.label}
-                                        </span>
-                                        <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                            <StatCard
+                                title="Delivered"
+                                value={totals.delivered.toLocaleString()}
+                                description={
+                                    totals.delivery_rate === null
+                                        ? 'Nothing attempted yet'
+                                        : `${totals.delivery_rate}% of attempts`
+                                }
+                                icon={CheckCheck}
+                                tone="success"
+                            />
+                            <StatCard
+                                title="Failed"
+                                value={totals.failed.toLocaleString()}
+                                description="Rejected, bounced or expired"
+                                icon={TriangleAlert}
+                                tone={totals.failed > 0 ? 'danger' : 'neutral'}
+                            />
+                            <StatCard
+                                title="In flight"
+                                value={totals.pending.toLocaleString()}
+                                description="Handed over, no outcome yet"
+                                icon={Timer}
+                                tone="warning"
+                            />
+                            <StatCard
+                                title="Spend"
+                                value={money(totals.spend)}
+                                description="Charged to the client wallets"
+                                icon={Wallet}
+                                tone="signal"
+                            />
+                            <StatCard
+                                title="Delivery rate"
+                                value={
+                                    totals.delivery_rate === null
+                                        ? '—'
+                                        : `${totals.delivery_rate}%`
+                                }
+                                description={`Against ${totals.total.toLocaleString()} attempt(s)`}
+                                icon={CheckCheck}
+                                tone="signal"
+                            />
+                            <StatCard
+                                title="Clients"
+                                value={totals.clients.toLocaleString()}
+                                description="Accounts with traffic in this window"
+                                icon={Users}
+                                tone="neutral"
+                            />
+                            <StatCard
+                                title="Window"
+                                value={`${period.days}d`}
+                                description={period.label}
+                                icon={Timer}
+                                tone="neutral"
+                            />
+                        </div>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Daily volume</CardTitle>
+                                <CardDescription>
+                                    What the platform attempted each day inside
+                                    the selected window.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {daily.length === 0 ? (
+                                    <EmptyState
+                                        icon={Icon}
+                                        title={`No ${channel.unit.toLowerCase()} in this window`}
+                                        description="Nothing was attempted between these dates."
+                                    />
+                                ) : (
+                                    <div className="flex flex-col gap-2.5">
+                                        {daily.map((day) => (
                                             <div
-                                                className="brand-gradient h-full rounded-full"
-                                                style={{
-                                                    width: `${(day.delivered / peak) * 100}%`,
-                                                }}
-                                            />
-                                        </div>
-                                        <span className="w-40 text-right text-xs tabular-nums">
-                                            {day.delivered.toLocaleString()} of{' '}
-                                            {day.total.toLocaleString()} ·{' '}
-                                            {day.failed.toLocaleString()} failed
-                                        </span>
+                                                key={day.date}
+                                                className="flex items-center gap-3"
+                                            >
+                                                <span className="w-16 text-xs text-muted-foreground">
+                                                    {day.label}
+                                                </span>
+                                                <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                                                    <div
+                                                        className="h-full rounded-full brand-gradient"
+                                                        style={{
+                                                            width: `${(day.delivered / peak) * 100}%`,
+                                                        }}
+                                                    />
+                                                </div>
+                                                <span className="w-40 text-right text-xs tabular-nums">
+                                                    {day.delivered.toLocaleString()}{' '}
+                                                    of{' '}
+                                                    {day.total.toLocaleString()}{' '}
+                                                    ·{' '}
+                                                    {day.failed.toLocaleString()}{' '}
+                                                    failed
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                )}
+                            </CardContent>
+                        </Card>
 
                         <ReportFilters
                             url={screen.href}
@@ -306,7 +311,7 @@ export default function AdminChannelReport({
                                             <TableCell className="text-right tabular-nums">
                                                 {row.failed.toLocaleString()}
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground text-right tabular-nums">
+                                            <TableCell className="text-right text-muted-foreground tabular-nums">
                                                 {row.pending.toLocaleString()}
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">
@@ -337,4 +342,3 @@ AdminChannelReport.layout = {
         },
     ],
 };
-

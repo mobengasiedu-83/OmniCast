@@ -85,7 +85,7 @@ export default function CampaignReport({
                     title="Campaigns"
                     description="Outcomes and spend for every campaign created in the window."
                     badge={
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                             {period.label}
                         </span>
                     }
@@ -205,7 +205,7 @@ export default function CampaignReport({
                                                 >
                                                     {row.name}
                                                 </Link>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {row.reference}
                                                 </p>
                                             </TableCell>
@@ -235,7 +235,7 @@ export default function CampaignReport({
                                             <TableCell className="text-right tabular-nums">
                                                 {money(row.spend)}
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground pr-4 text-xs">
+                                            <TableCell className="pr-4 text-xs text-muted-foreground">
                                                 {shortDate(row.launched_at)}
                                             </TableCell>
                                         </TableRow>

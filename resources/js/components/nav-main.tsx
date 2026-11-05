@@ -100,7 +100,7 @@ export function NavMain({
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel className="text-muted-foreground/80 text-[10px] font-semibold tracking-[0.16em] uppercase">
+            <SidebarGroupLabel className="text-[10px] font-semibold tracking-[0.16em] text-muted-foreground/80 uppercase">
                 {label}
             </SidebarGroupLabel>
 
@@ -128,4 +128,3 @@ export function NavMain({
         </SidebarGroup>
     );
 }
-

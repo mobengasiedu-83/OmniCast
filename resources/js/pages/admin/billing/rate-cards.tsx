@@ -30,12 +30,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { urls } from '@/lib/urls';
-import type {
-    ClientOption,
-    Option,
-    RateCardRow,
-    RateRow,
-} from '@/types';
+import type { ClientOption, Option, RateCardRow, RateRow } from '@/types';
 
 type PageProps = {
     rateCards: RateCardRow[];
@@ -166,8 +161,7 @@ export default function AdminRateCardsIndex({
                                 }
                                 onValueChange={(value) =>
                                     apply({
-                                        client_id:
-                                            value === 'all' ? '' : value,
+                                        client_id: value === 'all' ? '' : value,
                                     })
                                 }
                             >
@@ -241,7 +235,9 @@ function RateCardPanel({
                     <div className="space-y-1">
                         <CardTitle className="flex flex-wrap items-center gap-2">
                             {card.name}
-                            <Badge variant="outline">{card.channel_label}</Badge>
+                            <Badge variant="outline">
+                                {card.channel_label}
+                            </Badge>
                             {card.is_default && (
                                 <Badge variant="secondary">Default</Badge>
                             )}
@@ -255,7 +251,7 @@ function RateCardPanel({
                         </CardDescription>
                     </div>
 
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-xs text-muted-foreground">
                         {card.rates.length} destination
                         {card.rates.length === 1 ? '' : 's'}
                     </p>
@@ -336,11 +332,11 @@ function RateEditorRow({
         <TableRow>
             <TableCell className="pl-6">
                 <p className="font-medium">{rate.destination_label}</p>
-                <p className="text-muted-foreground font-mono text-xs">
+                <p className="font-mono text-xs text-muted-foreground">
                     {rate.destination}
                 </p>
             </TableCell>
-            <TableCell className="text-muted-foreground text-xs">
+            <TableCell className="text-xs text-muted-foreground">
                 {rate.billing_unit_label}
             </TableCell>
             <TableCell>
@@ -357,7 +353,7 @@ function RateEditorRow({
                             aria-label={`Unit price for ${rate.destination_label}`}
                             className="w-28 tabular-nums"
                         />
-                        <span className="text-muted-foreground text-[11px]">
+                        <span className="text-[11px] text-muted-foreground">
                             {money(Number(unitPrice || 0), currency)}
                         </span>
                     </div>
@@ -411,4 +407,3 @@ function RateEditorRow({
         </TableRow>
     );
 }
-

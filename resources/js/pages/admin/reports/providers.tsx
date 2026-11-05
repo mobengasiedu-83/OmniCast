@@ -91,7 +91,7 @@ export default function AdminProviderReport({
                     title="Provider performance"
                     description="Delivery by transport, plus the ledger check that proves the spend figure is real."
                     badge={
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                             {period.label}
                         </span>
                     }
@@ -116,7 +116,9 @@ export default function AdminProviderReport({
                                 ? `Within ${money(reconciliation.tolerance)}`
                                 : `${money(reconciliation.variance)} variance`
                         }
-                        icon={reconciliation.balanced ? CheckCheck : AlertTriangle}
+                        icon={
+                            reconciliation.balanced ? CheckCheck : AlertTriangle
+                        }
                         tone={reconciliation.balanced ? 'success' : 'danger'}
                     />
                     <StatCard
@@ -151,7 +153,7 @@ export default function AdminProviderReport({
                         <Card key={key}>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Icon className="text-muted-foreground size-4" />
+                                    <Icon className="size-4 text-muted-foreground" />
                                     {report.label}
                                 </CardTitle>
                                 <CardDescription>
@@ -200,7 +202,8 @@ export default function AdminProviderReport({
                                                         {row.failed.toLocaleString()}
                                                     </TableCell>
                                                     <TableCell className="pr-6 text-right tabular-nums">
-                                                        {row.delivery_rate === null
+                                                        {row.delivery_rate ===
+                                                        null
                                                             ? '—'
                                                             : `${row.delivery_rate}%`}
                                                     </TableCell>
@@ -213,7 +216,6 @@ export default function AdminProviderReport({
                         </Card>
                     ))}
                 </div>
-
 
                 <Card>
                     <CardHeader className="flex flex-row items-start justify-between gap-3">
@@ -246,9 +248,9 @@ export default function AdminProviderReport({
                             ).map(([label, value]) => (
                                 <div
                                     key={label}
-                                    className="bg-muted/40 rounded-lg p-3"
+                                    className="rounded-lg bg-muted/40 p-3"
                                 >
-                                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                                    <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                         {label}
                                     </p>
                                     <p className="mt-1 text-sm font-semibold tabular-nums">
@@ -259,16 +261,16 @@ export default function AdminProviderReport({
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="bg-muted/40 rounded-lg p-3">
-                                <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                            <div className="rounded-lg bg-muted/40 p-3">
+                                <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                     Usage vs campaign
                                 </p>
                                 <p className="mt-1 text-sm font-semibold tabular-nums">
                                     {money(reconciliation.usage_variance)}
                                 </p>
                             </div>
-                            <div className="bg-muted/40 rounded-lg p-3">
-                                <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                            <div className="rounded-lg bg-muted/40 p-3">
+                                <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                                     Campaign vs wallet
                                 </p>
                                 <p className="mt-1 text-sm font-semibold tabular-nums">
@@ -278,7 +280,6 @@ export default function AdminProviderReport({
                         </div>
                     </CardContent>
                 </Card>
-
 
                 <Card>
                     <CardHeader>
@@ -315,25 +316,27 @@ export default function AdminProviderReport({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {reconciliation.campaigns.map((campaign) => (
-                                        <TableRow key={campaign.id}>
-                                            <TableCell className="pl-6 font-mono text-xs">
-                                                {campaign.reference}
-                                            </TableCell>
-                                            <TableCell className="font-medium">
-                                                {campaign.name}
-                                            </TableCell>
-                                            <TableCell className="text-right tabular-nums">
-                                                {money(campaign.claimed)}
-                                            </TableCell>
-                                            <TableCell className="text-right tabular-nums">
-                                                {money(campaign.debited)}
-                                            </TableCell>
-                                            <TableCell className="text-destructive pr-6 text-right font-medium tabular-nums">
-                                                {money(campaign.variance)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                    {reconciliation.campaigns.map(
+                                        (campaign) => (
+                                            <TableRow key={campaign.id}>
+                                                <TableCell className="pl-6 font-mono text-xs">
+                                                    {campaign.reference}
+                                                </TableCell>
+                                                <TableCell className="font-medium">
+                                                    {campaign.name}
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {money(campaign.claimed)}
+                                                </TableCell>
+                                                <TableCell className="text-right tabular-nums">
+                                                    {money(campaign.debited)}
+                                                </TableCell>
+                                                <TableCell className="pr-6 text-right font-medium text-destructive tabular-nums">
+                                                    {money(campaign.variance)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ),
+                                    )}
                                 </TableBody>
                             </Table>
                         )}
@@ -352,4 +355,3 @@ AdminProviderReport.layout = {
         },
     ],
 };
-

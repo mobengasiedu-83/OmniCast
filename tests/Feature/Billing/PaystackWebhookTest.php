@@ -4,6 +4,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\WalletTransaction;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Testing\TestResponse;
 
 beforeEach(function (): void {
@@ -39,6 +40,17 @@ beforeEach(function (): void {
             $body,
         );
     };
+});
+
+it('accepts the webhook without a CSRF token, the way Paystack posts it', function (): void {
+    /*
+     * A live webhook arrives from Paystack's servers with no session and no
+     * CSRF token. Laravel skips token checks while the suite runs, so the
+     * exclusion is asserted directly: without it the route answers 419 in
+     * production and no wallet is ever credited.
+     */
+    expect(app(PreventRequestForgery::class)->getExcludedPaths())
+        ->toContain('webhooks/paystack');
 });
 
 it('settles the top up a signed charge.success names', function (): void {

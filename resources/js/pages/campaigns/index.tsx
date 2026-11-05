@@ -118,7 +118,7 @@ export default function CampaignsIndex({
                             className="flex flex-1 items-center gap-2 sm:flex-none"
                         >
                             <div className="relative w-full sm:w-72">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(event) =>
@@ -217,13 +217,18 @@ export default function CampaignsIndex({
                         </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="px-0">{campaigns.data.length === 0 ? (
+                    <CardContent className="px-0">
+                        {campaigns.data.length === 0 ? (
                             <EmptyState
                                 icon={Megaphone}
                                 title="No campaigns match these filters"
                                 description="Try a different search term, or clear the filters to see everything."
                                 action={
-                                    <Button variant="outline" size="sm" onClick={clear}>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clear}
+                                    >
                                         Clear filters
                                     </Button>
                                 }
@@ -247,18 +252,19 @@ export default function CampaignsIndex({
                                     </TableRow>
                                 </TableHeader>
 
-                                <TableBody>{campaigns.data.map((campaign) => (
+                                <TableBody>
+                                    {campaigns.data.map((campaign) => (
                                         <TableRow key={campaign.id}>
                                             <TableCell>
                                                 <Link
                                                     href={urls.campaigns.show(
                                                         campaign.id,
                                                     )}
-                                                    className="hover:text-brand font-medium transition-colors"
+                                                    className="font-medium transition-colors hover:text-brand"
                                                 >
                                                     {campaign.name}
                                                 </Link>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {campaign.reference}
                                                     {campaign.client
                                                         ? ` · ${campaign.client}`
@@ -280,7 +286,7 @@ export default function CampaignsIndex({
                                                     {campaign.channel_label}
                                                 </span>
                                                 {campaign.sender && (
-                                                    <p className="text-muted-foreground mt-0.5 text-xs">
+                                                    <p className="mt-0.5 text-xs text-muted-foreground">
                                                         {campaign.sender}
                                                     </p>
                                                 )}
@@ -312,7 +318,7 @@ export default function CampaignsIndex({
                                                 )}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {campaign.scheduled_at
                                                     ? new Date(
                                                           campaign.scheduled_at,
@@ -336,9 +342,11 @@ export default function CampaignsIndex({
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
-                                    ))}</TableBody>
+                                    ))}
+                                </TableBody>
                             </Table>
-                        )}</CardContent>
+                        )}
+                    </CardContent>
                 </Card>
 
                 <Pagination paginator={campaigns} noun="campaigns" />

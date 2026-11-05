@@ -34,14 +34,14 @@ The OTP can be delivered by email or SMS. It expires after 10 minutes, and verif
 
 SMS OTP is configured in `.env` with `SMS_DRIVER`, `SMS_ENDPOINT`, `SMS_TOKEN`, and `SMS_SENDER_ID`. The TxtConnect defaults are selected in both environment templates; put the bearer token in the local `.env` and keep it out of source control. The same values can be overridden in `/admin/settings` under **providers** (platform settings take precedence over `.env`):
 
-| Key | Description |
-| --- | --- |
-| `SMS_DRIVER` / `sms.driver` | `txtconnect`, `kannel`, or `generic_json` |
-| `SMS_ENDPOINT` / `sms.endpoint` | Provider URL; TxtConnect defaults to `https://api.txtconnect.net/dev/api/sms/send` |
-| `SMS_TOKEN` / `sms.token` | TxtConnect bearer token; platform UI values are encrypted as secrets |
-| `sms.username` | Provider username, if needed for Kannel or generic JSON |
-| `sms.password` | Provider password; platform UI values are encrypted as secrets |
-| `SMS_SENDER_ID` / `sms.sender_id` | Sender name/number accepted by the provider; defaults to `OmniCast` |
+| Key                               | Description                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------- |
+| `SMS_DRIVER` / `sms.driver`       | `txtconnect`, `kannel`, or `generic_json`                                          |
+| `SMS_ENDPOINT` / `sms.endpoint`   | Provider URL; TxtConnect defaults to `https://api.txtconnect.net/dev/api/sms/send` |
+| `SMS_TOKEN` / `sms.token`         | TxtConnect bearer token; platform UI values are encrypted as secrets               |
+| `sms.username`                    | Provider username, if needed for Kannel or generic JSON                            |
+| `sms.password`                    | Provider password; platform UI values are encrypted as secrets                     |
+| `SMS_SENDER_ID` / `sms.sender_id` | Sender name/number accepted by the provider; defaults to `OmniCast`                |
 
 TxtConnect sends a bearer-authenticated JSON request with `to`, `from`, `unicode: "1"`, and `sms` fields. It treats the message as accepted only when the API returns HTTP success, `data.status_code: "000"`, and `data.in_error: false`. The phone number is sent as digits without the leading `+`. The Kannel driver posts `username`, `password`, `to`, `from`, and `text` as form fields and expects a successful HTTP response beginning with `0:`. The `generic_json` driver posts `{ "to", "from", "message" }` as JSON, uses HTTP Basic authentication when credentials are set, and accepts a 2xx response with `success: true` (or an empty success body).
 
@@ -65,21 +65,21 @@ is only held in the `/approvals` queue when the platform asks for a human decisi
 in `.env` control this, and all three can be overridden per tenant through platform settings
 (`campaigns.require_approval`, `campaigns.require_approved_sender_id`, `campaigns.require_approved_audio`):
 
-| Key | Default | Description |
-| --- | --- | --- |
-| `CAMPAIGNS_REQUIRE_APPROVAL` | `false` | When `true`, every submitted campaign waits for a reviewer before it can launch |
-| `CAMPAIGNS_REQUIRE_APPROVED_SENDER_ID` | `true` | Blocks submission until the selected SMS sender ID is approved |
-| `CAMPAIGNS_REQUIRE_APPROVED_AUDIO` | `true` | Blocks launch until a reviewer approves the voice recording or script |
+| Key                                    | Default | Description                                                                     |
+| -------------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `CAMPAIGNS_REQUIRE_APPROVAL`           | `false` | When `true`, every submitted campaign waits for a reviewer before it can launch |
+| `CAMPAIGNS_REQUIRE_APPROVED_SENDER_ID` | `true`  | Blocks submission until the selected SMS sender ID is approved                  |
+| `CAMPAIGNS_REQUIRE_APPROVED_AUDIO`     | `true`  | Blocks launch until a reviewer approves the voice recording or script           |
 
 SMS sender IDs are allowed spaces, keep the case the client typed and are limited to 11 characters
 including spaces. These limits are configuration, not code:
 
-| Key | Default | Description |
-| --- | --- | --- |
-| `SMS_SENDER_ID_MIN_LENGTH` | `3` | Shortest accepted SMS sender ID |
-| `SMS_SENDER_ID_MAX_LENGTH` | `11` | Longest accepted SMS sender ID, spaces included |
-| `SMS_SENDER_ID_ALLOW_SPACES` | `true` | Whether spaces belong to the identity (`false` restricts it to letters, digits and symbols) |
-| `EMAIL_SENDER_ID_MAX_LENGTH` | `120` | Longest accepted email from address (capped at the 120-character `sender_ids.name` column) |
+| Key                          | Default | Description                                                                                 |
+| ---------------------------- | ------- | ------------------------------------------------------------------------------------------- |
+| `SMS_SENDER_ID_MIN_LENGTH`   | `3`     | Shortest accepted SMS sender ID                                                             |
+| `SMS_SENDER_ID_MAX_LENGTH`   | `11`    | Longest accepted SMS sender ID, spaces included                                             |
+| `SMS_SENDER_ID_ALLOW_SPACES` | `true`  | Whether spaces belong to the identity (`false` restricts it to letters, digits and symbols) |
+| `EMAIL_SENDER_ID_MAX_LENGTH` | `120`   | Longest accepted email from address (capped at the 120-character `sender_ids.name` column)  |
 
 SMS sender IDs are compared case-sensitively, so `OmniCast` and `omnicast` are two different
 sender IDs on one account; email addresses are lower-cased before they are stored.
@@ -89,16 +89,16 @@ sender IDs on one account; email addresses are lower-cased before they are store
 A voice campaign originates one call per recipient through a `VoiceGateway`. The driver is
 `voice.driver` (platform setting) over `config/voice.php`:
 
-| Key | Default | Description |
-| --- | --- | --- |
-| `VOICE_DRIVER` | `log` | `log` writes the originate to `storage/logs/laravel.log`, `ami` uses the Asterisk Manager Interface, `ari` uses the Asterisk REST Interface |
-| `VOICE_BROADCAST_ENABLED` | `false` | Live PBX drivers refuse every call while this is off; `log` always dials |
-| `VOICE_OUTBOUND_CALLER_ID` | — | The single platform DID every voice campaign dials from |
-| `VITALPBX_AMI_HOST` / `_PORT` / `_USERNAME` / `_SECRET` / `_TIMEOUT` | `127.0.0.1` / `5038` / — / — / `5` | AMI account used for `Originate` |
-| `VITALPBX_TRUNK_NAME` / `VITALPBX_BROADCAST_CONTEXT` | `SIP/omnicast` / `omnicast-outbound` | PJSIP endpoint and dialplan context of the broadcast trunk |
-| `VITALPBX_ARI_URL` / `_USERNAME` / `_SECRET` / `_APP` / `_ENDPOINT` | `http://127.0.0.1:8088/ari` / — / — / `omnicast` / `PJSIP` | ARI originate settings |
-| `VOICE_WEBHOOK_SECRET` | — | Shared secret for the switch callbacks; when empty every callback is refused |
-| `VOICE_IVR_TIMEOUT_SECONDS` / `_MAX_ATTEMPTS` / `_OPT_OUT_DIGIT` | `6` / `3` / `9` | Defaults for the campaign keypad menu; a campaign can override timeout and repeats, never the opt-out digit |
+| Key                                                                  | Default                                                    | Description                                                                                                                                 |
+| -------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VOICE_DRIVER`                                                       | `log`                                                      | `log` writes the originate to `storage/logs/laravel.log`, `ami` uses the Asterisk Manager Interface, `ari` uses the Asterisk REST Interface |
+| `VOICE_BROADCAST_ENABLED`                                            | `false`                                                    | Live PBX drivers refuse every call while this is off; `log` always dials                                                                    |
+| `VOICE_OUTBOUND_CALLER_ID`                                           | —                                                          | The single platform DID every voice campaign dials from                                                                                     |
+| `VITALPBX_AMI_HOST` / `_PORT` / `_USERNAME` / `_SECRET` / `_TIMEOUT` | `127.0.0.1` / `5038` / — / — / `5`                         | AMI account used for `Originate`                                                                                                            |
+| `VITALPBX_TRUNK_NAME` / `VITALPBX_BROADCAST_CONTEXT`                 | `SIP/omnicast` / `omnicast-outbound`                       | PJSIP endpoint and dialplan context of the broadcast trunk                                                                                  |
+| `VITALPBX_ARI_URL` / `_USERNAME` / `_SECRET` / `_APP` / `_ENDPOINT`  | `http://127.0.0.1:8088/ari` / — / — / `omnicast` / `PJSIP` | ARI originate settings                                                                                                                      |
+| `VOICE_WEBHOOK_SECRET`                                               | —                                                          | Shared secret for the switch callbacks; when empty every callback is refused                                                                |
+| `VOICE_IVR_TIMEOUT_SECONDS` / `_MAX_ATTEMPTS` / `_OPT_OUT_DIGIT`     | `6` / `3` / `9`                                            | Defaults for the campaign keypad menu; a campaign can override timeout and repeats, never the opt-out digit                                 |
 
 The call reference OmniCast generates is sent to the switch as both `Exten` and `ActionID`, and the
 dialplan reads the `OMNICAST_CALL`, `OMNICAST_CALLER_ID`, `OMNICAST_SCRIPT`, `OMNICAST_RECORDING`,
@@ -108,7 +108,14 @@ Call events come back on `POST /webhooks/voice`, signed with `X-Omnicast-Signatu
 hash_hmac('sha256', $rawBody, VOICE_WEBHOOK_SECRET)` (a `sha256=` prefix is accepted):
 
 ```json
-{ "reference": "01H…", "event": "dtmf", "digits": "9", "event_id": "switch-1234", "duration": 42, "hangup_cause": "NORMAL_CLEARING" }
+{
+    "reference": "01H…",
+    "event": "dtmf",
+    "digits": "9",
+    "event_id": "switch-1234",
+    "duration": 42,
+    "hangup_cause": "NORMAL_CLEARING"
+}
 ```
 
 `event` is one of `initiated`, `ringing`, `answered`, `dtmf`, `completed`, `failed`. The endpoint
@@ -121,15 +128,15 @@ per-campaign call reports are available at `/reports/voice`.
 An SMS campaign submits one message per recipient through an `SmsGateway`. The driver is
 `sms.driver` (platform setting) over `config/sms.php`:
 
-| Key | Default | Description |
-| --- | --- | --- |
-| `SMS_BROADCAST_DRIVER` | `log` | `log` writes to `storage/logs/sms.log`, `txtconnect` uses the TxtConnect API, `generic_json` posts to any JSON aggregator, `kannel` posts to a Kannel bearerbox that holds the SMPP bind |
-| `SMS_BROADCAST_ENABLED` | `false` | Live drivers refuse every message while this is off; `log` always submits |
-| `SMS_BROADCAST_GLOBAL_CPS` | `0` | Platform-wide submissions-per-second ceiling for SMS. A client override in `rate_limits.sms_cps` wins; `0` means unthrottled |
-| `SMS_TOKEN` / `SMS_ENDPOINT` | — / TxtConnect dev endpoint | TxtConnect bearer token and endpoint (shared with the signup OTP flow) |
-| `SMS_GENERIC_ENDPOINT` / `_TOKEN` / `_USERNAME` / `_PASSWORD` | — | Generic JSON aggregator: bearer token when set, otherwise HTTP basic |
-| `SMS_KANNEL_URL` / `_USERNAME` / `_PASSWORD` / `_DLR_MASK` | — / — / — / `31` | Kannel `sendsms` URL, credentials and receipt mask |
-| `SMS_WEBHOOK_SECRET` | — | Shared secret for delivery receipts; when empty every receipt is refused |
+| Key                                                           | Default                     | Description                                                                                                                                                                              |
+| ------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SMS_BROADCAST_DRIVER`                                        | `log`                       | `log` writes to `storage/logs/sms.log`, `txtconnect` uses the TxtConnect API, `generic_json` posts to any JSON aggregator, `kannel` posts to a Kannel bearerbox that holds the SMPP bind |
+| `SMS_BROADCAST_ENABLED`                                       | `false`                     | Live drivers refuse every message while this is off; `log` always submits                                                                                                                |
+| `SMS_BROADCAST_GLOBAL_CPS`                                    | `0`                         | Platform-wide submissions-per-second ceiling for SMS. A client override in `rate_limits.sms_cps` wins; `0` means unthrottled                                                             |
+| `SMS_TOKEN` / `SMS_ENDPOINT`                                  | — / TxtConnect dev endpoint | TxtConnect bearer token and endpoint (shared with the signup OTP flow)                                                                                                                   |
+| `SMS_GENERIC_ENDPOINT` / `_TOKEN` / `_USERNAME` / `_PASSWORD` | —                           | Generic JSON aggregator: bearer token when set, otherwise HTTP basic                                                                                                                     |
+| `SMS_KANNEL_URL` / `_USERNAME` / `_PASSWORD` / `_DLR_MASK`    | — / — / — / `31`            | Kannel `sendsms` URL, credentials and receipt mask                                                                                                                                       |
+| `SMS_WEBHOOK_SECRET`                                          | —                           | Shared secret for delivery receipts; when empty every receipt is refused                                                                                                                 |
 
 Every message is written to `sms_messages` before the provider is contacted, with the sender ID, the
 GSM-7/Unicode encoding, the billable segment count and the per-segment cost, so a campaign's spend can
@@ -139,7 +146,12 @@ for Kannel, whose per-message `dlr-url` carries `reference` and `sig = hash_hmac
 SMS_WEBHOOK_SECRET)`:
 
 ```json
-{ "reference": "01H…", "status": "DELIVRD", "message_id": "TC-991", "event_id": "receipt-1" }
+{
+    "reference": "01H…",
+    "status": "DELIVRD",
+    "message_id": "TC-991",
+    "event_id": "receipt-1"
+}
 ```
 
 `status` accepts the carrier tokens OmniCast understands (`DELIVRD`, `UNDELIV`, `EXPIRED`, `REJECTD`,
@@ -154,9 +166,9 @@ shows its own message log and delivery rate.
 Campaign work is handed to the queue rather than run inside the request. `config/queues.php` names the
 queues and their workers:
 
-| Queue | Carries |
-| --- | --- |
-| `campaigns` | the orchestration pass of a multi-channel campaign |
+| Queue                     | Carries                                              |
+| ------------------------- | ---------------------------------------------------- |
+| `campaigns`               | the orchestration pass of a multi-channel campaign   |
 | `sms` / `voice` / `email` | the per-recipient sends of a single-channel campaign |
 
 `QueueTopology` picks the queue from the campaign's channels, and a retry re-enters the same queue.

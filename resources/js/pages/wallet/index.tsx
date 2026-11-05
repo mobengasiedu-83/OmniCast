@@ -235,12 +235,11 @@ export default function WalletIndex({
                     </div>
                 )}
 
-
                 {wallet !== null && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <CreditCard className="text-brand size-4" />
+                                <CreditCard className="size-4 text-brand" />
                                 Top up the wallet
                             </CardTitle>
                             <CardDescription>
@@ -284,7 +283,7 @@ export default function WalletIndex({
                             )}
 
                             {!can.checkout && (
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     Your role can see the wallet but not fund
                                     it.
                                 </p>
@@ -293,12 +292,11 @@ export default function WalletIndex({
                     </Card>
                 )}
 
-
                 <div className="grid gap-4 xl:grid-cols-2">
                     <Card className="overflow-hidden">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <CreditCard className="text-brand size-4" />
+                                <CreditCard className="size-4 text-brand" />
                                 Recent payments
                             </CardTitle>
                             <CardDescription>
@@ -343,10 +341,8 @@ export default function WalletIndex({
                                                         status={payment.status}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground pr-6 text-xs">
-                                                    {moment(
-                                                        payment.created_at,
-                                                    )}
+                                                <TableCell className="pr-6 text-xs text-muted-foreground">
+                                                    {moment(payment.created_at)}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -356,12 +352,10 @@ export default function WalletIndex({
                         </CardContent>
                     </Card>
 
-
-
                     <Card className="overflow-hidden">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <ReceiptText className="text-brand size-4" />
+                                <ReceiptText className="size-4 text-brand" />
                                 Recent invoices
                             </CardTitle>
                             <CardDescription>
@@ -406,7 +400,7 @@ export default function WalletIndex({
                                                         status={invoice.status}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground pr-6 text-xs">
+                                                <TableCell className="pr-6 text-xs text-muted-foreground">
                                                     {moment(invoice.issued_at)}
                                                 </TableCell>
                                             </TableRow>
@@ -462,7 +456,7 @@ export default function WalletIndex({
                                                                     transaction.type_label
                                                                 }
                                                             </p>
-                                                            <p className="text-muted-foreground text-xs">
+                                                            <p className="text-xs text-muted-foreground">
                                                                 {transaction.description ??
                                                                     '—'}
                                                             </p>
@@ -488,7 +482,7 @@ export default function WalletIndex({
                                                                 walletCurrency,
                                                             )}
                                                         </TableCell>
-                                                        <TableCell className="text-muted-foreground pr-6 text-xs">
+                                                        <TableCell className="pr-6 text-xs text-muted-foreground">
                                                             {moment(
                                                                 transaction.created_at,
                                                             )}
@@ -507,11 +501,10 @@ export default function WalletIndex({
                         </CardContent>
                     </Card>
 
-
                     <Card className="overflow-hidden">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Lock className="text-brand size-4" />
+                                <Lock className="size-4 text-brand" />
                                 Reserved by campaigns
                             </CardTitle>
                             <CardDescription>
@@ -546,7 +539,7 @@ export default function WalletIndex({
                                                         {reservation.campaign ??
                                                             'Campaign'}
                                                     </p>
-                                                    <p className="text-muted-foreground font-mono text-xs">
+                                                    <p className="font-mono text-xs text-muted-foreground">
                                                         {reservation.reference ??
                                                             '—'}
                                                     </p>
@@ -572,12 +565,11 @@ export default function WalletIndex({
                     </Card>
                 </div>
 
-
                 {wallet !== null && can.manual_credit && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Banknote className="text-brand size-4" />
+                                <Banknote className="size-4 text-brand" />
                                 Adjust the balance
                             </CardTitle>
                             <CardDescription>
@@ -621,9 +613,7 @@ export default function WalletIndex({
                                     />
                                 </div>
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="reference">
-                                        Reference
-                                    </Label>
+                                    <Label htmlFor="reference">Reference</Label>
                                     <Input
                                         id="reference"
                                         value={reference}
@@ -652,7 +642,6 @@ export default function WalletIndex({
     );
 }
 
-
 function PackageCard({
     pkg,
     currency,
@@ -674,7 +663,7 @@ function PackageCard({
         <div
             className={
                 pkg.popular
-                    ? 'border-brand/40 bg-brand/5 relative flex flex-col gap-3 rounded-xl border p-4'
+                    ? 'relative flex flex-col gap-3 rounded-xl border border-brand/40 bg-brand/5 p-4'
                     : 'relative flex flex-col gap-3 rounded-xl border p-4'
             }
         >
@@ -690,16 +679,19 @@ function PackageCard({
                     {money(pkg.price, currency)}
                 </p>
                 {pkg.tagline !== '' && (
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-xs text-muted-foreground">
                         {pkg.tagline}
                     </p>
                 )}
             </div>
 
-            <ul className="text-muted-foreground space-y-1 text-xs">
+            <ul className="space-y-1 text-xs text-muted-foreground">
                 {pkg.units.map((unit) => (
-                    <li key={unit.service} className="flex items-center gap-1.5">
-                        <BadgeCheck className="text-success size-3.5" />
+                    <li
+                        key={unit.service}
+                        className="flex items-center gap-1.5"
+                    >
+                        <BadgeCheck className="size-3.5 text-success" />
                         {unit.formatted} {unit.label}
                     </li>
                 ))}
@@ -730,4 +722,3 @@ function PackageCard({
         </div>
     );
 }
-

@@ -15,7 +15,7 @@ export default function ThemeToggle() {
         <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-foreground relative overflow-hidden"
+            className="relative overflow-hidden text-muted-foreground hover:text-foreground"
             onClick={() => updateAppearance(isDark ? 'light' : 'dark')}
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -24,13 +24,13 @@ export default function ThemeToggle() {
             <Sun
                 className={cn(
                     'size-4 transition-all duration-300',
-                    isDark ? '-rotate-90 scale-0' : 'rotate-0 scale-100',
+                    isDark ? 'scale-0 -rotate-90' : 'scale-100 rotate-0',
                 )}
             />
             <Moon
                 className={cn(
                     'absolute size-4 transition-all duration-300',
-                    isDark ? 'rotate-0 scale-100' : 'rotate-90 scale-0',
+                    isDark ? 'scale-100 rotate-0' : 'scale-0 rotate-90',
                 )}
             />
         </Button>

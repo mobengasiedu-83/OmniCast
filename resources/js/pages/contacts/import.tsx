@@ -37,12 +37,14 @@ const columns: { name: string; description: string }[] = [
     },
     {
         name: 'first_name',
-        description: 'Optional. Falls back to a "name" column, then to the MSISDN.',
+        description:
+            'Optional. Falls back to a "name" column, then to the MSISDN.',
     },
     { name: 'last_name', description: 'Optional surname.' },
     {
         name: 'email',
-        description: 'Optional. Stored lower-cased and used for duplicate detection.',
+        description:
+            'Optional. Stored lower-cased and used for duplicate detection.',
     },
     {
         name: 'company, account_number, customer_id, location, language, timezone',
@@ -119,7 +121,9 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                     setNewListName('');
                 },
                 onError: (errors) => {
-                    setListError(errors.name ?? 'That list could not be created.');
+                    setListError(
+                        errors.name ?? 'That list could not be created.',
+                    );
                 },
                 onFinish: () => setCreatingList(false),
             },
@@ -157,13 +161,13 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                     <Card className="lg:col-span-3">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <FileUp className="text-brand size-4" />
+                                <FileUp className="size-4 text-brand" />
                                 Upload a CSV
                             </CardTitle>
                             <CardDescription>
-                                Rows are matched on the normalised phone
-                                number, so re-importing the same file updates
-                                contacts instead of duplicating them.
+                                Rows are matched on the normalised phone number,
+                                so re-importing the same file updates contacts
+                                instead of duplicating them.
                             </CardDescription>
                         </CardHeader>
 
@@ -172,18 +176,21 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                 onSubmit={submit}
                                 className="flex flex-col gap-4"
                             >
-
                                 {clients.length > 0 && (
                                     <div className="grid gap-1.5">
                                         <Label htmlFor="client_id">
                                             Client account
                                         </Label>
                                         <Select
-                                            value={form.data.client_id || 'none'}
+                                            value={
+                                                form.data.client_id || 'none'
+                                            }
                                             onValueChange={(value) =>
                                                 form.setData(
                                                     'client_id',
-                                                    value === 'none' ? '' : value,
+                                                    value === 'none'
+                                                        ? ''
+                                                        : value,
                                                 )
                                             }
                                         >
@@ -197,7 +204,9 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                                 {clients.map((client) => (
                                                     <SelectItem
                                                         key={client.id}
-                                                        value={String(client.id)}
+                                                        value={String(
+                                                            client.id,
+                                                        )}
                                                     >
                                                         {client.name}
                                                     </SelectItem>
@@ -224,7 +233,7 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                         }
                                         required
                                     />
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         Comma separated, the first row is the
                                         header. Existing contacts are updated
                                         and rows without a valid phone number
@@ -232,7 +241,6 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                     </p>
                                     <InputError message={form.errors.file} />
                                 </div>
-
 
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="contact_list_id">
@@ -271,16 +279,15 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                     <InputError
                                         message={form.errors.contact_list_id}
                                     />
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         A contact can belong to several lists.
-                                        Numbers that already exist are added
-                                        to this list without leaving their
-                                        other lists, so overlapping audiences
-                                        are only de-duplicated when a campaign
-                                        is sent.
+                                        Numbers that already exist are added to
+                                        this list without leaving their other
+                                        lists, so overlapping audiences are only
+                                        de-duplicated when a campaign is sent.
                                     </p>
 
-                                    <div className="border-border/60 mt-1 grid gap-1.5 border-t pt-3">
+                                    <div className="mt-1 grid gap-1.5 border-t border-border/60 pt-3">
                                         <Label htmlFor="new_list_name">
                                             Or create a list
                                         </Label>
@@ -318,14 +325,17 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                             </Button>
                                         </div>
                                         {listError && (
-                                            <p className="text-destructive text-xs">
+                                            <p className="text-xs text-destructive">
                                                 {listError}
                                             </p>
                                         )}
                                     </div>
                                 </div>
 
-                                <Button type="submit" disabled={form.processing}>
+                                <Button
+                                    type="submit"
+                                    disabled={form.processing}
+                                >
                                     <Upload />
                                     {form.processing
                                         ? 'Importing…'
@@ -338,7 +348,7 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                     <Card className="lg:col-span-2">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Users className="text-brand size-4" />
+                                <Users className="size-4 text-brand" />
                                 Supported columns
                             </CardTitle>
                             <CardDescription>
@@ -353,7 +363,7 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                     <p className="font-mono text-xs font-medium">
                                         {column.name}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {column.description}
                                     </p>
                                 </div>
@@ -378,4 +388,3 @@ ContactsImport.layout = {
         },
     ],
 };
-

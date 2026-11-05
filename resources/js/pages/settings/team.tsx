@@ -37,11 +37,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { urls } from '@/lib/urls';
-import type {
-    SelectOption,
-    TeamInvitationRow,
-    TeamMemberRow,
-} from '@/types';
+import type { SelectOption, TeamInvitationRow, TeamMemberRow } from '@/types';
 
 type PageProps = {
     members: TeamMemberRow[];
@@ -164,7 +160,7 @@ export default function SettingsTeam({
                                         </Badge>
                                     )}
                                 </p>
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     {member.email}
                                     {member.job_title
                                         ? ` · ${member.job_title}`
@@ -202,7 +198,7 @@ export default function SettingsTeam({
 
                 <CardContent className="divide-y divide-border/60 px-0">
                     {invitations.length === 0 ? (
-                        <p className="text-muted-foreground px-4 py-6 text-sm">
+                        <p className="px-4 py-6 text-sm text-muted-foreground">
                             No invitations have been sent for this organisation.
                         </p>
                     ) : (
@@ -215,7 +211,7 @@ export default function SettingsTeam({
                                     <p className="text-sm font-medium">
                                         {invitation.name ?? invitation.email}
                                     </p>
-                                    <p className="text-muted-foreground text-xs">
+                                    <p className="text-xs text-muted-foreground">
                                         {invitation.email} ·{' '}
                                         {invitation.role_label}
                                         {invitation.expires_at
@@ -271,7 +267,6 @@ export default function SettingsTeam({
                     )}
                 </CardContent>
             </Card>
-
 
             <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
                 <DialogContent className="sm:max-w-md">
@@ -365,4 +360,3 @@ SettingsTeam.layout = {
         },
     ],
 };
-

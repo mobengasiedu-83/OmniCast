@@ -1,5 +1,11 @@
 import { Head, router } from '@inertiajs/react';
-import { Ban, CircleDollarSign, ReceiptText, RotateCcw, Search } from 'lucide-react';
+import {
+    Ban,
+    CircleDollarSign,
+    ReceiptText,
+    RotateCcw,
+    Search,
+} from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
@@ -322,30 +328,32 @@ export default function AdminInvoicesIndex({
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {openInvoice.lines.map((line, index) => (
-                                            <TableRow
-                                                key={`${line.description}-${index}`}
-                                            >
-                                                <TableCell>
-                                                    {line.description}
-                                                </TableCell>
-                                                <TableCell className="tabular-nums">
-                                                    {line.quantity}
-                                                </TableCell>
-                                                <TableCell className="tabular-nums">
-                                                    {money(
-                                                        line.unit_price,
-                                                        openInvoice.currency,
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {money(
-                                                        line.amount,
-                                                        openInvoice.currency,
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {openInvoice.lines.map(
+                                            (line, index) => (
+                                                <TableRow
+                                                    key={`${line.description}-${index}`}
+                                                >
+                                                    <TableCell>
+                                                        {line.description}
+                                                    </TableCell>
+                                                    <TableCell className="tabular-nums">
+                                                        {line.quantity}
+                                                    </TableCell>
+                                                    <TableCell className="tabular-nums">
+                                                        {money(
+                                                            line.unit_price,
+                                                            openInvoice.currency,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right tabular-nums">
+                                                        {money(
+                                                            line.amount,
+                                                            openInvoice.currency,
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ),
+                                        )}
                                     </TableBody>
                                 </Table>
 
@@ -404,7 +412,7 @@ function InvoiceTableRow({
                 {invoice.number}
             </TableCell>
             <TableCell>{invoice.client ?? '—'}</TableCell>
-            <TableCell className="text-muted-foreground font-mono text-xs">
+            <TableCell className="font-mono text-xs text-muted-foreground">
                 {invoice.payment_reference ?? '—'}
             </TableCell>
             <TableCell className="font-medium tabular-nums">
@@ -413,7 +421,7 @@ function InvoiceTableRow({
             <TableCell>
                 <StatusBadge status={invoice.status} />
             </TableCell>
-            <TableCell className="text-muted-foreground text-xs">
+            <TableCell className="text-xs text-muted-foreground">
                 {moment(invoice.issued_at)}
             </TableCell>
             <TableCell className="pr-6 text-right">
@@ -430,5 +438,3 @@ function InvoiceTableRow({
         </TableRow>
     );
 }
-
-

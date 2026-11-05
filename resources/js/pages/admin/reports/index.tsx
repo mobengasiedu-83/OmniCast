@@ -105,7 +105,7 @@ export default function AdminReportsOverview({
                     title="Executive report"
                     description="Delivery, audience and money across every client account, read from the same ledgers the tenants are billed on."
                     badge={
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                             {period.label}
                         </span>
                     }
@@ -231,7 +231,7 @@ export default function AdminReportsOverview({
                                             <TableRow key={row.channel}>
                                                 <TableCell>
                                                     <span className="flex items-center gap-2">
-                                                        <Icon className="text-muted-foreground size-4" />
+                                                        <Icon className="size-4 text-muted-foreground" />
                                                         {row.label}
                                                     </span>
                                                 </TableCell>
@@ -265,12 +265,12 @@ export default function AdminReportsOverview({
                                     key={month.month}
                                     className="flex items-center gap-3"
                                 >
-                                    <span className="text-muted-foreground w-16 text-xs">
+                                    <span className="w-16 text-xs text-muted-foreground">
                                         {month.label}
                                     </span>
-                                    <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                                         <div
-                                            className="brand-gradient h-full rounded-full"
+                                            className="h-full rounded-full brand-gradient"
                                             style={{
                                                 width: `${(month.spend / peakSpend) * 100}%`,
                                             }}
@@ -308,12 +308,12 @@ export default function AdminReportsOverview({
                                             key={day.date}
                                             className="flex items-center gap-3"
                                         >
-                                            <span className="text-muted-foreground w-20 text-xs">
+                                            <span className="w-20 text-xs text-muted-foreground">
                                                 {day.date}
                                             </span>
-                                            <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                                                 <div
-                                                    className="brand-gradient h-full rounded-full"
+                                                    className="h-full rounded-full brand-gradient"
                                                     style={{
                                                         width: `${(day.recipients / peakRecipients) * 100}%`,
                                                     }}
@@ -330,7 +330,6 @@ export default function AdminReportsOverview({
                             )}
                         </CardContent>
                     </Card>
-
 
                     <Card>
                         <CardHeader className="flex flex-row items-start justify-between gap-2">
@@ -408,4 +407,3 @@ AdminReportsOverview.layout = {
         },
     ],
 };
-

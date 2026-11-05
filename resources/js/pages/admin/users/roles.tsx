@@ -101,7 +101,7 @@ export default function AdminRoles({ roles, groups }: PageProps) {
                                                         <Lock className="size-3" />
                                                     )}
                                                 </span>
-                                                <span className="text-muted-foreground text-[11px] font-normal">
+                                                <span className="text-[11px] font-normal text-muted-foreground">
                                                     {role.users_count}{' '}
                                                     {role.users_count === 1
                                                         ? 'user'
@@ -119,7 +119,7 @@ export default function AdminRoles({ roles, groups }: PageProps) {
                                         <TableRow className="bg-muted/40 hover:bg-muted/40">
                                             <TableCell
                                                 colSpan={roles.length + 1}
-                                                className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+                                                className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
                                             >
                                                 {group.label}
                                             </TableCell>
@@ -131,7 +131,7 @@ export default function AdminRoles({ roles, groups }: PageProps) {
                                                     <p className="text-sm font-medium">
                                                         {permission.label}
                                                     </p>
-                                                    <p className="text-muted-foreground font-mono text-[11px]">
+                                                    <p className="font-mono text-[11px] text-muted-foreground">
                                                         {permission.value}
                                                     </p>
                                                 </TableCell>
@@ -172,7 +172,7 @@ export default function AdminRoles({ roles, groups }: PageProps) {
                                     </Fragment>
                                 ))}
                                 <TableRow className="hover:bg-transparent">
-                                    <TableCell className="text-muted-foreground text-xs">
+                                    <TableCell className="text-xs text-muted-foreground">
                                         Each column saves on its own.
                                     </TableCell>
                                     {roles.map((role) => (
@@ -188,7 +188,8 @@ export default function AdminRoles({ roles, groups }: PageProps) {
                                                         : 'outline'
                                                 }
                                                 disabled={
-                                                    role.locked || !isDirty(role)
+                                                    role.locked ||
+                                                    !isDirty(role)
                                                 }
                                                 onClick={() => save(role)}
                                             >
@@ -209,7 +210,7 @@ export default function AdminRoles({ roles, groups }: PageProps) {
                     {roles.map((role) => (
                         <Badge key={role.name} variant="outline">
                             {role.label}
-                            <span className="text-muted-foreground ml-1 tabular-nums">
+                            <span className="ml-1 text-muted-foreground tabular-nums">
                                 {draft[role.name]?.length ?? 0} permissions
                             </span>
                         </Badge>

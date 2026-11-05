@@ -143,7 +143,7 @@ export default function ContactDndRegistry({
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                            <BarChart3 className="text-brand size-4" />
+                            <BarChart3 className="size-4 text-brand" />
                             Channel reach
                         </CardTitle>
                         <CardDescription>
@@ -194,7 +194,7 @@ export default function ContactDndRegistry({
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                            <ShieldBan className="text-brand size-4" />
+                            <ShieldBan className="size-4 text-brand" />
                             DND & suppression registry
                         </CardTitle>
                         <CardDescription>
@@ -347,7 +347,9 @@ export default function ContactDndRegistry({
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => void lift(suppression)}
+                                            onClick={() =>
+                                                void lift(suppression)
+                                            }
                                         >
                                             Lift
                                         </Button>

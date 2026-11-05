@@ -2,12 +2,22 @@
 
 namespace App\Services\Billing;
 
+use App\Models\PlatformSetting;
+use App\Models\User;
+use App\Services\PlatformConfiguration;
+
 /**
  * The "top up your wallet" catalogue from `config/billing.php`.
  *
  * A package is a bundle of pre-paid credit: buying it credits the wallet with
  * the package price, and the per-service allocation says how far that price
  * stretches on SMS, voice and email.
+ *
+ * Whether a package is on sale is decided per package: the `enabled` flag in
+ * the configuration is the default, and a `billing.<key>.enabled` platform
+ * setting — written by the Admin → Wallet packages screen — overrides it. A
+ * hidden package keeps its price and allocation but leaves the price list and
+ * is refused at checkout.
  */
 class PackageCatalogue
 {
@@ -23,7 +33,14 @@ class PackageCatalogue
     ];
 
     /**
-     * The whole catalogue, in the order it is configured.
+     * The platform setting group that records package availability.
+     */
+    private const SETTINGS_GROUP = 'billing';
+
+    public function __construct(protected PlatformConfiguration $configuration) {}
+
+    /**
+     * The packages on sale, in the order they are configured.
      *
      * @return list<array{
      *     key: string,
@@ -39,7 +56,38 @@ class PackageCatalogue
         $packages = [];
 
         foreach ($this->raw() as $key => $package) {
+            if (! $this->isEnabled((string) $key, $package)) {
+                continue;
+            }
+
             $packages[] = $this->present((string) $key, $package);
+        }
+
+        return $packages;
+    }
+
+    /**
+     * Every configured package with its availability, hidden ones included.
+     *
+     * @return list<array{
+     *     key: string,
+     *     name: string,
+     *     price: float,
+     *     popular: bool,
+     *     tagline: string,
+     *     units: list<array{service: string, label: string, quantity: int, formatted: string}>,
+     *     enabled: bool
+     * }>
+     */
+    public function every(): array
+    {
+        $packages = [];
+
+        foreach ($this->raw() as $key => $package) {
+            $packages[] = [
+                ...$this->present((string) $key, $package),
+                'enabled' => $this->isEnabled((string) $key, $package),
+            ];
         }
 
         return $packages;
@@ -68,7 +116,15 @@ class PackageCatalogue
      */
     public function keys(): array
     {
-        return array_map('strval', array_keys($this->raw()));
+        $keys = [];
+
+        foreach ($this->raw() as $key => $package) {
+            if ($this->isEnabled((string) $key, $package)) {
+                $keys[] = (string) $key;
+            }
+        }
+
+        return $keys;
     }
 
     /**
@@ -88,6 +144,73 @@ class PackageCatalogue
         $package = $this->raw()[$key] ?? null;
 
         return $package === null ? null : $this->present($key, $package);
+    }
+
+    /**
+     * One package as it may be bought right now, or null when the key is
+     * unknown or the package is switched off.
+     *
+     * @return array{
+     *     key: string,
+     *     name: string,
+     *     price: float,
+     *     popular: bool,
+     *     tagline: string,
+     *     units: list<array{service: string, label: string, quantity: int, formatted: string}>
+     * }|null
+     */
+    public function findPurchasable(string $key): ?array
+    {
+        $package = $this->raw()[$key] ?? null;
+
+        if ($package === null || ! $this->isEnabled($key, $package)) {
+            return null;
+        }
+
+        return $this->present($key, $package);
+    }
+
+    /**
+     * Whether the catalogue is configured with this key, on sale or not.
+     */
+    public function has(string $key): bool
+    {
+        return array_key_exists($key, $this->raw());
+    }
+
+    /**
+     * Whether the platform is currently selling this package.
+     */
+    public function isEnabled(string $key, ?array $package = null): bool
+    {
+        $package ??= $this->raw()[$key] ?? null;
+
+        if ($package === null) {
+            return false;
+        }
+
+        $default = (bool) ($package['enabled'] ?? true);
+
+        return (bool) filter_var(
+            $this->configuration->resolve(self::SETTINGS_GROUP, $key.'.enabled', $default),
+            FILTER_VALIDATE_BOOL,
+        );
+    }
+
+    /**
+     * Put a package on sale or take it off, overriding the configured default.
+     */
+    public function setEnabled(string $key, bool $enabled, ?User $user = null): void
+    {
+        $setting = PlatformSetting::query()->firstOrNew([
+            'group' => self::SETTINGS_GROUP,
+            'key' => $key.'.enabled',
+        ]);
+
+        $setting->value = $enabled ? '1' : '0';
+        $setting->is_secret = false;
+        $setting->updated_by = $user?->id;
+        $setting->save();
     }
 
     /**
@@ -133,7 +256,7 @@ class PackageCatalogue
     /**
      * The raw catalogue as configured.
      *
-     * @return array<string, array{name: string, price: float, popular?: bool, tagline?: string, units?: array<string, int>}>
+     * @return array<string, array{name: string, price: float, popular?: bool, tagline?: string, units?: array<string, int>, enabled?: bool}>
      */
     protected function raw(): array
     {
@@ -145,7 +268,7 @@ class PackageCatalogue
     /**
      * Shape one configured package for the page or a message.
      *
-     * @param  array{name?: string, price?: float|int, popular?: bool, tagline?: string, units?: array<string, int>}  $package
+     * @param  array{name?: string, price?: float|int, popular?: bool, tagline?: string, units?: array<string, int>, enabled?: bool}  $package
      * @return array{
      *     key: string,
      *     name: string,

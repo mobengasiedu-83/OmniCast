@@ -38,7 +38,7 @@ export default function AcceptInvitation({
                 <Head title="Invitation" />
 
                 <div className="space-y-4 text-center">
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-sm text-muted-foreground">
                         {emailInUse
                             ? 'An account already exists for this email address. Sign in instead.'
                             : 'This invitation has expired or been withdrawn. Ask an administrator for a new one.'}
@@ -57,17 +57,16 @@ export default function AcceptInvitation({
             <Head title="Accept invitation" />
 
             <div className="mb-6 space-y-1 text-center">
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                     {organisation
                         ? `${inviter ?? 'An administrator'} invited you to ${organisation}`
                         : `${inviter ?? 'An administrator'} invited you to the platform team`}
                 </p>
                 <p className="text-sm">
-                    <span className="font-medium">{email}</span> ·{' '}
-                    {roleLabel}
+                    <span className="font-medium">{email}</span> · {roleLabel}
                 </p>
                 {expiresAt && (
-                    <p className="text-muted-foreground text-xs">
+                    <p className="text-xs text-muted-foreground">
                         Link expires {expiresAt}
                     </p>
                 )}

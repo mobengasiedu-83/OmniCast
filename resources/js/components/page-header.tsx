@@ -31,7 +31,7 @@ export default function PageHeader({
         >
             <div className="flex items-start gap-3.5">
                 {Icon && (
-                    <span className="brand-gradient text-primary-foreground shadow-brand/25 hidden size-11 shrink-0 items-center justify-center rounded-xl shadow-md sm:flex">
+                    <span className="hidden size-11 shrink-0 items-center justify-center rounded-xl brand-gradient text-primary-foreground shadow-md shadow-brand/25 sm:flex">
                         <Icon className="size-5" />
                     </span>
                 )}
@@ -45,7 +45,7 @@ export default function PageHeader({
                     </div>
 
                     {description && (
-                        <p className="text-muted-foreground max-w-2xl text-sm">
+                        <p className="max-w-2xl text-sm text-muted-foreground">
                             {description}
                         </p>
                     )}

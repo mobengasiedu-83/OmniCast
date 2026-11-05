@@ -94,7 +94,7 @@ export default function AdminRevenueReport({
                     title="Revenue"
                     description="Settled payments, invoices and wallet credit read straight from the billing ledger."
                     badge={
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-muted-foreground">
                             {period.label}
                         </span>
                     }
@@ -167,7 +167,6 @@ export default function AdminRevenueReport({
                     />
                 </div>
 
-
                 <div className="grid gap-4 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
@@ -182,12 +181,12 @@ export default function AdminRevenueReport({
                                     key={point.month}
                                     className="flex items-center gap-3"
                                 >
-                                    <span className="text-muted-foreground w-16 text-xs">
+                                    <span className="w-16 text-xs text-muted-foreground">
                                         {point.label}
                                     </span>
-                                    <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                                         <div
-                                            className="bg-success h-full rounded-full"
+                                            className="h-full rounded-full bg-success"
                                             style={{
                                                 width: `${(point.revenue / peakRevenue) * 100}%`,
                                             }}
@@ -251,7 +250,6 @@ export default function AdminRevenueReport({
                         </CardContent>
                     </Card>
                 </div>
-
 
                 <div className="grid gap-4 lg:grid-cols-3">
                     <Card>
@@ -336,7 +334,6 @@ export default function AdminRevenueReport({
                         </CardContent>
                     </Card>
 
-
                     <Card>
                         <CardHeader>
                             <CardTitle>Wallet movements</CardTitle>
@@ -379,10 +376,9 @@ export default function AdminRevenueReport({
                     </Card>
                 </div>
 
-
                 <Card className="py-4">
                     <CardContent className="flex flex-wrap items-center justify-between gap-3">
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground">
                             A payment counts as revenue only once the gateway
                             settled it; requested and failed payments are shown
                             separately.
@@ -408,4 +404,3 @@ AdminRevenueReport.layout = {
         },
     ],
 };
-

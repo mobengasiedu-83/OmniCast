@@ -123,7 +123,7 @@ export default function AdminLoginAudit({
                             className="flex flex-1 items-center gap-2 sm:flex-none"
                         >
                             <div className="relative w-full sm:w-72">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(event) =>
@@ -182,7 +182,6 @@ export default function AdminLoginAudit({
                     </CardContent>
                 </Card>
 
-
                 <Card className="overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/60 py-3">
                         <CardTitle className="text-sm font-medium">
@@ -216,7 +215,7 @@ export default function AdminLoginAudit({
                                 <TableBody>
                                     {audits.data.map((audit) => (
                                         <TableRow key={audit.id}>
-                                            <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                            <TableCell className="text-xs whitespace-nowrap text-muted-foreground">
                                                 {audit.created_at
                                                     ? new Date(
                                                           audit.created_at,
@@ -230,7 +229,7 @@ export default function AdminLoginAudit({
                                                         audit.email ??
                                                         'Unknown'}
                                                 </p>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {audit.email}
                                                     {audit.client
                                                         ? ` · ${audit.client}`
@@ -249,7 +248,7 @@ export default function AdminLoginAudit({
                                                 {audit.device}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground font-mono text-xs">
+                                            <TableCell className="font-mono text-xs text-muted-foreground">
                                                 {audit.ip_address ?? '—'}
                                             </TableCell>
                                         </TableRow>
@@ -278,4 +277,3 @@ AdminLoginAudit.layout = {
         },
     ],
 };
-

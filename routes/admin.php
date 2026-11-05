@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ClientRegistrationController;
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\LoginAuditController;
+use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\QueueController;
@@ -94,6 +95,9 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::post('payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
 
             Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+
+            Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
+            Route::put('packages/{package}', [PackageController::class, 'update'])->name('packages.update');
         });
 
         Route::middleware('can:reports.view')->group(function (): void {

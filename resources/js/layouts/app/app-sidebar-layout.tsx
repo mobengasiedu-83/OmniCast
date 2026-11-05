@@ -19,7 +19,7 @@ export default function AppSidebarLayout({
                 <div className="relative flex-1">
                     <div
                         aria-hidden="true"
-                        className="brand-gradient-soft pointer-events-none absolute inset-x-0 top-0 h-48 opacity-50 [mask-image:linear-gradient(to_bottom,black,transparent)]"
+                        className="pointer-events-none absolute inset-x-0 top-0 h-48 brand-gradient-soft [mask-image:linear-gradient(to_bottom,black,transparent)] opacity-50"
                     />
 
                     <PageTransition>
@@ -32,4 +32,3 @@ export default function AppSidebarLayout({
         </AppShell>
     );
 }
-

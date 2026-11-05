@@ -297,7 +297,7 @@ export default function AdminUsersIndex({
                             className="flex flex-1 items-center gap-2 sm:flex-none"
                         >
                             <div className="relative w-full sm:w-72">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(event) =>
@@ -452,7 +452,7 @@ export default function AdminUsersIndex({
                                                 <p className="font-medium">
                                                     {user.name}
                                                 </p>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {user.email}
                                                     {user.client
                                                         ? ` · ${user.client}`
@@ -484,7 +484,7 @@ export default function AdminUsersIndex({
                                                     }
                                                 />
                                                 {user.suspension_reason && (
-                                                    <p className="text-muted-foreground mt-1 max-w-56 text-xs">
+                                                    <p className="mt-1 max-w-56 text-xs text-muted-foreground">
                                                         {user.suspension_reason}
                                                     </p>
                                                 )}
@@ -505,7 +505,7 @@ export default function AdminUsersIndex({
                                                 />
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {formatDate(user.last_login_at)}
                                             </TableCell>
 
@@ -818,7 +818,9 @@ export default function AdminUsersIndex({
                                 <div className="grid gap-2">
                                     <Label>Organisation</Label>
                                     <Select
-                                        value={editForm.data.client_id || 'none'}
+                                        value={
+                                            editForm.data.client_id || 'none'
+                                        }
                                         onValueChange={(value) =>
                                             editForm.setData(
                                                 'client_id',

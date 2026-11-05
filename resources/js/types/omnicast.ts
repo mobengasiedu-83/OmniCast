@@ -55,7 +55,12 @@ export type ContactListCandidate = {
     email: string | null;
 };
 
-export type TagOption = { id: number; name: string; color: string; contacts_count?: number };
+export type TagOption = {
+    id: number;
+    name: string;
+    color: string;
+    contacts_count?: number;
+};
 
 export type PaginationLink = {
     url: string | null;
@@ -1231,4 +1236,3 @@ export type ChannelDeliveryReport = {
     daily: ChannelDeliveryPoint[];
     byClient: ChannelDeliveryClientRow[];
 };
-

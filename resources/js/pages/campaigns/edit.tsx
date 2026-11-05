@@ -42,7 +42,9 @@ type PageProps = CampaignFormOptions & {
  * Turns the persisted campaign into form strings, keeping server defaults for
  * anything that is still null.
  */
-function initialValues(campaign: EditableCampaign): Partial<CampaignFormValues> {
+function initialValues(
+    campaign: EditableCampaign,
+): Partial<CampaignFormValues> {
     const text = (value: string | number | null): string =>
         value === null ? '' : String(value);
 
@@ -58,9 +60,7 @@ function initialValues(campaign: EditableCampaign): Partial<CampaignFormValues> 
         email_body: text(campaign.email_body),
         email_format: campaign.email_format ?? 'html',
         voice_script: text(campaign.voice_script),
-        voice_max_duration_seconds: text(
-            campaign.voice_max_duration_seconds,
-        ),
+        voice_max_duration_seconds: text(campaign.voice_max_duration_seconds),
         ivr_enabled: campaign.ivr_enabled ? '1' : '0',
         ivr_prompt: text(campaign.ivr_prompt),
         ivr_timeout_seconds: text(campaign.ivr_timeout_seconds),
@@ -88,12 +88,12 @@ export default function CampaignsEdit({ campaign, ...options }: PageProps) {
                 />
 
                 <CampaignForm
-                action={urls.campaigns.update(campaign.id)}
-                method="put"
-                options={options}
-                initial={initialValues(campaign)}
-                submitLabel="Save changes"
-                cancelHref={urls.campaigns.show(campaign.id)}
+                    action={urls.campaigns.update(campaign.id)}
+                    method="put"
+                    options={options}
+                    initial={initialValues(campaign)}
+                    submitLabel="Save changes"
+                    cancelHref={urls.campaigns.show(campaign.id)}
                 />
             </div>
         </>

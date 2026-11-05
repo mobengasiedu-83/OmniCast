@@ -22,9 +22,9 @@ export default function AuthCardLayout({
 }>) {
     return (
         <div className="relative flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-            <div className="mesh-backdrop animate-fade-in pointer-events-none absolute inset-0 -z-10 opacity-60" />
+            <div className="pointer-events-none absolute inset-0 -z-10 animate-fade-in mesh-backdrop opacity-60" />
 
-            <div className="animate-fade-in-up flex w-full max-w-md flex-col gap-6">
+            <div className="flex w-full max-w-md animate-fade-in-up flex-col gap-6">
                 <Link
                     href={home()}
                     className="flex items-center gap-2 self-center font-medium"
@@ -46,4 +46,3 @@ export default function AuthCardLayout({
         </div>
     );
 }
-

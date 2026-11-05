@@ -393,7 +393,7 @@ class CheckoutService
      */
     protected function package(string $packageKey): array
     {
-        $package = $this->packages->find($packageKey);
+        $package = $this->packages->findPurchasable($packageKey);
 
         if ($package === null) {
             throw ValidationException::withMessages([

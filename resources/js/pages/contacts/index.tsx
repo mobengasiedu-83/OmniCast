@@ -1,5 +1,15 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Ban, MailWarning, Plus, Search, ShieldBan, ShieldCheck, SlidersHorizontal, Upload, Users } from 'lucide-react';
+import {
+    Ban,
+    MailWarning,
+    Plus,
+    Search,
+    ShieldBan,
+    ShieldCheck,
+    SlidersHorizontal,
+    Upload,
+    Users,
+} from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useConfirm, type ConfirmOptions } from '@/components/confirm-dialog';
 import ClientFilter from '@/components/client-filter';
@@ -124,7 +134,8 @@ export default function ContactsIndex({
         bulkAction === 'add_to_list' || bulkAction === 'remove_from_list';
     const bulkNeedsTag = bulkAction === 'add_tag';
     const bulkBlocked =
-        (bulkNeedsList && bulkValue === '') || (bulkNeedsTag && bulkValue === '');
+        (bulkNeedsList && bulkValue === '') ||
+        (bulkNeedsTag && bulkValue === '');
 
     const toggleAll = (checked: boolean): void => {
         setSelected(checked ? pageIds : []);
@@ -132,7 +143,9 @@ export default function ContactsIndex({
 
     const toggleOne = (id: number, checked: boolean): void => {
         setSelected((current) =>
-            checked ? [...current, id] : current.filter((value) => value !== id),
+            checked
+                ? [...current, id]
+                : current.filter((value) => value !== id),
         );
     };
 
@@ -224,8 +237,16 @@ export default function ContactsIndex({
                                     </Link>
                                 </Button>
                             )}
-                            <Button variant="outline" asChild><Link href={urls.contacts.audiences}><SlidersHorizontal /> Audiences</Link></Button>
-                            <Button variant="outline" asChild><Link href={urls.contacts.dndRegistry}><ShieldBan /> DND</Link></Button>
+                            <Button variant="outline" asChild>
+                                <Link href={urls.contacts.audiences}>
+                                    <SlidersHorizontal /> Audiences
+                                </Link>
+                            </Button>
+                            <Button variant="outline" asChild>
+                                <Link href={urls.contacts.dndRegistry}>
+                                    <ShieldBan /> DND
+                                </Link>
+                            </Button>
 
                             {can.create && (
                                 <Button asChild>
@@ -239,9 +260,9 @@ export default function ContactsIndex({
                     }
                 />
 
-                                {flash?.import && (
-                    <Card className="border-success/30 bg-success-soft gap-0 py-3">
-                        <CardContent className="text-success flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-sm">
+                {flash?.import && (
+                    <Card className="gap-0 border-success/30 bg-success-soft py-3">
+                        <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 text-sm text-success">
                             <span className="flex items-center gap-2 font-medium">
                                 <ShieldCheck className="size-4" />
                                 Import complete
@@ -298,7 +319,7 @@ export default function ContactsIndex({
                             className="flex flex-1 items-center gap-2"
                         >
                             <div className="relative w-full max-w-xs">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+                                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(event) =>
@@ -343,15 +364,38 @@ export default function ContactsIndex({
                             </SelectContent>
                         </Select>
 
-                        <Select value={filters.tag_id ? String(filters.tag_id) : 'all'} onValueChange={(value) => apply({ tag_id: value === 'all' ? null : value })}>
-                            <SelectTrigger className="w-40"><SelectValue placeholder="Any tag" /></SelectTrigger>
-                            <SelectContent><SelectItem value="all">Any tag</SelectItem>{tags.map((tag) => <SelectItem key={tag.id} value={String(tag.id)}>{tag.name}</SelectItem>)}</SelectContent>
+                        <Select
+                            value={
+                                filters.tag_id ? String(filters.tag_id) : 'all'
+                            }
+                            onValueChange={(value) =>
+                                apply({
+                                    tag_id: value === 'all' ? null : value,
+                                })
+                            }
+                        >
+                            <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Any tag" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Any tag</SelectItem>
+                                {tags.map((tag) => (
+                                    <SelectItem
+                                        key={tag.id}
+                                        value={String(tag.id)}
+                                    >
+                                        {tag.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
                         </Select>
 
                         <Select
                             value={filters.quality || 'all'}
                             onValueChange={(value) =>
-                                apply({ quality: value === 'all' ? null : value })
+                                apply({
+                                    quality: value === 'all' ? null : value,
+                                })
                             }
                         >
                             <SelectTrigger className="w-44">
@@ -487,12 +531,13 @@ export default function ContactsIndex({
                             {contacts.total}{' '}
                             {contacts.total === 1 ? 'contact' : 'contacts'}
                         </CardTitle>
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground">
                             Page {contacts.current_page} of {contacts.last_page}
                         </p>
                     </CardHeader>
 
-                    <CardContent className="px-0">{contacts.data.length === 0 ? (
+                    <CardContent className="px-0">
+                        {contacts.data.length === 0 ? (
                             <EmptyState
                                 icon={Users}
                                 title={
@@ -549,7 +594,9 @@ export default function ContactsIndex({
                                                 <Checkbox
                                                     checked={allSelected}
                                                     onCheckedChange={(value) =>
-                                                        toggleAll(value === true)
+                                                        toggleAll(
+                                                            value === true,
+                                                        )
                                                     }
                                                     aria-label="Select all contacts on this page"
                                                 />
@@ -565,7 +612,8 @@ export default function ContactsIndex({
                                     </TableRow>
                                 </TableHeader>
 
-                                <TableBody>{contacts.data.map((contact) => (
+                                <TableBody>
+                                    {contacts.data.map((contact) => (
                                         <TableRow key={contact.id}>
                                             {can.update && (
                                                 <TableCell>
@@ -595,7 +643,7 @@ export default function ContactsIndex({
                                                     >
                                                         {contact.name}
                                                     </Link>
-                                                    <span className="text-muted-foreground text-xs">
+                                                    <span className="text-xs text-muted-foreground">
                                                         {contact.phone}
                                                         {contact.email
                                                             ? ` · ${contact.email}`
@@ -604,7 +652,7 @@ export default function ContactsIndex({
                                                 </div>
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="text-xs text-muted-foreground">
                                                 {contact.lists.length > 0
                                                     ? contact.lists.join(', ')
                                                     : '—'}
@@ -616,7 +664,7 @@ export default function ContactsIndex({
                                                         <Badge variant="destructive">
                                                             DND
                                                         </Badge>
-                                                        <span className="text-muted-foreground text-xs">
+                                                        <span className="text-xs text-muted-foreground">
                                                             Blocked on every
                                                             channel
                                                         </span>
@@ -628,10 +676,8 @@ export default function ContactsIndex({
                                                 )}
                                             </TableCell>
 
-                                            <TableCell className="text-muted-foreground text-xs">
-                                                {formatDate(
-                                                    contact.created_at,
-                                                )}
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {formatDate(contact.created_at)}
                                             </TableCell>
 
                                             <TableCell className="text-right">
@@ -666,9 +712,11 @@ export default function ContactsIndex({
                                                 )}
                                             </TableCell>
                                         </TableRow>
-                                    ))}</TableBody>
+                                    ))}
+                                </TableBody>
                             </Table>
-                        )}</CardContent>
+                        )}
+                    </CardContent>
                 </Card>
 
                 <Pagination paginator={contacts} noun="contacts" />

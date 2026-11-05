@@ -96,7 +96,7 @@ export default function AccountSessions({ sessions, supported }: PageProps) {
 
                     <CardContent className="divide-y divide-border/60 px-0">
                         {sessions.length === 0 ? (
-                            <p className="text-muted-foreground px-4 py-6 text-sm">
+                            <p className="px-4 py-6 text-sm text-muted-foreground">
                                 No sessions are recorded for this account.
                             </p>
                         ) : (
@@ -114,7 +114,7 @@ export default function AccountSessions({ sessions, supported }: PageProps) {
                                                 </Badge>
                                             )}
                                         </p>
-                                        <p className="text-muted-foreground text-xs">
+                                        <p className="text-xs text-muted-foreground">
                                             {session.ip_address ?? 'Unknown IP'}{' '}
                                             · last active{' '}
                                             {new Date(
@@ -145,8 +145,8 @@ export default function AccountSessions({ sessions, supported }: PageProps) {
 
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-start gap-2">
-                    <ShieldAlert className="text-muted-foreground mt-0.5 size-4" />
-                    <p className="text-muted-foreground max-w-md text-sm">
+                    <ShieldAlert className="mt-0.5 size-4 text-muted-foreground" />
+                    <p className="max-w-md text-sm text-muted-foreground">
                         Signing out other devices keeps you signed in here.
                         Password and two-factor settings live on the security
                         screen.

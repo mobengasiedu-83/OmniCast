@@ -360,7 +360,6 @@ export default function AdminPaymentsIndex({
                         )}
                     </CardContent>
                 </Card>
-
             </div>
         </>
     );
@@ -381,21 +380,22 @@ function PaymentTableRow({
         <TableRow>
             <TableCell className="pl-6">
                 <p className="font-mono text-xs">{payment.reference}</p>
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                     {payment.description}
                 </p>
             </TableCell>
             <TableCell>{payment.client ?? '—'}</TableCell>
-            <TableCell className="text-muted-foreground text-xs">
+            <TableCell className="text-xs text-muted-foreground">
                 {payment.package ?? '—'}
             </TableCell>
             <TableCell className="tabular-nums">
                 {money(payment.amount, payment.currency)}
-                {payment.is_settled && payment.amount_paid !== payment.amount && (
-                    <p className="text-muted-foreground text-xs">
-                        paid {money(payment.amount_paid, payment.currency)}
-                    </p>
-                )}
+                {payment.is_settled &&
+                    payment.amount_paid !== payment.amount && (
+                        <p className="text-xs text-muted-foreground">
+                            paid {money(payment.amount_paid, payment.currency)}
+                        </p>
+                    )}
             </TableCell>
             <TableCell className="text-xs capitalize">
                 {payment.provider}
@@ -406,12 +406,12 @@ function PaymentTableRow({
             <TableCell>
                 <StatusBadge status={payment.status} />
                 {payment.failure_reason !== null && (
-                    <p className="text-muted-foreground mt-1 max-w-48 text-xs">
+                    <p className="mt-1 max-w-48 text-xs text-muted-foreground">
                         {payment.failure_reason}
                     </p>
                 )}
             </TableCell>
-            <TableCell className="text-muted-foreground text-xs">
+            <TableCell className="text-xs text-muted-foreground">
                 {moment(payment.created_at)}
             </TableCell>
             <TableCell className="pr-6 text-right">
@@ -427,7 +427,7 @@ function PaymentTableRow({
                         {verifying ? 'Checking…' : 'Verify'}
                     </Button>
                 ) : (
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-xs text-muted-foreground">
                         {payment.invoice_number ?? '—'}
                     </span>
                 )}

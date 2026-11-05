@@ -64,7 +64,7 @@ export default function StatusBadge({
         >
             <span className="relative flex size-1.5 items-center justify-center">
                 {liveStatuses.has(status) && (
-                    <span className="animate-ping-soft absolute inline-flex size-1.5 rounded-full bg-current" />
+                    <span className="absolute inline-flex size-1.5 animate-ping-soft rounded-full bg-current" />
                 )}
                 <span className="relative inline-flex size-1.5 rounded-full bg-current" />
             </span>
@@ -72,4 +72,3 @@ export default function StatusBadge({
         </Badge>
     );
 }
-
