@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import BrandMark from '@/components/brand-mark';
+import PoweredBy from '@/components/powered-by';
 import {
     Card,
     CardContent,
@@ -39,6 +40,8 @@ export default function AuthCardLayout({
                     </CardHeader>
                     <CardContent className="px-8 py-7">{children}</CardContent>
                 </Card>
+
+                <PoweredBy className="self-center" />
             </div>
         </div>
     );

@@ -30,7 +30,7 @@ return [
     | The address the gateway is given when a tenant has stored none of its
     | own. It only ever receives the payment receipt.
     */
-    'support_email' => env('BILLING_SUPPORT_EMAIL', 'billing@omnicast.app'),
+    'support_email' => env('BILLING_SUPPORT_EMAIL', 'billing@sysup360.com'),
 
     'limits' => [
         'min_top_up' => (float) env('BILLING_MIN_TOP_UP', 1),

@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import BrandMark from '@/components/brand-mark';
+import PoweredBy from '@/components/powered-by';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -30,6 +31,8 @@ export default function AuthSimpleLayout({
 
                 {children}
             </div>
+
+            <PoweredBy className="mt-8 text-center" />
         </div>
     );
 }

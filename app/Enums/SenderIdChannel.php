@@ -40,7 +40,7 @@ enum SenderIdChannel: string
     public function placeholder(): string
     {
         return match ($this) {
-            self::Sms => 'OmniCast GH',
+            self::Sms => 'SysUp360',
             self::Email => 'noreply@yourdomain.com',
             self::Voice => '+233240000000',
         };

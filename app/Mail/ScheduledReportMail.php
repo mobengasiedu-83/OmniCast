@@ -29,7 +29,7 @@ class ScheduledReportMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Your OmniCast {$this->export->report->label()} report",
+            subject: "Your SysUp360 OmniCast {$this->export->report->label()} report",
         );
     }
 

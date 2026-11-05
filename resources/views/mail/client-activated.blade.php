@@ -16,9 +16,16 @@
                             <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;">Your account is activated</h1>
                             <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Hello {{ $clientName }}, your client account has been approved and activated. You can now sign in and use your enabled services.</p>
                             <p style="margin:0 0 24px;">
-                                <a href="{{ $loginUrl }}" style="display:inline-block;background:#6b4ae8;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">Sign in to OmniCast</a>
+                                <a href="{{ $loginUrl }}" style="display:inline-block;background:#6b4ae8;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">Sign in to SysUp360 OmniCast</a>
                             </p>
                             <p style="margin:0;font-size:13px;line-height:1.6;color:#57526b;">Sign in using your registered email address or phone number and your password.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top:24px;border-top:1px solid #eceaf3;">
+                            <p style="margin:0;font-size:11px;line-height:1.6;color:#8b8798;">
+                                Powered by <a href="https://sysup360.com" style="color:#6b4ae8;text-decoration:none;font-weight:600;">SysUp360</a>
+                            </p>
                         </td>
                     </tr>
                 </table>

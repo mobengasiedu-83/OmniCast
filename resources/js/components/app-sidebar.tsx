@@ -31,6 +31,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
+import PoweredBy from '@/components/powered-by';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -373,6 +374,8 @@ export function AppSidebar() {
                 </div>
 
                 <NavUser />
+
+                <PoweredBy className="px-2 pb-1 text-center group-data-[collapsible=icon]:hidden" />
             </SidebarFooter>
         </Sidebar>
     );

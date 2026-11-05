@@ -1,6 +1,7 @@
-# GWO SEVO OmniCast
+# SysUp360 OmniCast
 
 Laravel and Inertia application for client onboarding and voice/SMS campaign management.
+A product of [SysUp360](https://sysup360.com).
 
 ## Local URL
 

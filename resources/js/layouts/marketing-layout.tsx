@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import BrandMark from '@/components/brand-mark';
+import PoweredBy from '@/components/powered-by';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { dashboard, home, login, pricing } from '@/routes';
@@ -90,6 +91,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
                     © {new Date().getFullYear()} {name}
                 </span>
                 <div className="flex items-center gap-4">
+                    <PoweredBy />
                     <Link href={pricing()} className="hover:text-foreground">
                         Pricing
                     </Link>

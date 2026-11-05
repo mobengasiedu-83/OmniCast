@@ -24,7 +24,7 @@ class ClientActivated extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your OmniCast account is activated',
+            subject: 'Your SysUp360 OmniCast account is activated',
         );
     }
 

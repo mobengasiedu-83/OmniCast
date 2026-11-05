@@ -23,7 +23,7 @@ class ClientSignupOtpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verify your GWO SEVO OmniCast account',
+            subject: 'Verify your SysUp360 OmniCast account',
         );
     }
 

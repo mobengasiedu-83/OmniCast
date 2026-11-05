@@ -32,7 +32,7 @@ class OtpSmsSender
             return false;
         }
 
-        $message = 'Your GWO SEVO OmniCast verification code is '.$code.'. It expires in 10 minutes.';
+        $message = 'Your SysUp360 OmniCast verification code is '.$code.'. It expires in 10 minutes.';
         $request = Http::connectTimeout(3)->timeout(8);
 
         try {

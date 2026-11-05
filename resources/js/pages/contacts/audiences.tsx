@@ -228,6 +228,169 @@ export default function ContactAudiences({
                     />
                 </div>
 
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                                <Tags className="size-4 text-brand" />
+                                Tags
+                            </CardTitle>
+                            <CardDescription>
+                                Lightweight labels used to narrow audiences.
+                            </CardDescription>
+                        </CardHeader>
+
+                        <CardContent className="flex flex-col gap-3">
+                            <form
+                                onSubmit={submitTag}
+                                className="flex flex-wrap items-end gap-2"
+                            >
+                                <div className="grid flex-1 gap-1.5">
+                                    <Label htmlFor="tag-name">Tag name</Label>
+                                    <Input
+                                        id="tag-name"
+                                        value={tagForm.data.name}
+                                        onChange={(event) =>
+                                            tagForm.setData(
+                                                'name',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="VIP"
+                                        required
+                                    />
+                                </div>
+                                <Button
+                                    type="submit"
+                                    disabled={tagForm.processing}
+                                >
+                                    <Plus />
+                                    Add
+                                </Button>
+                            </form>
+
+                            {tags.length === 0 ? (
+                                <p className="text-xs text-muted-foreground">
+                                    No tags yet.
+                                </p>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {tags.map((tag) => (
+                                        <span
+                                            key={tag.id}
+                                            className="flex items-center gap-1.5 rounded-full border border-border/60 py-1 pr-1 pl-3 text-xs"
+                                        >
+                                            <span className="font-medium">
+                                                {tag.name}
+                                            </span>
+                                            <span className="text-muted-foreground">
+                                                {tag.contacts_count}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                aria-label={`Remove ${tag.name}`}
+                                                onClick={() =>
+                                                    router.delete(
+                                                        urls.contacts.deleteTag(
+                                                            tag.id,
+                                                        ),
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                                className="px-1 text-muted-foreground hover:text-destructive"
+                                            >
+                                                ×
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                                <Users className="size-4 text-brand" />
+                                Contact lists
+                            </CardTitle>
+                            <CardDescription>
+                                Static groups you can add contacts to from the
+                                contact record.
+                            </CardDescription>
+                        </CardHeader>
+
+                        <CardContent className="flex flex-col gap-3">
+                            <form
+                                onSubmit={submitList}
+                                className="flex flex-wrap items-end gap-2"
+                            >
+                                <div className="grid flex-1 gap-1.5">
+                                    <Label htmlFor="list-name">List name</Label>
+                                    <Input
+                                        id="list-name"
+                                        value={listForm.data.name}
+                                        onChange={(event) =>
+                                            listForm.setData(
+                                                'name',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Accra retail"
+                                        required
+                                    />
+                                </div>
+                                <Button
+                                    type="submit"
+                                    disabled={listForm.processing}
+                                >
+                                    <Plus />
+                                    Add
+                                </Button>
+                            </form>
+
+                            {lists.length === 0 ? (
+                                <p className="text-xs text-muted-foreground">
+                                    No contact lists yet.
+                                </p>
+                            ) : (
+                                <div className="flex flex-col divide-y divide-border/60">
+                                    {lists.map((list) => (
+                                        <div
+                                            key={list.id}
+                                            className="flex items-center justify-between gap-2 py-2 text-sm first:pt-0 last:pb-0"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <span className="font-medium">
+                                                    {list.name}
+                                                </span>
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() =>
+                                                    router.delete(
+                                                        urls.contacts.deleteList(
+                                                            list.id,
+                                                        ),
+                                                        {
+                                                            preserveScroll: true,
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                Delete
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-sm font-medium">
@@ -686,168 +849,6 @@ export default function ContactAudiences({
                     </CardContent>
                 </Card>
 
-                <div className="grid gap-4 lg:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Tags className="size-4 text-brand" />
-                                Tags
-                            </CardTitle>
-                            <CardDescription>
-                                Lightweight labels used to narrow audiences.
-                            </CardDescription>
-                        </CardHeader>
-
-                        <CardContent className="flex flex-col gap-3">
-                            <form
-                                onSubmit={submitTag}
-                                className="flex flex-wrap items-end gap-2"
-                            >
-                                <div className="grid flex-1 gap-1.5">
-                                    <Label htmlFor="tag-name">Tag name</Label>
-                                    <Input
-                                        id="tag-name"
-                                        value={tagForm.data.name}
-                                        onChange={(event) =>
-                                            tagForm.setData(
-                                                'name',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="VIP"
-                                        required
-                                    />
-                                </div>
-                                <Button
-                                    type="submit"
-                                    disabled={tagForm.processing}
-                                >
-                                    <Plus />
-                                    Add
-                                </Button>
-                            </form>
-
-                            {tags.length === 0 ? (
-                                <p className="text-xs text-muted-foreground">
-                                    No tags yet.
-                                </p>
-                            ) : (
-                                <div className="flex flex-wrap gap-2">
-                                    {tags.map((tag) => (
-                                        <span
-                                            key={tag.id}
-                                            className="flex items-center gap-1.5 rounded-full border border-border/60 py-1 pr-1 pl-3 text-xs"
-                                        >
-                                            <span className="font-medium">
-                                                {tag.name}
-                                            </span>
-                                            <span className="text-muted-foreground">
-                                                {tag.contacts_count}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                aria-label={`Remove ${tag.name}`}
-                                                onClick={() =>
-                                                    router.delete(
-                                                        urls.contacts.deleteTag(
-                                                            tag.id,
-                                                        ),
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
-                                                className="px-1 text-muted-foreground hover:text-destructive"
-                                            >
-                                                ×
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Users className="size-4 text-brand" />
-                                Contact lists
-                            </CardTitle>
-                            <CardDescription>
-                                Static groups you can add contacts to from the
-                                contact record.
-                            </CardDescription>
-                        </CardHeader>
-
-                        <CardContent className="flex flex-col gap-3">
-                            <form
-                                onSubmit={submitList}
-                                className="flex flex-wrap items-end gap-2"
-                            >
-                                <div className="grid flex-1 gap-1.5">
-                                    <Label htmlFor="list-name">List name</Label>
-                                    <Input
-                                        id="list-name"
-                                        value={listForm.data.name}
-                                        onChange={(event) =>
-                                            listForm.setData(
-                                                'name',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="Accra retail"
-                                        required
-                                    />
-                                </div>
-                                <Button
-                                    type="submit"
-                                    disabled={listForm.processing}
-                                >
-                                    <Plus />
-                                    Add
-                                </Button>
-                            </form>
-
-                            {lists.length === 0 ? (
-                                <p className="text-xs text-muted-foreground">
-                                    No contact lists yet.
-                                </p>
-                            ) : (
-                                <div className="flex flex-col divide-y divide-border/60">
-                                    {lists.map((list) => (
-                                        <div
-                                            key={list.id}
-                                            className="flex items-center justify-between gap-2 py-2 text-sm first:pt-0 last:pb-0"
-                                        >
-                                            <span className="flex items-center gap-2">
-                                                <span className="font-medium">
-                                                    {list.name}
-                                                </span>
-                                            </span>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() =>
-                                                    router.delete(
-                                                        urls.contacts.deleteList(
-                                                            list.id,
-                                                        ),
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
-                                            >
-                                                Delete
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
         </>
     );

@@ -20,6 +20,9 @@
                 <p style="margin:16px 0 0;font-size:11px;color:#8b8798;">
                     {{ config('app.name') }} · sent for campaign {{ $reference }}
                 </p>
+                <p style="margin:4px 0 0;font-size:11px;color:#8b8798;">
+                    Powered by <a href="https://sysup360.com" style="color:#8b8798;text-decoration:underline;">SysUp360</a>
+                </p>
             </td>
         </tr>
     </table>

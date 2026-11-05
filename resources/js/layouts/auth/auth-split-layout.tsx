@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import BrandMark from '@/components/brand-mark';
 import MeshBackdrop from '@/components/illustrations/mesh-backdrop';
 import SignalOrbit from '@/components/illustrations/signal-orbit';
+import PoweredBy from '@/components/powered-by';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -63,9 +64,22 @@ export default function AuthSplitLayout({
                     </ul>
                 </div>
 
-                <p className="relative z-10 text-[11px] tracking-wide text-white/40">
-                    GHS billing · Delivery confirmed per recipient
-                </p>
+                <div className="relative z-10 space-y-2">
+                    <p className="text-[11px] tracking-wide text-white/40">
+                        GHS billing · Delivery confirmed per recipient
+                    </p>
+                    <p className="text-[11px] tracking-wide text-white/40">
+                        Powered by{' '}
+                        <a
+                            href="https://sysup360.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
+                        >
+                            SysUp360
+                        </a>
+                    </p>
+                </div>
             </aside>
 
             <main className="relative flex items-center justify-center px-6 py-12 sm:px-10">
@@ -94,6 +108,8 @@ export default function AuthSplitLayout({
                     </div>
 
                     {children}
+
+                    <PoweredBy className="text-center lg:hidden" />
                 </div>
             </main>
         </div>

@@ -7,7 +7,7 @@ import AuthLayout from '@/layouts/auth-layout';
 import MarketingLayout from '@/layouts/marketing-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'OmniCast';
+const appName = import.meta.env.VITE_APP_NAME || 'SysUp360 OmniCast';
 
 void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

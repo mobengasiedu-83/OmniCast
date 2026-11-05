@@ -33,8 +33,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_BROADCAST_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'noreply@omnicast.gh')),
-        'name' => env('MAIL_BROADCAST_FROM_NAME', env('MAIL_FROM_NAME', env('APP_NAME', 'OmniCast'))),
+        'address' => env('MAIL_BROADCAST_FROM_ADDRESS', env('MAIL_FROM_ADDRESS', 'noreply@sysup360.com')),
+        'name' => env('MAIL_BROADCAST_FROM_NAME', env('MAIL_FROM_NAME', env('APP_NAME', 'SysUp360 OmniCast'))),
     ],
 
     /*

@@ -57,6 +57,13 @@
                             </p>
                         </td>
                     </tr>
+                    <tr>
+                        <td style="padding-top:24px;border-top:1px solid #eceaf3;">
+                            <p style="margin:0;font-size:11px;line-height:1.6;color:#8b8798;">
+                                Powered by <a href="https://sysup360.com" style="color:#6b4ae8;text-decoration:none;font-weight:600;">SysUp360</a>
+                            </p>
+                        </td>
+                    </tr>
                 </table>
             </td>
         </tr>
