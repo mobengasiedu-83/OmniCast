@@ -92,7 +92,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
     Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
 
-    Route::get('contacts/audiences', [ContactComplianceController::class, 'index'])->name('contacts.audiences.index');
+    Route::get('contacts/audiences', [ContactComplianceController::class, 'audiences'])->name('contacts.audiences.index');
     Route::post('contacts/audiences/tags', [ContactComplianceController::class, 'storeTag'])->name('contacts.audiences.tags.store');
     Route::delete('contacts/audiences/tags/{tag}', [ContactComplianceController::class, 'destroyTag'])->name('contacts.audiences.tags.destroy');
     Route::post('contacts/audiences/lists', [ContactComplianceController::class, 'storeList'])->name('contacts.audiences.lists.store');
@@ -103,6 +103,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('contacts/audiences/duplicates/merge', [ContactComplianceController::class, 'mergeDuplicates'])->name('contacts.audiences.duplicates.merge');
     Route::post('contacts/audiences/suppressions', [ContactComplianceController::class, 'storeSuppression'])->name('contacts.audiences.suppressions.store');
     Route::delete('contacts/audiences/suppressions/{suppression}', [ContactComplianceController::class, 'liftSuppression'])->name('contacts.audiences.suppressions.lift');
+    Route::get('contacts/dnd', [ContactComplianceController::class, 'dnd'])->name('contacts.dnd.registry');
     Route::get('contacts/import', [ContactController::class, 'showImport'])->name('contacts.import.create');
     Route::get('contacts/import/template', [ContactController::class, 'template'])->name('contacts.import.template');
     Route::post('contacts/import', [ContactController::class, 'import'])->name('contacts.import');

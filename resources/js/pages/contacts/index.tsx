@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Ban, MailWarning, Plus, Search, ShieldCheck, SlidersHorizontal, Upload, Users } from 'lucide-react';
+import { Ban, MailWarning, Plus, Search, ShieldBan, ShieldCheck, SlidersHorizontal, Upload, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import ClientFilter from '@/components/client-filter';
 import EmptyState from '@/components/empty-state';
@@ -160,6 +160,9 @@ export default function ContactsIndex({
         );
     };
 
+    /** A brand new contact book needs an onboarding path, not a filter tip. */
+    const bookIsEmpty = stats.total === 0;
+
     return (
         <>
             <Head title="Contacts" />
@@ -179,7 +182,8 @@ export default function ContactsIndex({
                                     </Link>
                                 </Button>
                             )}
-                            <Button variant="outline" asChild><Link href={urls.contacts.audiences}><SlidersHorizontal /> Audiences & DND</Link></Button>
+                            <Button variant="outline" asChild><Link href={urls.contacts.audiences}><SlidersHorizontal /> Audiences</Link></Button>
+                            <Button variant="outline" asChild><Link href={urls.contacts.dndRegistry}><ShieldBan /> DND</Link></Button>
 
                             {can.create && (
                                 <Button asChild>
@@ -449,8 +453,50 @@ export default function ContactsIndex({
                     <CardContent className="px-0">{contacts.data.length === 0 ? (
                             <EmptyState
                                 icon={Users}
-                                title="No contacts match these filters"
-                                description="Adjust the search, list or quality filters to see contacts again."
+                                title={
+                                    bookIsEmpty
+                                        ? 'No contacts yet'
+                                        : 'No contacts match these filters'
+                                }
+                                description={
+                                    bookIsEmpty
+                                        ? 'Upload a CSV to build the book, or create an audience list first and import straight into it.'
+                                        : 'Adjust the search, list or quality filters to see contacts again.'
+                                }
+                                action={
+                                    bookIsEmpty ? (
+                                        <div className="flex flex-wrap items-center justify-center gap-2">
+                                            {can.import && (
+                                                <Button asChild>
+                                                    <Link
+                                                        href={
+                                                            urls.contacts.import
+                                                        }
+                                                    >
+                                                        <Upload />
+                                                        Upload contacts
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                            {can.create && (
+                                                <Button
+                                                    variant="outline"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={
+                                                            urls.contacts
+                                                                .audiences
+                                                        }
+                                                    >
+                                                        <SlidersHorizontal />
+                                                        Create a list
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ) : undefined
+                                }
                             />
                         ) : (
                             <Table>

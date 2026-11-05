@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { urls } from '@/lib/urls';
 import type { CampaignFormOptions, CampaignFormValues } from '@/types';
 
 const defaults: CampaignFormValues = {
@@ -242,9 +243,22 @@ export default function CampaignForm({
                         <Label htmlFor="contact_segment_id">Saved segment</Label>
                         <Select value={form.data.contact_segment_id || 'none'} onValueChange={(value) => { form.setData('contact_segment_id', value === 'none' ? '' : value); form.setData('contact_list_id', ''); }}>
                             <SelectTrigger id="contact_segment_id"><SelectValue placeholder="No saved segment" /></SelectTrigger>
-                            <SelectContent><SelectItem value="none">Choose list or all contacts</SelectItem>{options.contactSegments.map((segment) => <SelectItem key={segment.id} value={String(segment.id)}>{segment.name} ({segment.contacts_count})</SelectItem>)}</SelectContent>
+                            <SelectContent><SelectItem value="none">No saved segment</SelectItem>{options.contactSegments.map((segment) => <SelectItem key={segment.id} value={String(segment.id)}>{segment.name} ({segment.contacts_count})</SelectItem>)}</SelectContent>
                         </Select>
                         <InputError message={form.errors.contact_segment_id} />
+                        {options.contactLists.length === 0 &&
+                            options.contactSegments.length === 0 && (
+                                <p className="text-muted-foreground text-xs">
+                                    No saved list or segment yet —{' '}
+                                    <Link
+                                        href={urls.contacts.audiences}
+                                        className="underline underline-offset-2"
+                                    >
+                                        create an audience
+                                    </Link>{' '}
+                                    to narrow who this campaign reaches.
+                                </p>
+                            )}
                     </div>
 
                     {(requiresSms || requiresEmail) && (

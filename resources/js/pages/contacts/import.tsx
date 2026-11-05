@@ -1,6 +1,6 @@
-import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, Download, FileUp, Upload, Users } from 'lucide-react';
-import { type FormEvent } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { ArrowLeft, Download, FileUp, Plus, Upload, Users } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import PageHeader from '@/components/page-header';
 import { Button } from '@/components/ui/button';
@@ -74,6 +74,10 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
         file: null,
     });
 
+    const [newListName, setNewListName] = useState('');
+    const [creatingList, setCreatingList] = useState(false);
+    const [listError, setListError] = useState<string | null>(null);
+
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
 
@@ -81,6 +85,45 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
             forceFormData: true,
             onSuccess: () => form.reset(),
         });
+    };
+
+    /**
+     * Create the audience list without leaving the upload screen, then preselect
+     * it so the uploaded file lands in the list the client just named.
+     */
+    const createList = (): void => {
+        const name = newListName.trim();
+
+        if (name === '') {
+            return;
+        }
+
+        setCreatingList(true);
+        setListError(null);
+
+        router.post(
+            urls.contacts.storeList,
+            { name },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: (page) => {
+                    const lists = (page.props.contactLists ??
+                        []) as ContactListOption[];
+                    const created = lists.find((list) => list.name === name);
+
+                    if (created) {
+                        form.setData('contact_list_id', String(created.id));
+                    }
+
+                    setNewListName('');
+                },
+                onError: (errors) => {
+                    setListError(errors.name ?? 'That list could not be created.');
+                },
+                onFinish: () => setCreatingList(false),
+            },
+        );
     };
 
     return (
@@ -228,6 +271,50 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                     <InputError
                                         message={form.errors.contact_list_id}
                                     />
+
+                                    <div className="border-border/60 mt-1 grid gap-1.5 border-t pt-3">
+                                        <Label htmlFor="new_list_name">
+                                            Or create a list
+                                        </Label>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                id="new_list_name"
+                                                value={newListName}
+                                                onChange={(event) => {
+                                                    setNewListName(
+                                                        event.target.value,
+                                                    );
+                                                    setListError(null);
+                                                }}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter') {
+                                                        event.preventDefault();
+                                                        createList();
+                                                    }
+                                                }}
+                                                placeholder="Accra retail"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={createList}
+                                                disabled={
+                                                    creatingList ||
+                                                    newListName.trim() === ''
+                                                }
+                                            >
+                                                <Plus />
+                                                {creatingList
+                                                    ? 'Creating…'
+                                                    : 'Create'}
+                                            </Button>
+                                        </div>
+                                        {listError && (
+                                            <p className="text-destructive text-xs">
+                                                {listError}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <Button type="submit" disabled={form.processing}>

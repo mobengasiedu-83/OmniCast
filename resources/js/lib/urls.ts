@@ -49,6 +49,7 @@ export const urls = {
         import: path('/contacts/import'),
         importTemplate: path('/contacts/import/template'),
         audiences: path('/contacts/audiences'),
+        dndRegistry: path('/contacts/dnd'),
         storeTag: path('/contacts/audiences/tags'),
         deleteTag: (tag: number) => path(`/contacts/audiences/tags/${tag}`),
         storeList: path('/contacts/audiences/lists'),

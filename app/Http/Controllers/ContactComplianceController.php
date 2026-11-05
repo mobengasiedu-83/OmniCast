@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ContactSuppressionReason;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
+use App\Models\Client;
 use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\ContactSegment;
@@ -24,17 +25,18 @@ class ContactComplianceController extends Controller
 {
     use ResolvesTenantClient;
 
-    public function index(
+    /**
+     * The audiences workspace: contact quality, duplicates, segments, tags and lists.
+     */
+    public function audiences(
         Request $request,
         ContactSegmentQuery $segments,
         ContactQualityReport $quality,
         ContactDuplicates $duplicates,
     ): Response {
-        Gate::authorize('viewAny', Contact::class);
-        $client = $this->tenantClient($request);
-        abort_if($client === null, 403);
+        $client = $this->authorizedClient($request);
 
-        return Inertia::render('contacts/compliance', [
+        return Inertia::render('contacts/audiences', [
             'quality' => $quality->summary($client),
             'duplicateGroups' => $duplicates->groups($client->id),
             'clientId' => $client->id,
@@ -47,6 +49,20 @@ class ContactComplianceController extends Controller
             ]),
             'tags' => Tag::query()->where('client_id', $client->id)->withCount('contacts')->orderBy('name')->get(['id', 'name', 'color']),
             'lists' => ContactList::query()->where('client_id', $client->id)->orderBy('name')->get(['id', 'name']),
+            'clients' => $this->selectableClients($request),
+        ]);
+    }
+
+    /**
+     * The DND and suppression registry, kept separate from the audience builder.
+     */
+    public function dnd(Request $request, ContactQualityReport $quality): Response
+    {
+        $client = $this->authorizedClient($request);
+
+        return Inertia::render('contacts/dnd-registry', [
+            'quality' => $quality->summary($client),
+            'clientId' => $client->id,
             'suppressions' => ContactSuppression::query()
                 ->where(fn ($query) => $query->whereNull('client_id')->orWhere('client_id', $client->id))
                 ->where('is_active', true)->latest()->limit(100)->get()
@@ -70,6 +86,18 @@ class ContactComplianceController extends Controller
             'canManageGlobalSuppressions' => $request->user()->isPlatformUser() && $request->user()->isSuperAdmin(),
             'clients' => $this->selectableClients($request),
         ]);
+    }
+
+    /**
+     * The tenant whose audience screens are being opened, after the access check.
+     */
+    private function authorizedClient(Request $request): Client
+    {
+        Gate::authorize('viewAny', Contact::class);
+        $client = $this->tenantClient($request);
+        abort_if($client === null, 403);
+
+        return $client;
     }
 
     public function storeTag(Request $request): RedirectResponse

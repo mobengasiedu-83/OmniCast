@@ -5,19 +5,15 @@ import {
     CopyCheck,
     Mail,
     Plus,
-    ShieldBan,
     Tags,
     Users,
-    UserX,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import ClientFilter from '@/components/client-filter';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
 import StatCard from '@/components/stat-card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Card,
     CardContent,
@@ -41,8 +37,6 @@ import type {
     ContactListOption,
     ContactQualityReport,
     ContactSegmentRow,
-    ContactSuppressionRow,
-    SelectOption,
     TagOption,
 } from '@/types';
 
@@ -52,10 +46,6 @@ type PageProps = {
     segments: ContactSegmentRow[];
     tags: (TagOption & { contacts_count: number })[];
     lists: ContactListOption[];
-    suppressions: ContactSuppressionRow[];
-    channels: SelectOption[];
-    reasons: SelectOption[];
-    canManageGlobalSuppressions: boolean;
     clients: ClientOption[];
     clientId: number;
 };
@@ -71,20 +61,12 @@ const emptyFilters = {
     has_email: '',
 };
 
-/** Render an ISO timestamp the way the rest of the workspace does. */
-const formatDateTime = (value: string | null): string =>
-    value ? new Date(value).toLocaleString() : '—';
-
-export default function ContactCompliance({
+export default function ContactAudiences({
     quality,
     duplicateGroups,
     segments,
     tags,
     lists,
-    suppressions,
-    channels,
-    reasons,
-    canManageGlobalSuppressions,
     clients,
     clientId,
 }: PageProps) {
@@ -96,12 +78,6 @@ export default function ContactCompliance({
         filters: { ...emptyFilters },
     });
     const editForm = useForm({ name: '', description: '' });
-    const suppressionForm = useForm({
-        channel: 'sms',
-        identifier: '',
-        reason: 'manual',
-        global: false,
-    });
     const [editingSegment, setEditingSegment] = useState<number | null>(null);
     const [survivors, setSurvivors] = useState<Record<string, number>>({});
 
@@ -171,14 +147,6 @@ export default function ContactCompliance({
         });
     };
 
-    const submitSuppression = (event: FormEvent<HTMLFormElement>): void => {
-        event.preventDefault();
-        suppressionForm.post(urls.contacts.storeSuppression, {
-            preserveScroll: true,
-            onSuccess: () => suppressionForm.reset('identifier'),
-        });
-    };
-
     const mergeInto = (
         email: string,
         survivorId: number,
@@ -202,13 +170,13 @@ export default function ContactCompliance({
 
     return (
         <>
-            <Head title="Audiences & DND" />
+            <Head title="Audiences" />
 
             <div className="flex flex-col gap-4">
                 <PageHeader
                     icon={Users}
-                    title="Audiences & DND"
-                    description="Audit contact quality, merge duplicates, build reusable segments and keep the DND registry current."
+                    title="Audiences"
+                    description="Audit contact quality, merge duplicates and build the lists, tags and segments campaigns send to."
                     actions={
                         <ClientFilter
                             clients={clients}
@@ -227,13 +195,6 @@ export default function ContactCompliance({
                         tone="brand"
                     />
                     <StatCard
-                        title="On the DND list"
-                        value={quality.dnd}
-                        description="Blocked from every audience"
-                        icon={UserX}
-                        tone={quality.dnd > 0 ? 'warning' : 'success'}
-                    />
-                    <StatCard
                         title="Missing email"
                         value={quality.missing_email}
                         description={`${quality.invalid_email} invalid addresses`}
@@ -245,14 +206,11 @@ export default function ContactCompliance({
                         value={quality.duplicate_contacts}
                         description={`${quality.duplicate_emails} shared addresses`}
                         icon={AtSign}
-                        tone={quality.duplicate_contacts > 0 ? 'danger' : 'success'}
-                    />
-                    <StatCard
-                        title="Registry entries"
-                        value={quality.suppressed}
-                        description="Active DND and suppression rows"
-                        icon={ShieldBan}
-                        tone="neutral"
+                        tone={
+                            quality.duplicate_contacts > 0
+                                ? 'danger'
+                                : 'success'
+                        }
                     />
                     <StatCard
                         title="Added last 30 days"
@@ -270,169 +228,109 @@ export default function ContactCompliance({
                     />
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <BarChart3 className="text-brand size-4" />
-                                Channel reach
-                            </CardTitle>
-                            <CardDescription>
-                                Contacts that can be reached right now,
-                                compared with the numbers blocked by DND.
-                            </CardDescription>
-                        </CardHeader>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                            <CopyCheck className="size-4 text-brand" />
+                            Duplicate contacts
+                        </CardTitle>
+                        <CardDescription>
+                            Contacts sharing an email address. Pick the record
+                            to keep, then merge the rest into it.
+                        </CardDescription>
+                    </CardHeader>
 
-                        <CardContent className="grid gap-3">
-                            {quality.channels.map((channel) => {
-                                const share =
-                                    quality.total > 0
-                                        ? Math.round(
-                                              (channel.eligible /
-                                                  quality.total) *
-                                                  100,
-                                          )
-                                        : 0;
+                    <CardContent className="flex flex-col gap-3">
+                        {duplicateGroups.length === 0 && (
+                            <EmptyState
+                                icon={CopyCheck}
+                                title="No duplicate emails"
+                                description="Every contact has its own email address."
+                            />
+                        )}
 
-                                return (
-                                    <div
-                                        key={channel.channel}
-                                        className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2"
+                        {duplicateGroups.map((group) => {
+                            const survivor =
+                                survivors[group.email] ?? group.contacts[0]?.id;
+
+                            return (
+                                <div
+                                    key={group.email}
+                                    className="flex flex-col gap-2 rounded-lg border border-border/60 p-3"
+                                >
+                                    <p className="text-sm font-medium break-all">
+                                        {group.email}
+                                    </p>
+
+                                    <Select
+                                        value={String(survivor)}
+                                        onValueChange={(value) =>
+                                            setSurvivors((current) => ({
+                                                ...current,
+                                                [group.email]: Number(value),
+                                            }))
+                                        }
                                     >
-                                        <div>
-                                            <p className="text-sm font-medium uppercase">
-                                                {channel.channel}
-                                            </p>
-                                            <p className="text-muted-foreground text-xs">
-                                                {channel.eligible} eligible (
-                                                {share}%)
-                                            </p>
-                                        </div>
-                                        <Badge
-                                            variant={
-                                                channel.blocked > 0
-                                                    ? 'warning'
-                                                    : 'success'
-                                            }
+                                        <SelectTrigger
+                                            className="w-full"
+                                            aria-label="Record to keep"
                                         >
-                                            {channel.blocked} blocked
-                                        </Badge>
-                                    </div>
-                                );
-                            })}
-                        </CardContent>
-                    </Card>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {group.contacts.map((member) => (
+                                                <SelectItem
+                                                    key={member.id}
+                                                    value={String(member.id)}
+                                                >
+                                                    {member.name} ·{' '}
+                                                    {member.phone}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <CopyCheck className="text-brand size-4" />
-                                Duplicate contacts
-                            </CardTitle>
-                            <CardDescription>
-                                Contacts sharing an email address. Pick the
-                                record to keep, then merge the rest into it.
-                            </CardDescription>
-                        </CardHeader>
-
-                        <CardContent className="flex flex-col gap-3">
-                            {duplicateGroups.length === 0 && (
-                                <EmptyState
-                                    icon={CopyCheck}
-                                    title="No duplicate emails"
-                                    description="Every contact has its own email address."
-                                />
-                            )}
-
-                            {duplicateGroups.map((group) => {
-                                const survivor =
-                                    survivors[group.email] ??
-                                    group.contacts[0]?.id;
-
-                                return (
-                                    <div
-                                        key={group.email}
-                                        className="flex flex-col gap-2 rounded-lg border border-border/60 p-3"
-                                    >
-                                        <p className="text-sm font-medium break-all">
-                                            {group.email}
-                                        </p>
-
-                                        <Select
-                                            value={String(survivor)}
-                                            onValueChange={(value) =>
-                                                setSurvivors((current) => ({
-                                                    ...current,
-                                                    [group.email]:
-                                                        Number(value),
-                                                }))
-                                            }
-                                        >
-                                            <SelectTrigger
-                                                className="w-full"
-                                                aria-label="Record to keep"
-                                            >
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {group.contacts.map(
-                                                    (member) => (
-                                                        <SelectItem
-                                                            key={member.id}
-                                                            value={String(
+                                    <div className="flex flex-col gap-2">
+                                        {group.contacts
+                                            .filter(
+                                                (member) =>
+                                                    member.id !== survivor,
+                                            )
+                                            .map((member) => (
+                                                <div
+                                                    key={member.id}
+                                                    className="flex items-center justify-between gap-2 text-sm"
+                                                >
+                                                    <span className="font-mono text-xs text-muted-foreground">
+                                                        {member.name} ·{' '}
+                                                        {member.phone}
+                                                    </span>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            mergeInto(
+                                                                group.email,
+                                                                survivor,
                                                                 member.id,
-                                                            )}
-                                                        >
-                                                            {member.name} ·{' '}
-                                                            {member.phone}
-                                                        </SelectItem>
-                                                    ),
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-
-                                        <div className="flex flex-col gap-2">
-                                            {group.contacts
-                                                .filter(
-                                                    (member) =>
-                                                        member.id !== survivor,
-                                                )
-                                                .map((member) => (
-                                                    <div
-                                                        key={member.id}
-                                                        className="flex items-center justify-between gap-2 text-sm"
+                                                            )
+                                                        }
                                                     >
-                                                        <span className="text-muted-foreground font-mono text-xs">
-                                                            {member.name} ·{' '}
-                                                            {member.phone}
-                                                        </span>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                mergeInto(
-                                                                    group.email,
-                                                                    survivor,
-                                                                    member.id,
-                                                                )
-                                                            }
-                                                        >
-                                                            Merge in
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                        </div>
+                                                        Merge in
+                                                    </Button>
+                                                </div>
+                                            ))}
                                     </div>
-                                );
-                            })}
-                        </CardContent>
-                    </Card>
-                </div>
+                                </div>
+                            );
+                        })}
+                    </CardContent>
+                </Card>
 
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                            <Users className="text-brand size-4" />
+                            <Users className="size-4 text-brand" />
                             Audience segments
                         </CardTitle>
                         <CardDescription>
@@ -461,7 +359,7 @@ export default function ContactCompliance({
                                     required
                                 />
                                 {segmentForm.errors.name && (
-                                    <p className="text-destructive text-xs">
+                                    <p className="text-xs text-destructive">
                                         {segmentForm.errors.name}
                                     </p>
                                 )}
@@ -504,7 +402,9 @@ export default function ContactCompliance({
                             <div className="grid gap-1.5">
                                 <Label>DND</Label>
                                 <Select
-                                    value={segmentForm.data.filters.dnd || 'any'}
+                                    value={
+                                        segmentForm.data.filters.dnd || 'any'
+                                    }
                                     onValueChange={(value) =>
                                         segmentForm.setData('filters', {
                                             ...segmentForm.data.filters,
@@ -547,9 +447,7 @@ export default function ContactCompliance({
                             </div>
 
                             <div className="grid gap-1.5">
-                                <Label htmlFor="segment-company">
-                                    Company
-                                </Label>
+                                <Label htmlFor="segment-company">Company</Label>
                                 <Input
                                     id="segment-company"
                                     value={segmentForm.data.filters.company}
@@ -744,7 +642,7 @@ export default function ContactCompliance({
                                                 <p className="text-sm font-medium">
                                                     {segment.name}
                                                 </p>
-                                                <p className="text-muted-foreground text-xs">
+                                                <p className="text-xs text-muted-foreground">
                                                     {segment.contacts_count}{' '}
                                                     contacts match
                                                     {segment.description
@@ -792,7 +690,7 @@ export default function ContactCompliance({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Tags className="text-brand size-4" />
+                                <Tags className="size-4 text-brand" />
                                 Tags
                             </CardTitle>
                             <CardDescription>
@@ -830,7 +728,7 @@ export default function ContactCompliance({
                             </form>
 
                             {tags.length === 0 ? (
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     No tags yet.
                                 </p>
                             ) : (
@@ -859,7 +757,7 @@ export default function ContactCompliance({
                                                         },
                                                     )
                                                 }
-                                                className="text-muted-foreground hover:text-destructive px-1"
+                                                className="px-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 ×
                                             </button>
@@ -873,7 +771,7 @@ export default function ContactCompliance({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                                <Users className="text-brand size-4" />
+                                <Users className="size-4 text-brand" />
                                 Contact lists
                             </CardTitle>
                             <CardDescription>
@@ -912,7 +810,7 @@ export default function ContactCompliance({
                             </form>
 
                             {lists.length === 0 ? (
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                     No contact lists yet.
                                 </p>
                             ) : (
@@ -950,200 +848,20 @@ export default function ContactCompliance({
                         </CardContent>
                     </Card>
                 </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                            <ShieldBan className="text-brand size-4" />
-                            DND & suppression registry
-                        </CardTitle>
-                        <CardDescription>
-                            Numbers and addresses that must never receive a
-                            broadcast. "Every channel" entries are the DND list.
-                        </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="flex flex-col gap-4">
-                        <form
-                            onSubmit={submitSuppression}
-                            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-                        >
-                            <div className="grid gap-1.5">
-                                <Label>Channel</Label>
-                                <Select
-                                    value={suppressionForm.data.channel}
-                                    onValueChange={(value) =>
-                                        suppressionForm.setData(
-                                            'channel',
-                                            value,
-                                        )
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {channels.map((channel) => (
-                                            <SelectItem
-                                                key={channel.value}
-                                                value={channel.value}
-                                            >
-                                                {channel.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid gap-1.5">
-                                <Label htmlFor="suppression-identifier">
-                                    Number or email
-                                </Label>
-                                <Input
-                                    id="suppression-identifier"
-                                    value={suppressionForm.data.identifier}
-                                    onChange={(event) =>
-                                        suppressionForm.setData(
-                                            'identifier',
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="+233201234567"
-                                    required
-                                />
-                                {suppressionForm.errors.identifier && (
-                                    <p className="text-destructive text-xs">
-                                        {suppressionForm.errors.identifier}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="grid gap-1.5">
-                                <Label>Reason</Label>
-                                <Select
-                                    value={suppressionForm.data.reason}
-                                    onValueChange={(value) =>
-                                        suppressionForm.setData(
-                                            'reason',
-                                            value,
-                                        )
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {reasons.map((reason) => (
-                                            <SelectItem
-                                                key={reason.value}
-                                                value={reason.value}
-                                            >
-                                                {reason.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex items-end">
-                                <Button
-                                    type="submit"
-                                    disabled={suppressionForm.processing}
-                                >
-                                    <Plus />
-                                    Suppress
-                                </Button>
-                            </div>
-
-                            {canManageGlobalSuppressions && (
-                                <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                                    <Checkbox
-                                        checked={suppressionForm.data.global}
-                                        onCheckedChange={(checked) =>
-                                            suppressionForm.setData(
-                                                'global',
-                                                checked === true,
-                                            )
-                                        }
-                                    />
-                                    Apply across every client
-                                </label>
-                            )}
-                        </form>
-
-                        {suppressions.length === 0 ? (
-                            <EmptyState
-                                icon={ShieldBan}
-                                title="Registry is empty"
-                                description="No numbers or addresses are currently suppressed."
-                            />
-                        ) : (
-                            <div className="flex flex-col divide-y divide-border/60">
-                                {suppressions.map((suppression) => (
-                                    <div
-                                        key={suppression.id}
-                                        className="flex flex-wrap items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
-                                    >
-                                        <div className="space-y-0.5">
-                                            <p className="flex items-center gap-2 text-sm font-medium">
-                                                <span className="uppercase">
-                                                    {suppression.channel}
-                                                </span>
-                                                <span className="font-mono text-xs">
-                                                    {suppression.identifier}
-                                                </span>
-                                                {suppression.is_global && (
-                                                    <Badge variant="warning">
-                                                        Global
-                                                    </Badge>
-                                                )}
-                                            </p>
-                                            <p className="text-muted-foreground text-xs">
-                                                {suppression.reason_label} ·{' '}
-                                                {suppression.source} ·{' '}
-                                                {formatDateTime(
-                                                    suppression.suppressed_at,
-                                                )}
-                                            </p>
-                                        </div>
-
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                                router.delete(
-                                                    urls.contacts.liftSuppression(
-                                                        suppression.id,
-                                                    ),
-                                                    {
-                                                        preserveScroll: true,
-                                                    },
-                                                )
-                                            }
-                                        >
-                                            Lift
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
             </div>
         </>
     );
 }
 
-ContactCompliance.layout = {
+ContactAudiences.layout = {
     breadcrumbs: [
         {
             title: 'Contacts',
             href: urls.contacts.index,
         },
         {
-            title: 'Audiences & DND',
+            title: 'Audiences',
             href: urls.contacts.audiences,
         },
     ],
 };
-

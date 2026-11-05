@@ -22,6 +22,7 @@ import {
     ScrollText,
     ServerCog,
     Settings,
+    ShieldBan,
     ShieldCheck,
     Tags,
     UserRoundCog,
@@ -64,6 +65,23 @@ const messagingNavItems: NavItem[] = [
         title: 'Contacts',
         href: urls.contacts.index,
         icon: Users,
+        children: [
+            {
+                title: 'All contacts',
+                href: urls.contacts.index,
+                icon: Users,
+            },
+            {
+                title: 'Audiences',
+                href: urls.contacts.audiences,
+                icon: Tags,
+            },
+            {
+                title: 'DND',
+                href: urls.contacts.dndRegistry,
+                icon: ShieldBan,
+            },
+        ],
     },
     {
         title: 'Sender IDs',

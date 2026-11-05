@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Client;
 use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\ContactSegment;
@@ -114,11 +115,41 @@ it('reports missing addresses and duplicate email groups on the audience health 
     $this->actingAs($user)->get(route('contacts.audiences.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('contacts/compliance')
+            ->component('contacts/audiences')
             ->where('quality.total', 4)
             ->where('quality.dnd', 1)
             ->where('quality.missing_email', 1)
             ->where('quality.duplicate_emails', 1));
+});
+
+it('keeps the DND registry on its own screen, apart from the audience builder', function (): void {
+    [$client, , $user] = clientWithWallet();
+    Contact::factory()->forClient($client)->dnd()->create(['email' => 'blocked@example.test']);
+    ContactSuppression::query()->create([
+        'client_id' => $client->id,
+        'channel' => 'sms',
+        'identifier' => '+233240123456',
+        'reason' => 'manual',
+        'source' => 'staff_registry',
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)->get(route('contacts.dnd.registry'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('contacts/dnd-registry')
+            ->where('quality.dnd', 1)
+            ->has('suppressions', 1)
+            ->where('suppressions.0.identifier', '+233240123456')
+            ->has('channels')
+            ->has('reasons'));
+
+    $this->actingAs($user)->get(route('contacts.audiences.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('contacts/audiences')
+            ->missing('suppressions')
+            ->missing('channels'));
 });
 
 it('refuses global suppression management to client users', function (): void {
@@ -241,4 +272,32 @@ it('toggles DND from the contact detail quick action', function (): void {
     expect($contact->refresh()->dnd)->toBeFalse()
         ->and($contact->fresh()->dnd_at)->toBeNull()
         ->and(ContactSuppression::query()->where('is_active', true)->count())->toBe(0);
+});
+
+it('lets a client admin create the audience list contacts are uploaded into', function (): void {
+    [$client, , $user] = clientWithWallet();
+
+    $this->actingAs($user)->post(route('contacts.audiences.lists.store'), [
+        'name' => 'Accra retail',
+        'description' => 'Walk-in customers',
+    ])->assertSessionHasNoErrors();
+
+    $list = ContactList::query()->where('client_id', $client->id)->sole();
+
+    expect($list->name)->toBe('Accra retail')
+        ->and($list->description)->toBe('Walk-in customers')
+        ->and($list->created_by)->toBe($user->id);
+});
+
+it('keeps contact list names unique inside each client tenant', function (): void {
+    [$client, , $user] = clientWithWallet();
+    ContactList::factory()->forClient(Client::factory()->create())->create(['name' => 'VIP customers']);
+
+    $this->actingAs($user)->post(route('contacts.audiences.lists.store'), ['name' => 'VIP customers'])
+        ->assertSessionHasNoErrors();
+
+    expect(ContactList::query()->where('client_id', $client->id)->where('name', 'VIP customers')->exists())->toBeTrue();
+
+    $this->actingAs($user)->post(route('contacts.audiences.lists.store'), ['name' => 'VIP customers'])
+        ->assertSessionHasErrors('name');
 });
