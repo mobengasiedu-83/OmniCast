@@ -179,6 +179,9 @@ and stalled ones are re-queued by `php artisan campaigns:sweep` (every five minu
 `schedule:work` is the heartbeat of the delivery engine; the Horizon dashboard stays behind
 `/horizon` for platform users holding `queues.view`.
 
+Running, restarting and troubleshooting those processes — locally and on the production server — is
+written up command by command in [docs/RUNNING-THE-SERVICES.md](docs/RUNNING-THE-SERVICES.md).
+
 ## Verification commands
 
 ```bash
