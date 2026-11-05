@@ -111,29 +111,6 @@ class ContactComplianceController extends Controller
         return back()->with('toast', ['type' => 'success', 'message' => 'Tag saved.']);
     }
 
-    public function storeList(Request $request): RedirectResponse
-    {
-        Gate::authorize('create', Contact::class);
-        $client = $this->tenantClient($request);
-        abort_if($client === null, 403);
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:120', Rule::unique('contact_lists', 'name')->where('client_id', $client->id)],
-            'description' => ['nullable', 'string', 'max:1000'],
-        ]);
-        ContactList::query()->create([...$data, 'client_id' => $client->id, 'created_by' => $request->user()->id]);
-
-        return back()->with('toast', ['type' => 'success', 'message' => 'Contact list created.']);
-    }
-
-    public function destroyList(Request $request, ContactList $list): RedirectResponse
-    {
-        Gate::authorize('create', Contact::class);
-        abort_unless($this->tenantClient($request)?->is($list->client), 404);
-        $list->delete();
-
-        return back()->with('toast', ['type' => 'success', 'message' => 'Contact list archived.']);
-    }
-
     public function destroyTag(Request $request, Tag $tag): RedirectResponse
     {
         Gate::authorize('create', Contact::class);

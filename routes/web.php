@@ -7,6 +7,7 @@ use App\Http\Controllers\ClientRegistrationController;
 use App\Http\Controllers\ContactComplianceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactDndController;
+use App\Http\Controllers\ContactListController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailWebhookController;
 use App\Http\Controllers\MobileMoneyCheckoutController;
@@ -92,11 +93,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
     Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
 
+    Route::get('contacts/lists', [ContactListController::class, 'index'])->name('contacts.lists.index');
+    Route::post('contacts/lists', [ContactListController::class, 'store'])->name('contacts.lists.store');
+    Route::get('contacts/lists/{list}', [ContactListController::class, 'show'])->name('contacts.lists.show');
+    Route::put('contacts/lists/{list}', [ContactListController::class, 'update'])->name('contacts.lists.update');
+    Route::delete('contacts/lists/{list}', [ContactListController::class, 'destroy'])->name('contacts.lists.destroy');
+    Route::post('contacts/lists/{list}/import', [ContactListController::class, 'import'])->name('contacts.lists.import');
+    Route::post('contacts/lists/{list}/contacts', [ContactListController::class, 'attach'])->name('contacts.lists.contacts.store');
+    Route::delete('contacts/lists/{list}/contacts', [ContactListController::class, 'detach'])->name('contacts.lists.contacts.destroy');
+
     Route::get('contacts/audiences', [ContactComplianceController::class, 'audiences'])->name('contacts.audiences.index');
     Route::post('contacts/audiences/tags', [ContactComplianceController::class, 'storeTag'])->name('contacts.audiences.tags.store');
     Route::delete('contacts/audiences/tags/{tag}', [ContactComplianceController::class, 'destroyTag'])->name('contacts.audiences.tags.destroy');
-    Route::post('contacts/audiences/lists', [ContactComplianceController::class, 'storeList'])->name('contacts.audiences.lists.store');
-    Route::delete('contacts/audiences/lists/{list}', [ContactComplianceController::class, 'destroyList'])->name('contacts.audiences.lists.destroy');
+    Route::post('contacts/audiences/lists', [ContactListController::class, 'store'])->name('contacts.audiences.lists.store');
+    Route::delete('contacts/audiences/lists/{list}', [ContactListController::class, 'destroy'])->name('contacts.audiences.lists.destroy');
     Route::post('contacts/audiences/segments', [ContactComplianceController::class, 'storeSegment'])->name('contacts.audiences.segments.store');
     Route::put('contacts/audiences/segments/{segment}', [ContactComplianceController::class, 'updateSegment'])->name('contacts.audiences.segments.update');
     Route::delete('contacts/audiences/segments/{segment}', [ContactComplianceController::class, 'destroySegment'])->name('contacts.audiences.segments.destroy');

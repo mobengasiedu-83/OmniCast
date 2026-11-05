@@ -237,6 +237,11 @@ export default function CampaignForm({
                             </SelectContent>
                         </Select>
                         <InputError message={form.errors.contact_list_id} />
+                        <p className="text-muted-foreground text-xs">
+                            Contacts can sit in several lists. Everyone in the
+                            chosen audience is de-duplicated when the campaign
+                            is sent, so no number is messaged twice.
+                        </p>
                     </div>
 
                     <div className="grid gap-1.5">

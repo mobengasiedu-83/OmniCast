@@ -14,6 +14,47 @@ export type ContactListOption = {
     contacts_count: number;
 };
 
+/** A row of the contact list library. */
+export type ContactListSummary = {
+    id: number;
+    name: string;
+    description: string | null;
+    client: string | null;
+    contacts_count: number;
+    campaigns_count: number;
+    updated_at: string | null;
+};
+
+/** The header of a single contact list. */
+export type ContactListDetail = {
+    id: number;
+    name: string;
+    description: string | null;
+    client_name: string | null;
+    campaigns_count: number;
+    created_at: string | null;
+    updated_at: string | null;
+};
+
+/** A member of a contact list. */
+export type ContactListMember = {
+    id: number;
+    name: string;
+    phone: string;
+    email: string | null;
+    company: string | null;
+    dnd: boolean;
+    added_at: string | null;
+};
+
+/** A contact in the book that can still be added to a list. */
+export type ContactListCandidate = {
+    id: number;
+    name: string;
+    phone: string;
+    email: string | null;
+};
+
 export type TagOption = { id: number; name: string; color: string; contacts_count?: number };
 
 export type PaginationLink = {

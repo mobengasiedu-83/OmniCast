@@ -271,6 +271,14 @@ export default function ContactsImport({ contactLists, clients }: PageProps) {
                                     <InputError
                                         message={form.errors.contact_list_id}
                                     />
+                                    <p className="text-muted-foreground text-xs">
+                                        A contact can belong to several lists.
+                                        Numbers that already exist are added
+                                        to this list without leaving their
+                                        other lists, so overlapping audiences
+                                        are only de-duplicated when a campaign
+                                        is sent.
+                                    </p>
 
                                     <div className="border-border/60 mt-1 grid gap-1.5 border-t pt-3">
                                         <Label htmlFor="new_list_name">

@@ -335,6 +335,10 @@ export default function ContactForm({
 
                     <div className="grid gap-2">
                         <Label>Contact lists</Label>
+                        <p className="text-muted-foreground text-xs">
+                            A contact can be in more than one list. Duplicates
+                            are only removed when a campaign is sent.
+                        </p>
                         {contactLists.length === 0 ? (
                             <p className="text-muted-foreground text-sm">
                                 No contact lists have been created yet.

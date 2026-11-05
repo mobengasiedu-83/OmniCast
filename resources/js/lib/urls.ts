@@ -50,6 +50,18 @@ export const urls = {
         importTemplate: path('/contacts/import/template'),
         audiences: path('/contacts/audiences'),
         dndRegistry: path('/contacts/dnd'),
+        lists: {
+            index: path('/contacts/lists'),
+            store: path('/contacts/lists'),
+            show: (list: number) => path(`/contacts/lists/${list}`),
+            update: (list: number) => path(`/contacts/lists/${list}`),
+            destroy: (list: number) => path(`/contacts/lists/${list}`),
+            import: (list: number) => path(`/contacts/lists/${list}/import`),
+            attachContacts: (list: number) =>
+                path(`/contacts/lists/${list}/contacts`),
+            detachContacts: (list: number) =>
+                path(`/contacts/lists/${list}/contacts`),
+        },
         storeTag: path('/contacts/audiences/tags'),
         deleteTag: (tag: number) => path(`/contacts/audiences/tags/${tag}`),
         storeList: path('/contacts/audiences/lists'),

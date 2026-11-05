@@ -318,7 +318,9 @@ export default function ContactAudiences({
                             </CardTitle>
                             <CardDescription>
                                 Static groups you can add contacts to from the
-                                contact record.
+                                contact record. A contact can sit in several
+                                lists; duplicates are only removed when a
+                                campaign is sent.
                             </CardDescription>
                         </CardHeader>
 
