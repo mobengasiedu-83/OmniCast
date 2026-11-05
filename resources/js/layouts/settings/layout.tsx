@@ -3,6 +3,7 @@ import {
     KeyRound,
     MonitorSmartphone,
     Palette,
+    Settings,
     ShieldCheck,
     UserRound,
     UsersRound,
@@ -67,16 +68,14 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     return (
         <div className="flex flex-col gap-6">
             <Heading
+                icon={Settings}
                 title="Settings"
                 description="Manage your profile and account settings"
             />
 
             <div className="flex flex-col gap-8 lg:flex-row">
                 <aside className="w-full lg:w-52">
-                    <nav
-                        className="flex flex-col gap-1"
-                        aria-label="Settings"
-                    >
+                    <nav className="flex flex-col gap-1" aria-label="Settings">
                         {sidebarNavItems.map((item, index) => (
                             <Button
                                 key={`${toUrl(item.href)}-${index}`}
@@ -113,4 +112,3 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         </div>
     );
 }
-

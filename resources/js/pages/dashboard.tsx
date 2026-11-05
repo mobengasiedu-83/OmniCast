@@ -2,7 +2,9 @@ import { Head, Link } from '@inertiajs/react';
 import {
     Activity,
     ArrowUpRight,
+    ChartPie,
     Coins,
+    History,
     Layers,
     Megaphone,
     MessageSquare,
@@ -82,6 +84,9 @@ function channelStyle(channel: string) {
     return { bar: 'bg-chart-4', icon: Layers };
 }
 
+/** Entrance order for the overview grid, so the cards cascade in. */
+const overviewStagger = ['stagger-1', 'stagger-2', 'stagger-3', 'stagger-4'];
+
 export default function Dashboard({
     stats,
     wallet,
@@ -137,6 +142,7 @@ export default function Dashboard({
                         <>
                             <Button variant="outline" asChild>
                                 <Link href={urls.campaigns.index}>
+                                    <Megaphone />
                                     All campaigns
                                 </Link>
                             </Button>
@@ -155,8 +161,10 @@ export default function Dashboard({
                         <StatCard
                             key={item.title}
                             {...item}
-                            className="animate-fade-in-up"
-                            style={{ animationDelay: `${index * 60}ms` }}
+                            className={cn(
+                                'animate-fade-in-up',
+                                overviewStagger[index],
+                            )}
                         />
                     ))}
                 </div>
@@ -165,7 +173,10 @@ export default function Dashboard({
                     <Card className="gap-0 overflow-hidden py-0 lg:col-span-2">
                         <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/60 py-4">
                             <div className="space-y-1">
-                                <CardTitle>Recent campaigns</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <History className="size-4 text-brand" />
+                                    Recent campaigns
+                                </CardTitle>
                                 <CardDescription>
                                     The six most recently created campaigns.
                                 </CardDescription>
@@ -213,7 +224,8 @@ export default function Dashboard({
                                         </TableRow>
                                     </TableHeader>
 
-                                    <TableBody>{recentCampaigns.map((campaign) => {
+                                    <TableBody>
+                                        {recentCampaigns.map((campaign) => {
                                             const { bar, icon: Icon } =
                                                 channelStyle(campaign.channel);
 
@@ -224,14 +236,12 @@ export default function Dashboard({
                                                             href={urls.campaigns.show(
                                                                 campaign.id,
                                                             )}
-                                                            className="hover:text-brand font-medium transition-colors"
+                                                            className="font-medium transition-colors hover:text-brand"
                                                         >
                                                             {campaign.name}
                                                         </Link>
-                                                        <p className="text-muted-foreground text-xs">
-                                                            {
-                                                                campaign.reference
-                                                            }
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {campaign.reference}
                                                         </p>
                                                     </TableCell>
 
@@ -276,21 +286,22 @@ export default function Dashboard({
                                                         )}
                                                     </TableCell>
 
-                                                    <TableCell className="text-muted-foreground pr-4 text-xs">
+                                                    <TableCell className="pr-4 text-xs text-muted-foreground">
                                                         {shortDate(
                                                             campaign.created_at,
                                                         )}
                                                     </TableCell>
                                                 </TableRow>
                                             );
-                                        })}</TableBody>
+                                        })}
+                                    </TableBody>
                                 </Table>
                             )}
                         </CardContent>
                     </Card>
 
                     <div className="flex flex-col gap-4">
-                                                {wallet === null ? (
+                        {wallet === null ? (
                             <Card className="py-5">
                                 <CardHeader>
                                     <CardTitle>Wallet</CardTitle>
@@ -301,17 +312,18 @@ export default function Dashboard({
                                 </CardHeader>
                             </Card>
                         ) : (
-                            <Card className="relative gap-0 overflow-hidden border-0 py-0">
-                                <div className="brand-gradient absolute inset-0" />
-                                <div className="absolute inset-0 bg-[#0b0a1f]/55" />
-                                <div className="dot-pattern absolute inset-0 opacity-20" />
+                            <Card className="sheen-sweep relative gap-0 overflow-hidden border-0 py-0">
+                                <div className="absolute inset-0 brand-gradient" />
+                                <div className="absolute inset-0 bg-ink/70" />
+                                <div className="absolute inset-0 dot-pattern opacity-20" />
+                                <div className="absolute -top-12 -right-10 size-32 animate-glow rounded-full bg-brand-highlight/25 blur-2xl" />
 
                                 <div className="relative space-y-4 p-5 text-white">
                                     <div className="flex items-center justify-between">
                                         <p className="text-[11px] font-semibold tracking-[0.16em] text-white/75 uppercase">
                                             Wallet
                                         </p>
-                                        <WalletIcon className="size-4 text-white/70" />
+                                        <WalletIcon className="size-4 animate-blink text-white/70" />
                                     </div>
 
                                     <div className="space-y-1">
@@ -367,9 +379,12 @@ export default function Dashboard({
                             </Card>
                         )}
 
-                                                <Card className="py-5">
+                        <Card className="py-5">
                             <CardHeader>
-                                <CardTitle>Channel mix</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <ChartPie className="size-4 text-brand" />
+                                    Channel mix
+                                </CardTitle>
                                 <CardDescription>
                                     Campaigns per channel
                                 </CardDescription>
@@ -377,7 +392,7 @@ export default function Dashboard({
 
                             <CardContent className="space-y-3.5">
                                 {channelBreakdown.length === 0 ? (
-                                    <p className="text-muted-foreground text-sm">
+                                    <p className="text-sm text-muted-foreground">
                                         No campaigns yet.
                                     </p>
                                 ) : (
@@ -400,18 +415,18 @@ export default function Dashboard({
                                             >
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="flex items-center gap-2">
-                                                        <Icon className="text-muted-foreground size-3.5" />
+                                                        <Icon className="size-3.5 text-muted-foreground" />
                                                         {row.label}
                                                     </span>
-                                                    <span className="text-muted-foreground text-xs tabular-nums">
+                                                    <span className="text-xs text-muted-foreground tabular-nums">
                                                         {row.total} · {share}%
                                                     </span>
                                                 </div>
 
-                                                <div className="bg-muted h-2 overflow-hidden rounded-full">
+                                                <div className="h-2 overflow-hidden rounded-full bg-muted">
                                                     <div
                                                         className={cn(
-                                                            'animate-grow-x h-full origin-left rounded-full',
+                                                            'h-full origin-left animate-grow-x rounded-full',
                                                             bar,
                                                         )}
                                                         style={{

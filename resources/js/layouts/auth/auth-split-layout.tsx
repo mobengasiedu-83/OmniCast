@@ -22,15 +22,22 @@ export default function AuthSplitLayout({
 
     return (
         <div className="grid min-h-svh lg:grid-cols-[1.05fr_1fr]">
-            <aside className="relative hidden overflow-hidden bg-[oklch(0.16_0.03_276)] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+            <aside className="relative hidden overflow-hidden ink-panel p-10 text-white lg:flex lg:flex-col lg:justify-between">
                 <MeshBackdrop className="opacity-90" />
-                <SignalOrbit className="pointer-events-none absolute -right-28 -bottom-32 size-[26rem] text-white/40" />
+
+                <div className="pointer-events-none absolute -right-28 -bottom-32 animate-orbit">
+                    <SignalOrbit className="size-[26rem] text-white/35" />
+                </div>
 
                 <Link
                     href={home()}
                     className="relative z-10 flex items-center gap-3"
                 >
-                    <BrandMark className="size-10" glyphClassName="size-5" />
+                    <BrandMark
+                        className="size-10"
+                        glyphClassName="size-5"
+                        ambient
+                    />
                     <span className="space-y-0.5">
                         <span className="block text-sm font-semibold tracking-tight">
                             {name}
@@ -52,12 +59,15 @@ export default function AuthSplitLayout({
                     </p>
 
                     <ul className="space-y-3">
-                        {highlights.map((highlight) => (
+                        {highlights.map((highlight, index) => (
                             <li
                                 key={highlight}
-                                className="flex items-start gap-2.5 text-sm text-white/80"
+                                className="flex animate-fade-in-up items-start gap-2.5 text-sm text-white/80"
+                                style={{
+                                    animationDelay: `${240 + index * 90}ms`,
+                                }}
                             >
-                                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-white/45" />
+                                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand-highlight" />
                                 {highlight}
                             </li>
                         ))}
@@ -83,9 +93,9 @@ export default function AuthSplitLayout({
             </aside>
 
             <main className="relative flex items-center justify-center px-6 py-12 sm:px-10">
-                <div className="mesh-backdrop animate-fade-in absolute inset-0 -z-10 opacity-60 lg:hidden" />
+                <div className="absolute inset-0 -z-10 animate-fade-in mesh-backdrop opacity-60 lg:hidden" />
 
-                <div className="animate-fade-in-up w-full max-w-sm space-y-8">
+                <div className="w-full max-w-sm animate-fade-in-up space-y-8">
                     <div className="space-y-4">
                         <Link
                             href={home()}
@@ -101,7 +111,7 @@ export default function AuthSplitLayout({
                             <h1 className="text-2xl font-semibold tracking-tight">
                                 {title}
                             </h1>
-                            <p className="text-muted-foreground text-sm">
+                            <p className="text-sm text-muted-foreground">
                                 {description}
                             </p>
                         </div>
@@ -115,4 +125,3 @@ export default function AuthSplitLayout({
         </div>
     );
 }
-

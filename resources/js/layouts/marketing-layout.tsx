@@ -29,9 +29,9 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
             <div className="pointer-events-none absolute inset-0 -z-10 mesh-backdrop opacity-70" />
             <div className="pointer-events-none absolute inset-0 -z-10 grid-pattern [mask-image:radial-gradient(ellipse_at_top,black,transparent_72%)] opacity-30" />
 
-            <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-5">
+            <header className="mx-auto flex w-full max-w-6xl animate-fade-in-down items-center justify-between gap-4 px-6 py-5">
                 <Link href={home()} className="flex items-center gap-2.5">
-                    <BrandMark className="size-9" />
+                    <BrandMark className="size-9" ambient />
                     <span className="text-sm font-semibold tracking-tight">
                         {name}
                     </span>

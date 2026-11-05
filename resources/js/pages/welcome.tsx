@@ -23,7 +23,10 @@ export default function Welcome() {
             <section className="grid items-center gap-12 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
                 <div className="animate-fade-in-up space-y-6">
                     <span className="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-accent-foreground ring-1 ring-brand/20">
-                        <span className="flex size-1.5 rounded-full bg-brand" />
+                        <span className="relative flex size-1.5">
+                            <span className="absolute inset-0 animate-ping-soft rounded-full bg-brand" />
+                            <span className="relative size-1.5 rounded-full bg-brand" />
+                        </span>
                         SMS, voice &amp; email broadcasting
                     </span>
 
@@ -85,11 +88,18 @@ export default function Welcome() {
                 </div>
 
                 <div className="relative mx-auto w-full max-w-md">
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-x-2 -top-12 bottom-4 -z-10 brand-halo opacity-80"
+                    />
+
                     <div className="relative animate-float">
-                        <SignalOrbit className="w-full text-brand/70" />
+                        <div className="animate-orbit">
+                            <SignalOrbit className="w-full text-brand/60" />
+                        </div>
                     </div>
 
-                    <div className="absolute -top-2 left-0 animate-fade-in-up rounded-xl surface-glass p-3 shadow-lg ring-1 ring-border/60 [animation-delay:200ms]">
+                    <div className="absolute -top-2 left-0 animate-fade-in-up rounded-xl surface-glass p-3 shadow-lg ring-1 ring-border/60 transition-transform duration-300 [animation-delay:200ms] hover:-translate-y-0.5">
                         <div className="flex items-center gap-2.5">
                             <span className="flex size-8 items-center justify-center rounded-lg bg-signal text-white">
                                 <MessageSquare className="size-4" />
@@ -105,7 +115,7 @@ export default function Welcome() {
                         </div>
                     </div>
 
-                    <div className="absolute top-8 right-0 animate-fade-in-up rounded-xl surface-glass p-3 shadow-lg ring-1 ring-border/60 [animation-delay:260ms]">
+                    <div className="absolute top-8 right-0 animate-fade-in-up rounded-xl surface-glass p-3 shadow-lg ring-1 ring-border/60 transition-transform duration-300 [animation-delay:260ms] hover:-translate-y-0.5">
                         <div className="flex items-center gap-2.5">
                             <span className="flex size-8 items-center justify-center rounded-lg bg-brand-soft text-brand ring-1 ring-brand/20">
                                 <Mail className="size-4" />
@@ -121,7 +131,7 @@ export default function Welcome() {
                         </div>
                     </div>
 
-                    <div className="absolute right-0 bottom-6 animate-fade-in-up rounded-xl surface-glass p-3 shadow-lg ring-1 ring-border/60 [animation-delay:320ms]">
+                    <div className="absolute right-0 bottom-6 animate-fade-in-up rounded-xl surface-glass p-3 shadow-lg ring-1 ring-border/60 transition-transform duration-300 [animation-delay:320ms] hover:-translate-y-0.5">
                         <div className="flex items-center gap-2.5">
                             <span className="flex size-8 items-center justify-center rounded-lg brand-gradient text-white">
                                 <Phone className="size-4" />
@@ -159,7 +169,7 @@ export default function Welcome() {
                 ].map((feature, index) => (
                     <div
                         key={feature.title}
-                        className="card-lift animate-fade-in-up rounded-xl border border-border/70 bg-card p-5 shadow-sm"
+                        className="sheen-sweep card-lift animate-fade-in-up rounded-xl border border-border/70 bg-card p-5 shadow-sm"
                         style={{ animationDelay: `${index * 70}ms` }}
                     >
                         <span className="mb-3 flex size-10 items-center justify-center rounded-xl brand-gradient-soft text-brand ring-1 ring-brand/15">
@@ -219,11 +229,11 @@ export default function Welcome() {
                     ].map((channel) => (
                         <div
                             key={channel.title}
-                            className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-6"
+                            className="sheen-sweep relative card-lift overflow-hidden rounded-2xl border border-border/70 bg-card p-6"
                         >
                             <span
                                 className={cn(
-                                    'absolute -top-16 -right-10 size-40 rounded-full opacity-20 blur-2xl',
+                                    'absolute -top-16 -right-10 size-40 animate-glow rounded-full opacity-20 blur-2xl',
                                     channel.accent,
                                 )}
                             />

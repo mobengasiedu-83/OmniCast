@@ -25,15 +25,19 @@ export default function EmptyState({
                 className,
             )}
         >
-            <span className="brand-gradient-soft ring-brand/15 flex size-14 items-center justify-center rounded-2xl ring-1">
-                {Icon && <Icon className="text-brand size-6" />}
+            <span className="relative flex size-14 animate-pop items-center justify-center rounded-2xl brand-gradient-soft ring-1 ring-brand/15">
+                <span
+                    aria-hidden="true"
+                    className="absolute inset-0 animate-ping-soft rounded-2xl border border-brand/30"
+                />
+                {Icon && <Icon className="size-6 text-brand" />}
             </span>
 
             <div className="space-y-1">
                 <p className="font-medium">{title}</p>
 
                 {description && (
-                    <p className="text-muted-foreground mx-auto max-w-sm text-sm">
+                    <p className="mx-auto max-w-sm text-sm text-muted-foreground">
                         {description}
                     </p>
                 )}

@@ -39,18 +39,34 @@ export function BrandGlyph(props: SVGProps<SVGSVGElement>) {
 export default function BrandMark({
     className,
     glyphClassName,
+    ambient = false,
 }: {
     className?: string;
     glyphClassName?: string;
+    /** Adds a slow warm halo; use it where the mark has room to breathe. */
+    ambient?: boolean;
 }) {
     return (
         <span
             className={cn(
-                'brand-gradient text-primary-foreground shadow-brand/30 ring-1 ring-white/25 flex size-9 shrink-0 items-center justify-center rounded-xl shadow-sm',
+                'relative isolate inline-flex shrink-0 rounded-xl',
                 className,
             )}
         >
-            <BrandGlyph className={cn('size-5', glyphClassName)} />
+            {ambient && (
+                <span
+                    aria-hidden="true"
+                    className="absolute -inset-2 -z-10 animate-glow rounded-full brand-gradient opacity-45 blur-lg"
+                />
+            )}
+
+            <span
+                className={cn(
+                    'relative flex size-full items-center justify-center rounded-[inherit] brand-gradient text-primary-foreground shadow-sm ring-1 shadow-brand/30 ring-white/25',
+                )}
+            >
+                <BrandGlyph className={cn('size-5', glyphClassName)} />
+            </span>
         </span>
     );
 }

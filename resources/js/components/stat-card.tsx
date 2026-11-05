@@ -62,9 +62,17 @@ export default function StatCard({
 }) {
     return (
         <Card
-            className={cn('card-lift relative gap-0 overflow-hidden py-0', className)}
+            className={cn(
+                'group/stat relative card-lift gap-0 overflow-hidden py-0',
+                className,
+            )}
             style={style}
         >
+            <span
+                aria-hidden="true"
+                className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-brand/40 to-transparent"
+            />
+
             <span
                 aria-hidden="true"
                 className={cn(
@@ -75,14 +83,14 @@ export default function StatCard({
 
             <div className="relative space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
-                    <p className="text-muted-foreground text-[11px] font-semibold tracking-[0.14em] uppercase">
+                    <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                         {title}
                     </p>
 
                     {Icon && (
                         <span
                             className={cn(
-                                'flex size-8 shrink-0 items-center justify-center rounded-lg',
+                                'flex size-8 shrink-0 items-center justify-center rounded-lg transition-transform duration-300 group-hover/stat:scale-110',
                                 tones[tone].chip,
                             )}
                         >
@@ -92,12 +100,12 @@ export default function StatCard({
                 </div>
 
                 <div className="space-y-1">
-                    <p className="text-2xl font-semibold tracking-tight tabular-nums">
+                    <p className="animate-tick text-2xl font-semibold tracking-tight tabular-nums">
                         {value}
                     </p>
 
                     {description && (
-                        <p className="text-muted-foreground text-xs">
+                        <p className="text-xs text-muted-foreground">
                             {description}
                         </p>
                     )}
@@ -106,4 +114,3 @@ export default function StatCard({
         </Card>
     );
 }
-

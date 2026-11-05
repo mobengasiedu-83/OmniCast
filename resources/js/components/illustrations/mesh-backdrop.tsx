@@ -13,11 +13,11 @@ export default function MeshBackdrop({ className }: { className?: string }) {
                 className,
             )}
         >
-            <div className="mesh-backdrop absolute inset-0" />
-            <div className="grid-pattern absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
-            <div className="bg-brand/30 animate-glow absolute -top-24 -left-20 size-72 rounded-full blur-3xl" />
-            <div className="bg-signal/25 animate-glow absolute top-1/3 -right-24 size-80 rounded-full blur-3xl [animation-delay:1.5s]" />
-            <div className="bg-brand-via/20 animate-glow absolute -bottom-28 left-1/3 size-72 rounded-full blur-3xl [animation-delay:3s]" />
+            <div className="absolute inset-0 mesh-backdrop" />
+            <div className="absolute inset-0 grid-pattern [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)] opacity-40" />
+            <div className="absolute -top-24 -left-20 size-72 animate-glow rounded-full bg-brand/30 blur-3xl" />
+            <div className="absolute top-1/3 -right-24 size-80 animate-drift rounded-full bg-signal/20 blur-3xl" />
+            <div className="bg-brand-to/25 absolute -bottom-28 left-1/3 size-72 animate-drift-slow rounded-full blur-3xl" />
         </div>
     );
 }

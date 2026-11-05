@@ -24,6 +24,7 @@ import {
     Settings,
     ShieldBan,
     ShieldCheck,
+    Sparkles,
     Tags,
     UserRoundCog,
     Users,
@@ -216,7 +217,8 @@ export function AppSidebar() {
     const canReviewCampaigns = permissions.includes('campaigns.approve');
     const canReviewSenderIds = permissions.includes('sender-ids.approve');
     const canViewWallet = permissions.includes('wallet.view');
-    const canManageWallet = isPlatformUser && permissions.includes('wallet.manage');
+    const canManageWallet =
+        isPlatformUser && permissions.includes('wallet.manage');
     const canViewRates = isPlatformUser && permissions.includes('rates.view');
     const canViewQueues = isPlatformUser && permissions.includes('queues.view');
     const canViewReports = permissions.includes('reports.view');
@@ -295,7 +297,12 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset" className="border-r-0">
-            <SidebarHeader>
+            <SidebarHeader className="relative overflow-hidden">
+                <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 top-0 h-24 brand-gradient [mask-image:linear-gradient(to_bottom,black,transparent)] opacity-[0.09]"
+                />
+
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
@@ -332,16 +339,68 @@ export function AppSidebar() {
                 {isPlatformUser && (canManageClients || canReviewClients) && (
                     <NavMain
                         items={[
-                            ...(canManageClients ? [{ title: 'Clients', href: clients.index.url(), icon: Users }] : []),
-                            ...(canReviewClients ? [{ title: 'Registrations', href: registrations.index.url(), icon: UserRoundCog }] : []),
-                            ...(canManageClients ? [
-                                { title: 'Pending', href: clients.index.url({ query: { status: 'pending' } }), icon: ClipboardCheck },
-                                { title: 'Active', href: clients.index.url({ query: { status: 'active' } }), icon: Users },
-                                { title: 'Suspended', href: clients.index.url({ query: { status: 'suspended' } }), icon: ShieldCheck },
-                                { title: 'Documents', href: clients.index.url({ query: { view: 'documents' } }), icon: FileText },
-                                { title: 'Users', href: urls.admin.users.index, icon: UsersRound },
-                                { title: 'Service entitlements', href: clients.index.url({ query: { view: 'services' } }), icon: PackagePlus },
-                            ] : []),
+                            ...(canManageClients
+                                ? [
+                                      {
+                                          title: 'Clients',
+                                          href: clients.index.url(),
+                                          icon: Users,
+                                      },
+                                  ]
+                                : []),
+                            ...(canReviewClients
+                                ? [
+                                      {
+                                          title: 'Registrations',
+                                          href: registrations.index.url(),
+                                          icon: UserRoundCog,
+                                      },
+                                  ]
+                                : []),
+                            ...(canManageClients
+                                ? [
+                                      {
+                                          title: 'Pending',
+                                          href: clients.index.url({
+                                              query: { status: 'pending' },
+                                          }),
+                                          icon: ClipboardCheck,
+                                      },
+                                      {
+                                          title: 'Active',
+                                          href: clients.index.url({
+                                              query: { status: 'active' },
+                                          }),
+                                          icon: Users,
+                                      },
+                                      {
+                                          title: 'Suspended',
+                                          href: clients.index.url({
+                                              query: { status: 'suspended' },
+                                          }),
+                                          icon: ShieldCheck,
+                                      },
+                                      {
+                                          title: 'Documents',
+                                          href: clients.index.url({
+                                              query: { view: 'documents' },
+                                          }),
+                                          icon: FileText,
+                                      },
+                                      {
+                                          title: 'Users',
+                                          href: urls.admin.users.index,
+                                          icon: UsersRound,
+                                      },
+                                      {
+                                          title: 'Service entitlements',
+                                          href: clients.index.url({
+                                              query: { view: 'services' },
+                                          }),
+                                          icon: PackagePlus,
+                                      },
+                                  ]
+                                : []),
                         ]}
                         label="Clients"
                     />
@@ -356,18 +415,18 @@ export function AppSidebar() {
                     <NavMain items={reportsNavItems} label="Reports" />
                 )}
                 {canViewReports && isPlatformUser && (
-                    <NavMain
-                        items={platformReportsNavItems}
-                        label="Reports"
-                    />
+                    <NavMain items={platformReportsNavItems} label="Reports" />
                 )}
                 <NavMain items={accountNavItems} label="Account" />
             </SidebarContent>
 
             <SidebarFooter className="gap-2">
-                <div className="brand-gradient-soft ring-brand/15 mx-1 rounded-xl p-3 ring-1 group-data-[collapsible=icon]:hidden">
-                    <p className="text-xs font-semibold">How approvals work</p>
-                    <p className="text-muted-foreground mt-1 text-[11px] leading-snug">
+                <div className="sheen-sweep mx-1 rounded-xl brand-gradient-soft p-3 ring-1 ring-brand/15 group-data-[collapsible=icon]:hidden">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold">
+                        <Sparkles className="size-3.5 text-brand" />
+                        How approvals work
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
                         Submitting a campaign reserves credit. Launching
                         captures it and starts delivery.
                     </p>
@@ -380,4 +439,3 @@ export function AppSidebar() {
         </Sidebar>
     );
 }
-

@@ -12,7 +12,10 @@ export default function PageTransition({ children }: { children: ReactNode }) {
     const { component } = usePage();
 
     return (
-        <div key={component} className="animate-fade-in-up">
+        <div
+            key={component}
+            className="animate-rise will-change-transform motion-reduce:animate-none"
+        >
             {children}
         </div>
     );
