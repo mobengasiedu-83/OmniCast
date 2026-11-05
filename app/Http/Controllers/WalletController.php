@@ -93,6 +93,7 @@ class WalletController extends Controller
             'gateway' => [
                 'driver' => (string) config('billing.driver', 'paystack'),
                 'live' => $this->gateways->isLive(),
+                'mobile_money' => $this->gateways->supportsMobileMoney(),
             ],
             'payments' => $client === null ? [] : $this->recentPayments($client),
             'invoices' => $client === null ? [] : $this->recentInvoices($client),

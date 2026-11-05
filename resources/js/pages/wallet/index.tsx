@@ -6,6 +6,7 @@ import {
     ExternalLink,
     Lock,
     ReceiptText,
+    Smartphone,
     Sparkles,
     Wallet as WalletIcon,
     WalletCards,
@@ -57,7 +58,7 @@ type PageProps = {
     currency: string;
     packages: WalletPackage[];
     limits: { min: number; max: number };
-    gateway: { driver: string; live: boolean };
+    gateway: { driver: string; live: boolean; mobile_money: boolean };
     payments: WalletPaymentRow[];
     invoices: WalletInvoiceRow[];
     can: { checkout: boolean; manual_credit: boolean };
@@ -111,6 +112,13 @@ export default function WalletIndex({
                 onFinish: () => setStarting(null),
             },
         );
+    };
+
+    const startMobileMoney = (packageKey: string): void => {
+        router.get(urls.wallet.mobileMoney.create, {
+            package: packageKey,
+            client_id: client?.id ?? null,
+        });
     };
 
     const creditManually = (event: FormEvent<HTMLFormElement>): void => {
@@ -219,8 +227,9 @@ export default function WalletIndex({
                             </CardTitle>
                             <CardDescription>
                                 Pick a package and pay on the gateway&apos;s
-                                secure checkout page. Credit lands once the
-                                charge is confirmed
+                                secure checkout page, or have us prompt your
+                                mobile money wallet right here. Credit lands
+                                once the charge is confirmed
                                 {limits.min > 0
                                     ? ` · minimum ${money(limits.min, currency)}`
                                     : ''}
@@ -246,7 +255,11 @@ export default function WalletIndex({
                                                 starting !== null
                                             }
                                             starting={starting === pkg.key}
+                                            mobileMoney={gateway.mobile_money}
                                             onSelect={startCheckout}
+                                            onSelectMobileMoney={
+                                                startMobileMoney
+                                            }
                                         />
                                     ))}
                                 </div>
@@ -627,13 +640,17 @@ function PackageCard({
     currency,
     disabled,
     starting,
+    mobileMoney,
     onSelect,
+    onSelectMobileMoney,
 }: {
     pkg: WalletPackage;
     currency: string;
     disabled: boolean;
     starting: boolean;
+    mobileMoney: boolean;
     onSelect: (key: string) => void;
+    onSelectMobileMoney: (key: string) => void;
 }) {
     return (
         <div
@@ -670,15 +687,28 @@ function PackageCard({
                 ))}
             </ul>
 
-            <Button
-                type="button"
-                className="mt-auto"
-                disabled={disabled}
-                onClick={() => onSelect(pkg.key)}
-            >
-                <ExternalLink className="size-4" />
-                {starting ? 'Opening checkout…' : 'Pay with card'}
-            </Button>
+            <div className="mt-auto grid gap-2">
+                <Button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onSelect(pkg.key)}
+                >
+                    <ExternalLink className="size-4" />
+                    {starting ? 'Opening checkout…' : 'Pay now'}
+                </Button>
+
+                {mobileMoney && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={disabled}
+                        onClick={() => onSelectMobileMoney(pkg.key)}
+                    >
+                        <Smartphone className="size-4" />
+                        Mobile money
+                    </Button>
+                )}
+            </div>
         </div>
     );
 }

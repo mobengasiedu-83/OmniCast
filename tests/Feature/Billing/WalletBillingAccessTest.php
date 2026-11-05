@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Rate;
 use App\Models\RateCard;
 use App\Models\WalletTransaction;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function (): void {
@@ -24,6 +25,30 @@ it('shows a tenant its own wallet even when another client is asked for', functi
             ->component('wallet/index')
             ->where('client.id', $this->client->id)
             ->where('wallet.balance', 10),
+        );
+});
+
+it('shows the published package price list', function (): void {
+    $this->actingAs($this->user)
+        ->get(route('wallet.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('wallet/index')
+            ->has('packages', 4)
+            ->where('packages', fn (Collection $packages): bool => $packages
+                ->mapWithKeys(fn (array $package): array => [
+                    $package['key'] => [
+                        $package['price'],
+                        ...array_column($package['units'], 'quantity'),
+                    ],
+                ])
+                ->all() === [
+                    'starter' => [51.25, 1300, 136, 1025],
+                    'growth' => [243.75, 6050, 650, 4875],
+                    'business' => [2153.75, 55000, 5743, 43075],
+                    'enterprise' => [3990, 100000, 10640, 79800],
+                ])
+            ->where('packages.0.units.1.label', 'Voice minutes')
+            ->where('packages.0.units.1.formatted', '136'),
         );
 });
 

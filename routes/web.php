@@ -9,7 +9,9 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactDndController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailWebhookController;
+use App\Http\Controllers\MobileMoneyCheckoutController;
 use App\Http\Controllers\PaystackWebhookController;
+use App\Http\Controllers\PricingController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SenderIdController;
 use App\Http\Controllers\Settings\ClientSettingsController;
@@ -20,6 +22,8 @@ use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+Route::get('pricing', PricingController::class)->name('pricing');
 
 Route::get('stop-messages/{contact}', [ContactDndController::class, 'show'])
     ->middleware('signed')
@@ -130,10 +134,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('wallet/checkout/{payment}/cancel', [WalletCheckoutController::class, 'cancel'])
         ->name('wallet.checkout.cancel');
 
+    Route::get('wallet/mobile-money', [MobileMoneyCheckoutController::class, 'create'])
+        ->name('wallet.mobile-money.create');
+    Route::post('wallet/mobile-money', [MobileMoneyCheckoutController::class, 'store'])
+        ->name('wallet.mobile-money.store');
+    Route::get('wallet/mobile-money/{payment}', [MobileMoneyCheckoutController::class, 'show'])
+        ->name('wallet.mobile-money.show');
+    Route::post('wallet/mobile-money/{payment}/otp', [MobileMoneyCheckoutController::class, 'submitOtp'])
+        ->name('wallet.mobile-money.otp');
+    Route::post('wallet/mobile-money/{payment}/refresh', [MobileMoneyCheckoutController::class, 'refresh'])
+        ->name('wallet.mobile-money.refresh');
+
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/campaigns', [ReportController::class, 'campaigns'])->name('reports.campaigns');
+    Route::get('reports/contacts', [ReportController::class, 'contacts'])->name('reports.contacts');
     Route::get('reports/voice', [ReportController::class, 'voice'])->name('reports.voice');
     Route::get('reports/sms', [ReportController::class, 'sms'])->name('reports.sms');
     Route::get('reports/email', [ReportController::class, 'email'])->name('reports.email');
+
+    Route::get('reports/exports', [ReportController::class, 'exportHistory'])->name('reports.exports.index');
+    Route::post('reports/exports', [ReportController::class, 'storeExport'])->name('reports.exports.store');
+    Route::get('reports/exports/{export}/download', [ReportController::class, 'downloadExport'])
+        ->name('reports.exports.download');
 });
 
 require __DIR__.'/admin.php';

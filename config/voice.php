@@ -21,7 +21,6 @@ return [
     'broadcast' => [
         'enabled' => filter_var(env('VOICE_BROADCAST_ENABLED', false), FILTER_VALIDATE_BOOL),
         'channels' => (int) env('VOICE_BROADCAST_GLOBAL_CHANNELS', 0),
-        'cps' => (int) env('VOICE_BROADCAST_GLOBAL_CPS', 0),
         'media_mode' => env('VOICE_BROADCAST_MEDIA_MODE', 'pbx'),
         'media_base_url' => env('VOICE_BROADCAST_MEDIA_BASE_URL'),
     ],

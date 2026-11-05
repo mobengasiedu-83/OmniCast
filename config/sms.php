@@ -19,7 +19,6 @@ return [
 
     'broadcast' => [
         'enabled' => filter_var(env('SMS_BROADCAST_ENABLED', false), FILTER_VALIDATE_BOOL),
-        'cps' => (int) env('SMS_BROADCAST_GLOBAL_CPS', 0),
     ],
 
     /*

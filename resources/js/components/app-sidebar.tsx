@@ -1,6 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Banknote,
+    ChartLine,
+    ClipboardCheck,
+    CreditCard,
+    Download,
+    FileText,
     Fingerprint,
+    Gauge,
     KeyRound,
     LayoutDashboard,
     Mail,
@@ -8,16 +15,14 @@ import {
     Megaphone,
     MessageSquareText,
     MonitorSmartphone,
-    FileText,
-    ClipboardCheck,
-    CreditCard,
-    ReceiptText,
-    ScrollText,
-    Settings,
-    ShieldCheck,
     PackagePlus,
     Layers3,
     PhoneCall,
+    ReceiptText,
+    ScrollText,
+    ServerCog,
+    Settings,
+    ShieldCheck,
     Tags,
     UserRoundCog,
     Users,
@@ -130,6 +135,57 @@ const identityNavItems: NavItem[] = [
     },
 ];
 
+const operationsNavItems: NavItem[] = [
+    {
+        title: 'Delivery queues',
+        href: urls.admin.queues.index,
+        icon: Gauge,
+    },
+];
+
+/** The tenant's own analytics screens. */
+const reportsNavItems: NavItem[] = [
+    {
+        title: 'Reports',
+        href: urls.reports.index,
+        icon: ChartLine,
+    },
+    {
+        title: 'Report exports',
+        href: urls.reports.exports.index,
+        icon: Download,
+    },
+];
+
+/** The platform team's cross-client analytics screens. */
+const platformReportsNavItems: NavItem[] = [
+    {
+        title: 'Executive report',
+        href: urls.admin.reports.index,
+        icon: ChartLine,
+    },
+    {
+        title: 'Client performance',
+        href: urls.admin.reports.clients,
+        icon: Users,
+    },
+    {
+        title: 'Revenue',
+        href: urls.admin.reports.revenue,
+        icon: Banknote,
+    },
+    {
+        title: 'Provider performance',
+        href: urls.admin.reports.providers,
+        icon: ServerCog,
+    },
+    {
+        title: 'Report exports',
+        href: urls.admin.reports.exports.index,
+        icon: Download,
+    },
+];
+
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
 
@@ -143,6 +199,8 @@ export function AppSidebar() {
     const canViewWallet = permissions.includes('wallet.view');
     const canManageWallet = isPlatformUser && permissions.includes('wallet.manage');
     const canViewRates = isPlatformUser && permissions.includes('rates.view');
+    const canViewQueues = isPlatformUser && permissions.includes('queues.view');
+    const canViewReports = permissions.includes('reports.view');
     const isClientUser = !isPlatformUser && (auth?.clientId ?? null) !== null;
 
     const billingNavItems: NavItem[] = [
@@ -271,6 +329,18 @@ export function AppSidebar() {
                 )}
                 {isPlatformUser && canManageUsers && (
                     <NavMain items={identityNavItems} label="Users" />
+                )}
+                {canViewQueues && (
+                    <NavMain items={operationsNavItems} label="Operations" />
+                )}
+                {canViewReports && !isPlatformUser && (
+                    <NavMain items={reportsNavItems} label="Reports" />
+                )}
+                {canViewReports && isPlatformUser && (
+                    <NavMain
+                        items={platformReportsNavItems}
+                        label="Reports"
+                    />
                 )}
                 <NavMain items={accountNavItems} label="Account" />
             </SidebarContent>

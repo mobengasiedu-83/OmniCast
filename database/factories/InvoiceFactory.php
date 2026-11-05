@@ -21,7 +21,7 @@ class InvoiceFactory extends Factory
      */
     public function definition(): array
     {
-        $amount = 51.25;
+        $amount = 243.75;
 
         return [
             'client_id' => Client::factory(),

@@ -17,6 +17,7 @@ use App\Models\ContactSuppression;
 use App\Models\SenderId;
 use App\Services\CampaignDispatcher;
 use App\Services\CampaignService;
+use App\Services\Delivery\QueueTopology;
 use App\Services\Sms\OutboundSms;
 use App\Services\Sms\SmsDispatchResult;
 use Illuminate\Support\Facades\Queue;
@@ -273,7 +274,7 @@ it('finishes the campaign through the dispatch job without requeueing it', funct
     $this->service->submit($campaign, $this->user);
     $this->service->launch($campaign);
 
-    (new DispatchCampaignJob($campaign->id))->handle(app(CampaignDispatcher::class));
+    (new DispatchCampaignJob($campaign->id))->handle(app(CampaignDispatcher::class), app(QueueTopology::class));
 
     expect($campaign->refresh()->status)->toBe(CampaignStatus::Completed);
 
@@ -286,7 +287,7 @@ it('leaves a campaign that is not ready for dispatch untouched', function (): vo
     $campaign = ($this->draft)();
     $campaign->forceFill(['status' => CampaignStatus::Paused])->save();
 
-    (new DispatchCampaignJob($campaign->id))->handle(app(CampaignDispatcher::class));
+    (new DispatchCampaignJob($campaign->id))->handle(app(CampaignDispatcher::class), app(QueueTopology::class));
 
     expect($campaign->refresh()->status)->toBe(CampaignStatus::Paused)
         ->and(CampaignContact::query()->where('campaign_id', $campaign->id)->count())->toBe(0);

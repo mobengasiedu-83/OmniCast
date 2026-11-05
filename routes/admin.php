@@ -9,7 +9,9 @@ use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\LoginAuditController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\QueueController;
 use App\Http\Controllers\Admin\RateCardController;
+use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -65,6 +67,10 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::put('resource-requests/{resourceRequest}', [SettingsController::class, 'reviewRequest'])->name('resource-requests.review');
         });
 
+        Route::middleware('can:queues.view')->group(function (): void {
+            Route::get('queues', [QueueController::class, 'index'])->name('queues.index');
+        });
+
         Route::middleware('can:clients.manage')->group(function (): void {
             Route::get('clients', [ClientController::class, 'index'])->name('clients.index');
             Route::get('clients/{client}', [ClientController::class, 'show'])->name('clients.show');
@@ -88,6 +94,22 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::post('payments/{payment}/verify', [PaymentController::class, 'verify'])->name('payments.verify');
 
             Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        });
+
+        Route::middleware('can:reports.view')->group(function (): void {
+            Route::get('reports', [AdminReportController::class, 'index'])->name('reports.index');
+            Route::get('reports/clients', [AdminReportController::class, 'clients'])->name('reports.clients');
+            Route::get('reports/voice', [AdminReportController::class, 'voice'])->name('reports.voice');
+            Route::get('reports/sms', [AdminReportController::class, 'sms'])->name('reports.sms');
+            Route::get('reports/email', [AdminReportController::class, 'email'])->name('reports.email');
+            Route::get('reports/revenue', [AdminReportController::class, 'revenue'])->name('reports.revenue');
+            Route::get('reports/providers', [AdminReportController::class, 'providers'])->name('reports.providers');
+            Route::get('reports/exports', [AdminReportController::class, 'exportHistory'])->name('reports.exports.index');
+            Route::get('reports/exports/{export}/download', [AdminReportController::class, 'downloadExport'])
+                ->name('reports.exports.download');
+            Route::post('reports/exports', [AdminReportController::class, 'storeExport'])
+                ->middleware('can:reports.export')
+                ->name('reports.exports.store');
         });
 
         Route::middleware('can:rates.view')->group(function (): void {

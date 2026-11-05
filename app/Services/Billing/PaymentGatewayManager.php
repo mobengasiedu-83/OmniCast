@@ -44,6 +44,15 @@ class PaymentGatewayManager
     }
 
     /**
+     * Whether the client can be prompted for a mobile money wallet on our own
+     * form instead of being sent to the gateway's hosted checkout.
+     */
+    public function supportsMobileMoney(): bool
+    {
+        return $this->driver()->supportsMobileMoney();
+    }
+
+    /**
      * Paystack needs a secret key before it can register a transaction.
      */
     protected function paystack(): PaymentGateway

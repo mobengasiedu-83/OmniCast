@@ -111,6 +111,38 @@ class Payment extends Model
     }
 
     /**
+     * The mobile money charge this payment is running, when it is one.
+     *
+     * @return array{phone?: string, provider?: string, provider_label?: string, status?: string, message?: string, requires_otp?: bool, updated_at?: string, checked_at?: string}|null
+     */
+    public function mobileMoney(): ?array
+    {
+        $mobileMoney = $this->metadata['mobile_money'] ?? null;
+
+        return is_array($mobileMoney) ? $mobileMoney : null;
+    }
+
+    /**
+     * Whether the payment is a charge prompted on a mobile money wallet.
+     */
+    public function isMobileMoney(): bool
+    {
+        return $this->mobileMoney() !== null;
+    }
+
+    /**
+     * The wallet number the charge was sent to.
+     */
+    public function mobileMoneyNumber(): ?string
+    {
+        $mobileMoney = $this->mobileMoney();
+
+        $phone = $mobileMoney['phone'] ?? null;
+
+        return is_string($phone) ? $phone : null;
+    }
+
+    /**
      * The catalogue entry this payment was bought from, when it was a package.
      *
      * @return array{name: string, price: float, popular: bool, tagline: string, units: array<string, int>}|null

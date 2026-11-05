@@ -80,12 +80,29 @@ export const urls = {
         checkoutCallback: path('/wallet/checkout/callback'),
         cancelCheckout: (payment: number) =>
             path(`/wallet/checkout/${payment}/cancel`),
+        mobileMoney: {
+            create: path('/wallet/mobile-money'),
+            store: path('/wallet/mobile-money'),
+            show: (payment: number) => path(`/wallet/mobile-money/${payment}`),
+            otp: (payment: number) =>
+                path(`/wallet/mobile-money/${payment}/otp`),
+            refresh: (payment: number) =>
+                path(`/wallet/mobile-money/${payment}/refresh`),
+        },
     },
     reports: {
         index: path('/reports'),
+        campaigns: path('/reports/campaigns'),
+        contacts: path('/reports/contacts'),
         voice: path('/reports/voice'),
         sms: path('/reports/sms'),
         email: path('/reports/email'),
+        exports: {
+            index: path('/reports/exports'),
+            store: path('/reports/exports'),
+            download: (exportId: number) =>
+                path(`/reports/exports/${exportId}/download`),
+        },
     },
     admin: {
         settings: {
@@ -157,6 +174,24 @@ export const urls = {
         },
         loginAudit: {
             index: path('/admin/login-audit'),
+        },
+        queues: {
+            index: path('/admin/queues'),
+        },
+        reports: {
+            index: path('/admin/reports'),
+            clients: path('/admin/reports/clients'),
+            voice: path('/admin/reports/voice'),
+            sms: path('/admin/reports/sms'),
+            email: path('/admin/reports/email'),
+            revenue: path('/admin/reports/revenue'),
+            providers: path('/admin/reports/providers'),
+            exports: {
+                index: path('/admin/reports/exports'),
+                store: path('/admin/reports/exports'),
+                download: (exportId: number) =>
+                    path(`/admin/reports/exports/${exportId}/download`),
+            },
         },
     },
     account: {

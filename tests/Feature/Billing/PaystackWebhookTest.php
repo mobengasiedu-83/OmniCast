@@ -46,7 +46,7 @@ it('settles the top up a signed charge.success names', function (): void {
         'event' => 'charge.success',
         'data' => [
             'reference' => $this->payment->reference,
-            'amount' => 5125,
+            'amount' => 24375,
             'currency' => 'GHS',
             'channel' => 'mobile_money',
             'status' => 'success',
@@ -102,6 +102,25 @@ it('rejects every webhook when no shared secret is configured', function (): voi
         ->assertForbidden();
 
     expect($this->payment->refresh()->status)->toBe(PaymentStatus::Pending);
+});
+
+it('verifies the signature with the secret key when no webhook secret is set', function (): void {
+    config()->set('billing.paystack.webhook_secret', '');
+    config()->set('billing.paystack.secret_key', 'sk_test_signing_key');
+
+    ($this->postEvent)([
+        'event' => 'charge.success',
+        'data' => [
+            'reference' => $this->payment->reference,
+            'amount' => 24375,
+            'currency' => 'GHS',
+            'status' => 'success',
+        ],
+    ], secret: 'sk_test_signing_key')
+        ->assertOk()
+        ->assertJson(['status' => 'paid', 'reference' => $this->payment->reference]);
+
+    expect($this->payment->refresh()->status)->toBe(PaymentStatus::Paid);
 });
 
 it('fails the payment when the gateway reports charge.failed', function (): void {

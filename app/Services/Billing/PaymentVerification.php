@@ -10,6 +10,16 @@ use Carbon\CarbonInterface;
 class PaymentVerification
 {
     /**
+     * The gateway statuses that mean a charge is still on its way.
+     *
+     * @var list<string>
+     */
+    private const IN_FLIGHT = [
+        'pending', 'ongoing', 'processing', 'queued',
+        'pay_offline', 'send_otp', 'send_phone', 'send_birthday', 'send_address', 'attention',
+    ];
+
+    /**
      * @param  array<string, mixed>  $raw
      */
     public function __construct(
@@ -21,6 +31,7 @@ class PaymentVerification
         public readonly ?CarbonInterface $paidAt = null,
         public readonly ?string $failureReason = null,
         public readonly array $raw = [],
+        public readonly ?string $status = null,
     ) {}
 
     /**
@@ -29,6 +40,14 @@ class PaymentVerification
     public function covers(float $amount): bool
     {
         return round($this->amount, 2) + 0.001 >= round($amount, 2);
+    }
+
+    /**
+     * Whether the wallet still has to answer, rather than having refused.
+     */
+    public function isPending(): bool
+    {
+        return in_array($this->status, self::IN_FLIGHT, true);
     }
 
     /**

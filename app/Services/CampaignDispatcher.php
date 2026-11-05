@@ -13,6 +13,7 @@ use App\Enums\ReservationStatus;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
+use App\Services\Delivery\DeliveryPacer;
 use App\Services\Email\OutboundEmail;
 use App\Services\Sms\OutboundSms;
 use App\Services\Voice\VoiceCall as VoiceCallData;
@@ -37,6 +38,7 @@ class CampaignDispatcher
         protected VoiceCallTracker $tracker,
         protected SmsTracker $smsTracker,
         protected EmailTracker $emailTracker,
+        protected DeliveryPacer $pacer,
     ) {}
 
     /**
@@ -157,6 +159,8 @@ class CampaignDispatcher
             if (! ($channelDecisions[$channel->value]['eligible'] ?? false)) {
                 continue;
             }
+
+            $this->pacer->await($channel, $campaign->client);
 
             $delivered = match ($channel) {
                 Channel::Sms => $this->sendSms($campaign, $row, $contact, $smsCostPerRecipient),

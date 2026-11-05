@@ -18,7 +18,7 @@ class PackageCatalogue
      */
     private const SERVICES = [
         'sms' => 'SMS',
-        'voice' => 'Voice Calls',
+        'voice' => 'Voice minutes',
         'email' => 'Emails',
     ];
 

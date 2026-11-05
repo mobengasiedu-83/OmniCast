@@ -2,26 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\CampaignContactStatus;
-use App\Enums\CampaignStatus;
 use App\Enums\Channel;
 use App\Enums\Permission;
+use App\Enums\ReportType;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Models\Campaign;
-use App\Models\CampaignContact;
 use App\Models\EmailMessage;
+use App\Models\ReportExport;
 use App\Models\SmsMessage;
 use App\Models\User;
 use App\Models\VoiceCall;
 use App\Services\EmailMessageReport;
+use App\Services\Reporting\CampaignPerformanceReport;
+use App\Services\Reporting\ContactOutcomeReport;
+use App\Services\Reporting\OverviewReport;
+use App\Services\Reporting\ReportExportManager;
+use App\Services\Reporting\ReportPeriod;
+use App\Services\Reporting\ReportScope;
 use App\Services\SmsMessageReport;
 use App\Services\VoiceCallReport;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
@@ -30,109 +38,89 @@ class ReportController extends Controller
     /**
      * Show delivery and spend reporting for a date range.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, OverviewReport $overview): Response
     {
         abort_unless($request->user()->can(Permission::ViewReports->value), 403);
 
         /** @var User $user */
         $user = $request->user();
 
-        $to = Carbon::parse($request->string('to')->toString() ?: null)->endOfDay();
-        $from = Carbon::parse($request->string('from')->toString() ?: null)->startOfDay();
+        $period = ReportPeriod::fromRequest($request, (int) config('reports.default_window_days', 30));
         $channel = $request->string('channel')->toString();
-
-        $campaigns = Campaign::query()
-            ->forUser($user)
-            ->whereBetween('created_at', [$from, $to])
-            ->when($channel !== '', fn ($query) => $query->where('channel', $channel));
-
-        $recipients = CampaignContact::query()
-            ->whereHas('campaign', fn ($query) => $query
-                ->forUser($user)
-                ->whereBetween('created_at', [$from, $to])
-                ->when($channel !== '', fn ($query) => $query->where('channel', $channel)));
-
-        $statusTotals = (clone $recipients)
-            ->selectRaw('status, count(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        $delivered = (int) $statusTotals->get(CampaignContactStatus::Delivered->value, 0)
-            + (int) $statusTotals->get(CampaignContactStatus::Sent->value, 0);
-        $failed = (int) $statusTotals->get(CampaignContactStatus::Failed->value, 0);
-        $skipped = (int) $statusTotals->get(CampaignContactStatus::Skipped->value, 0);
-        $attempted = $delivered + $failed + $skipped;
 
         return Inertia::render('reports/index', [
             'filters' => [
-                'from' => $from->toDateString(),
-                'to' => $to->toDateString(),
+                ...$period->toArray(),
                 'channel' => $channel,
             ],
-            'summary' => [
-                'campaigns' => (clone $campaigns)->count(),
-                'completed_campaigns' => (clone $campaigns)->where('status', CampaignStatus::Completed->value)->count(),
-                'recipients' => (int) $statusTotals->sum(),
-                'delivered' => $delivered,
-                'failed' => $failed,
-                'skipped' => $skipped,
-                'spend' => round((float) (clone $campaigns)->sum('actual_cost'), 2),
-                'reserved' => round((float) (clone $campaigns)->sum('reserved_amount'), 2),
-                'delivery_rate' => $attempted > 0 ? round($delivered / $attempted * 100, 1) : null,
+            'period' => [
+                'label' => $period->label(),
+                'days' => $period->days(),
             ],
-            'byChannel' => collect(Channel::cases())
-                ->map(function (Channel $channelCase) use ($user, $from, $to): array {
-                    $query = Campaign::query()
-                        ->forUser($user)
-                        ->where('channel', $channelCase->value)
-                        ->whereBetween('created_at', [$from, $to]);
-
-                    return [
-                        'channel' => $channelCase->value,
-                        'label' => $channelCase->label(),
-                        'campaigns' => (clone $query)->count(),
-                        'recipients' => (int) (clone $query)->sum('estimated_recipients'),
-                        'spend' => round((float) (clone $query)->sum('actual_cost'), 2),
-                    ];
-                })
-                ->all(),
-            'monthly' => collect(range(5, 0))
-                ->map(function (int $monthsAgo) use ($user): array {
-                    $month = now()->subMonths($monthsAgo);
-                    $query = Campaign::query()
-                        ->forUser($user)
-                        ->whereYear('created_at', $month->year)
-                        ->whereMonth('created_at', $month->month);
-
-                    return [
-                        'month' => $month->format('Y-m'),
-                        'label' => $month->format('M Y'),
-                        'campaigns' => (clone $query)->count(),
-                        'spend' => round((float) (clone $query)->sum('actual_cost'), 2),
-                    ];
-                })
-                ->all(),
-            'topCampaigns' => (clone $campaigns)
-                ->orderByDesc('actual_cost')
-                ->limit(5)
-                ->get(['id', 'reference', 'name', 'channel', 'actual_cost', 'estimated_recipients'])
-                ->map(fn (Campaign $campaign): array => [
-                    'id' => $campaign->id,
-                    'reference' => $campaign->reference,
-                    'name' => $campaign->name,
-                    'channel_label' => $campaign->channel->label(),
-                    'recipients' => $campaign->estimated_recipients,
-                    'spend' => (float) $campaign->actual_cost,
-                ])
-                ->all(),
-            'channels' => array_map(
-                fn (Channel $channelCase): array => ['value' => $channelCase->value, 'label' => $channelCase->label()],
-                Channel::cases(),
-            ),
+            ...$overview->for(ReportScope::forUser($user), $period, $channel),
+            'channels' => $this->channelOptions(),
             'can' => [
                 'export' => Gate::allows(Permission::ExportReports->value),
             ],
-            'clients' => $this->selectableClients($request),
+        ]);
+    }
+
+    /**
+     * Show one row per campaign with the outcomes its audience produced.
+     */
+    public function campaigns(Request $request, CampaignPerformanceReport $reports): Response
+    {
+        abort_unless($request->user()->can(Permission::ViewReports->value), 403);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $period = ReportPeriod::fromRequest($request, (int) config('reports.default_window_days', 30));
+        $filters = [
+            'campaign' => $request->integer('campaign'),
+            'channel' => $request->string('channel')->toString(),
+        ];
+
+        return Inertia::render('reports/campaigns', [
+            'filters' => [
+                ...$period->toArray(),
+                ...$filters,
+            ],
+            'period' => [
+                'label' => $period->label(),
+                'days' => $period->days(),
+            ],
+            'report' => $reports->for(ReportScope::forUser($user), $period, $filters),
+            'channels' => $this->channelOptions(),
+            'campaigns' => $this->campaignOptions($user),
+            'can' => [
+                'export' => Gate::allows(Permission::ExportReports->value),
+            ],
+        ]);
+    }
+
+    /**
+     * Show how the audience answered the campaigns that reached it.
+     */
+    public function contacts(Request $request, ContactOutcomeReport $reports): Response
+    {
+        abort_unless($request->user()->can(Permission::ViewReports->value), 403);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $period = ReportPeriod::fromRequest($request, (int) config('reports.default_window_days', 30));
+
+        return Inertia::render('reports/contacts', [
+            'filters' => $period->toArray(),
+            'period' => [
+                'label' => $period->label(),
+                'days' => $period->days(),
+            ],
+            'report' => $reports->for(ReportScope::forUser($user), $period),
+            'can' => [
+                'export' => Gate::allows(Permission::ExportReports->value),
+            ],
         ]);
     }
 
@@ -272,5 +260,104 @@ class ReportController extends Controller
                 ->all(),
             'clients' => $this->selectableClients($request),
         ]);
+    }
+
+    /**
+     * Show the exports the requester (or the platform) generated.
+     */
+    public function exportHistory(Request $request, ReportExportManager $manager): Response
+    {
+        abort_unless($request->user()->can(Permission::ViewReports->value), 403);
+
+        $period = ReportPeriod::fromRequest($request, (int) config('reports.default_window_days', 30));
+
+        return Inertia::render('reports/exports', [
+            'exports' => $manager->listing($request->user()),
+            'reports' => $manager->options($request->user()),
+            'report' => $request->string('report')->toString(),
+            'filters' => $period->toArray(),
+            'can' => [
+                'export' => Gate::allows(Permission::ExportReports->value),
+            ],
+        ]);
+    }
+
+    /**
+     * Queue an export of the current report window.
+     */
+    public function storeExport(Request $request, ReportExportManager $manager): RedirectResponse
+    {
+        abort_unless($request->user()->can(Permission::ExportReports->value), 403);
+
+        $data = $request->validate([
+            'report' => ['required', Rule::enum(ReportType::class)],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'campaign' => ['nullable', 'integer'],
+            'channel' => ['nullable', 'string', 'max:32'],
+            'client_id' => ['nullable', 'integer', 'exists:clients,id'],
+        ]);
+
+        $type = ReportType::from($data['report']);
+        abort_if($type->isPlatformOnly() && ! $request->user()->isPlatformUser(), 403);
+
+        $period = ReportPeriod::between(
+            $data['from'] ?? now()->subDays(29)->toDateString(),
+            $data['to'] ?? now()->toDateString(),
+        );
+
+        $manager->create($request->user(), $type, $period, $data);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'The export is being generated. It will appear here when it is ready.',
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Download a generated report file.
+     */
+    public function downloadExport(Request $request, ReportExport $export, ReportExportManager $manager): StreamedResponse
+    {
+        abort_unless($request->user()->can(Permission::ViewReports->value), 403);
+        abort_unless($manager->canAccess($request->user(), $export), 404);
+
+        return $manager->download($export);
+    }
+
+    /**
+     * The channel options a filter offers.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    protected function channelOptions(): array
+    {
+        return array_map(
+            fn (Channel $channel): array => ['value' => $channel->value, 'label' => $channel->label()],
+            Channel::cases(),
+        );
+    }
+
+    /**
+     * The campaigns the requester may narrow a report to.
+     *
+     * @return list<array{id: int, name: string, reference: string}>
+     */
+    protected function campaignOptions(User $user): array
+    {
+        return Campaign::query()
+            ->forUser($user)
+            ->latest('id')
+            ->limit(100)
+            ->get(['id', 'reference', 'name'])
+            ->map(fn (Campaign $campaign): array => [
+                'id' => $campaign->id,
+                'name' => $campaign->name,
+                'reference' => $campaign->reference,
+            ])
+            ->values()
+            ->all();
     }
 }

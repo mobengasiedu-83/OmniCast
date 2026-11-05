@@ -573,6 +573,32 @@ export type WalletInvoiceRow = {
     issued_at: string | null;
 };
 
+export type MobileMoneyProviderOption = {
+    value: string;
+    label: string;
+    prefixes: string[];
+};
+
+export type WalletMobileMoneyPayment = {
+    id: number;
+    reference: string;
+    description: string;
+    status: string;
+    status_label: string;
+    amount: number;
+    currency: string;
+    phone: string | null;
+    provider: string | null;
+    provider_label: string | null;
+    charge_status: string | null;
+    message: string | null;
+    requires_otp: boolean;
+    awaits_approval: boolean;
+    is_open: boolean;
+    failure_reason: string | null;
+    created_at: string | null;
+};
+
 export type PaymentRow = {
     id: number;
     reference: string;
@@ -853,5 +879,315 @@ export type TeamInvitationRow = {
     is_pending: boolean;
     expires_at: string | null;
     created_at: string | null;
+};
+
+export type DeliveryQueueRow = {
+    name: string;
+    purpose: string;
+    channels: string[];
+    supervisor: string | null;
+    cps: number;
+    tries: number;
+    backoff: string;
+    timeout: string;
+    queued: number;
+    failed: number;
+};
+
+export type DeliveryChannelRow = {
+    value: string;
+    label: string;
+    queue: string;
+    cps: number;
+};
+
+/*
+|--------------------------------------------------------------------------
+| Reporting
+|--------------------------------------------------------------------------
+*/
+
+export type ReportOption = {
+    value: string;
+    label: string;
+};
+
+export type ReportPeriod = {
+    label: string;
+    days: number;
+};
+
+export type ReportCampaignOption = {
+    id: number;
+    name: string;
+    reference: string;
+};
+
+export type CampaignPerformanceRow = {
+    id: number;
+    reference: string;
+    name: string;
+    channel: string;
+    channel_label: string;
+    status: string;
+    status_label: string;
+    recipients: number;
+    delivered: number;
+    failed: number;
+    skipped: number;
+    pending: number;
+    spend: number;
+    delivery_rate: number | null;
+    created_at: string | null;
+    launched_at: string | null;
+    completed_at: string | null;
+};
+
+export type CampaignPerformanceTotals = {
+    campaigns: number;
+    recipients: number;
+    delivered: number;
+    failed: number;
+    skipped: number;
+    pending: number;
+    spend: number;
+    delivery_rate: number | null;
+};
+
+export type CampaignPerformanceReport = {
+    rows: CampaignPerformanceRow[];
+    totals: CampaignPerformanceTotals;
+};
+
+export type ContactOutcomeReport = {
+    totals: {
+        contacts: number;
+        reachable: number;
+        dnd: number;
+        suppressed: number;
+        reached: number;
+        delivered: number;
+        failed: number;
+        skipped: number;
+        pending: number;
+        opt_outs: number;
+    };
+    byStatus: Array<{ status: string; label: string; total: number }>;
+    topContacts: Array<{
+        contact_id: number | null;
+        name: string;
+        phone: string | null;
+        email: string | null;
+        recipients: number;
+        failed: number;
+    }>;
+    recentOptOuts: Array<{
+        id: number;
+        name: string;
+        phone: string | null;
+        email: string | null;
+        dnd_at: string | null;
+    }>;
+};
+
+export type ReportExportRow = {
+    id: number;
+    report: string;
+    report_label: string;
+    status: string;
+    status_label: string;
+    source: string;
+    period: string;
+    rows: number | null;
+    size: number | null;
+    file_name: string | null;
+    downloadable: boolean;
+    expired: boolean;
+    error_message: string | null;
+    client: string | null;
+    requester: string | null;
+    created_at: string | null;
+};
+
+export type ExecutiveSummary = ReportSummary & {
+    clients: number;
+    active_clients: number;
+    new_clients: number;
+    pending: number;
+    revenue: number;
+    payments: number;
+    wallet_balance: number;
+    wallet_reserved: number;
+};
+
+export type ReportTrendPoint = {
+    date: string;
+    recipients: number;
+    delivered: number;
+    failed: number;
+    spend: number;
+};
+
+export type TopClientRow = {
+    client_id: number;
+    name: string;
+    campaigns: number;
+    recipients: number;
+    spend: number;
+};
+
+export type ClientPerformanceRow = {
+    id: number;
+    name: string;
+    status: string;
+    status_label: string;
+    campaigns: number;
+    recipients: number;
+    delivered: number;
+    failed: number;
+    skipped: number;
+    delivery_rate: number | null;
+    spend: number;
+    revenue: number;
+    balance: number;
+    reserved: number;
+};
+
+export type ClientPerformanceTotals = {
+    clients: number;
+    campaigns: number;
+    recipients: number;
+    delivered: number;
+    failed: number;
+    spend: number;
+    revenue: number;
+    balance: number;
+    reserved: number;
+};
+
+export type RevenueStatusRow = {
+    status: string;
+    label: string;
+    total: number;
+    amount: number;
+};
+
+export type WalletEntryRow = {
+    type: string;
+    label: string;
+    entries: number;
+    amount: number;
+};
+
+export type RevenueMonthlyPoint = {
+    month: string;
+    label: string;
+    revenue: number;
+    spend: number;
+};
+
+export type ProviderRow = {
+    provider: string;
+    total: number;
+    delivered: number;
+    failed: number;
+    pending: number;
+    delivery_rate: number | null;
+    spend: number;
+};
+
+export type ProviderChannelReport = {
+    label: string;
+    rows: ProviderRow[];
+    totals: {
+        total: number;
+        delivered: number;
+        failed: number;
+        spend: number;
+        delivery_rate: number | null;
+    };
+};
+
+export type LedgerReconciliation = {
+    period: string;
+    usage: { sms: number; voice: number; email: number; total: number };
+    campaign_cost: number;
+    ledger: number;
+    variance: number;
+    usage_variance: number;
+    tolerance: number;
+    balanced: boolean;
+    campaigns: Array<{
+        id: number;
+        reference: string;
+        name: string;
+        claimed: number;
+        debited: number;
+        variance: number;
+    }>;
+};
+
+export type RevenueTotals = {
+    revenue: number;
+    payments: number;
+    pending_payments: number;
+    failed_payments: number;
+    invoiced: number;
+    invoices: number;
+    spend: number;
+    balance: number;
+    reserved: number;
+};
+
+export type RevenueProviderRow = {
+    provider: string;
+    payments: number;
+    revenue: number;
+};
+
+export type RevenueReport = {
+    totals: RevenueTotals;
+    paymentStatuses: RevenueStatusRow[];
+    invoiceStatuses: RevenueStatusRow[];
+    wallet: WalletEntryRow[];
+    byProvider: RevenueProviderRow[];
+    monthly: RevenueMonthlyPoint[];
+};
+
+export type ChannelDeliveryTotals = {
+    total: number;
+    delivered: number;
+    failed: number;
+    pending: number;
+    delivery_rate: number | null;
+    spend: number;
+    clients: number;
+};
+
+export type ChannelDeliveryPoint = {
+    date: string;
+    label: string;
+    total: number;
+    delivered: number;
+    failed: number;
+    spend: number;
+};
+
+export type ChannelDeliveryClientRow = {
+    client_id: number;
+    name: string;
+    total: number;
+    delivered: number;
+    failed: number;
+    pending: number;
+    delivery_rate: number | null;
+    spend: number;
+};
+
+export type ChannelDeliveryReport = {
+    channel: { value: string; label: string; unit: string };
+    totals: ChannelDeliveryTotals;
+    daily: ChannelDeliveryPoint[];
+    byClient: ChannelDeliveryClientRow[];
 };
 

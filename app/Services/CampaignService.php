@@ -9,6 +9,7 @@ use App\Jobs\DispatchCampaignJob;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\User;
+use App\Services\Delivery\QueueTopology;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -26,6 +27,7 @@ class CampaignService
         protected ClientQuotaService $quota,
         protected CampaignVersionRecorder $versions,
         protected CampaignReadiness $readiness,
+        protected QueueTopology $queues,
     ) {}
 
     /**
@@ -282,7 +284,8 @@ class CampaignService
             return $campaign;
         });
 
-        $job = DispatchCampaignJob::dispatch($campaign->id);
+        $job = DispatchCampaignJob::dispatch($campaign->id)
+            ->onQueue($this->queues->queueForCampaign($campaign));
 
         if ($campaign->status === CampaignStatus::Scheduled) {
             $job->delay($campaign->scheduled_at ?? now());

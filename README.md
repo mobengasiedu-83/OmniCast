@@ -124,7 +124,7 @@ An SMS campaign submits one message per recipient through an `SmsGateway`. The d
 | --- | --- | --- |
 | `SMS_BROADCAST_DRIVER` | `log` | `log` writes to `storage/logs/sms.log`, `txtconnect` uses the TxtConnect API, `generic_json` posts to any JSON aggregator, `kannel` posts to a Kannel bearerbox that holds the SMPP bind |
 | `SMS_BROADCAST_ENABLED` | `false` | Live drivers refuse every message while this is off; `log` always submits |
-| `SMS_BROADCAST_GLOBAL_CPS` | `0` | Reserved for the Phase 12 throttle; read but not enforced yet |
+| `SMS_BROADCAST_GLOBAL_CPS` | `0` | Platform-wide submissions-per-second ceiling for SMS. A client override in `rate_limits.sms_cps` wins; `0` means unthrottled |
 | `SMS_TOKEN` / `SMS_ENDPOINT` | — / TxtConnect dev endpoint | TxtConnect bearer token and endpoint (shared with the signup OTP flow) |
 | `SMS_GENERIC_ENDPOINT` / `_TOKEN` / `_USERNAME` / `_PASSWORD` | — | Generic JSON aggregator: bearer token when set, otherwise HTTP basic |
 | `SMS_KANNEL_URL` / `_USERNAME` / `_PASSWORD` / `_DLR_MASK` | — / — / — / `31` | Kannel `sendsms` URL, credentials and receipt mask |
@@ -147,6 +147,36 @@ missing/incorrect signature and `422` for an unmapped status. A delivered receip
 recipient to `Delivered`; an undelivered, expired or rejected one reopens the campaign and re-queues
 the resend until `max_retries` is spent. Delivery reports are at `/reports/sms`, and each campaign
 shows its own message log and delivery rate.
+
+## Queues, scheduling and delivery pace (phase 12)
+
+Campaign work is handed to the queue rather than run inside the request. `config/queues.php` names the
+queues and their workers:
+
+| Queue | Carries |
+| --- | --- |
+| `campaigns` | the orchestration pass of a multi-channel campaign |
+| `sms` / `voice` / `email` | the per-recipient sends of a single-channel campaign |
+
+`QueueTopology` picks the queue from the campaign's channels, and a retry re-enters the same queue.
+`config/horizon.php` runs one supervisor per queue on the `redis` connection, so `.env.example` ships
+`QUEUE_CONNECTION=redis`. `composer run dev` starts `php artisan horizon`, `php artisan schedule:work`,
+the HTTP server and Vite together; a deployment keeps `php artisan horizon`, `php artisan schedule:run`
+(or `schedule:work`) and `php artisan queue:prune-failed --hours=<QUEUE_FAILED_PRUNE_HOURS>` running,
+and `/admin/queues` shows the depth of every queue, the failed count and the ceilings in force. A
+`database` queue still works, but then run `php artisan queue:work` — the Horizon supervisors have
+nothing to work.
+
+`DeliveryPacer` holds each channel to its submissions per second before every send. The ceiling is the
+client's `rate_limits.<channel>_cps` setting when present, otherwise the platform setting, otherwise
+`SMS_BROADCAST_GLOBAL_CPS` / `VOICE_BROADCAST_GLOBAL_CPS` / `EMAIL_BROADCAST_GLOBAL_CPS`; `0` means the
+channel is unthrottled.
+
+Campaigns scheduled for later are released by `php artisan campaigns:dispatch-scheduled` (every minute)
+and stalled ones are re-queued by `php artisan campaigns:sweep` (every five minutes, or after
+`CAMPAIGN_STALLED_AFTER_MINUTES` of silence). Both are registered on the scheduler, so a running
+`schedule:work` is the heartbeat of the delivery engine; the Horizon dashboard stays behind
+`/horizon` for platform users holding `queues.view`.
 
 ## Verification commands
 

@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Contracts\PaymentGateway;
+use App\Enums\MobileMoneyProvider;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Log;
 
@@ -11,7 +12,9 @@ use Illuminate\Support\Facades\Log;
  * the callback and the payment settles itself.
  *
  * `BILLING_DRIVER=log` keeps the whole funding flow (checkout record, ledger
- * credit, invoice) exercisable before a live Paystack key is issued.
+ * credit, invoice) exercisable before a live Paystack key is issued. A direct
+ * mobile money charge always answers "send_otp" and accepts any six digits, so
+ * the prompt and the code forms are exercisable too.
  */
 class LogPaymentGateway implements PaymentGateway
 {
@@ -59,6 +62,51 @@ class LogPaymentGateway implements PaymentGateway
             providerReference: $payment->reference,
             channel: 'log',
             paidAt: now(),
+            status: 'success',
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function supportsMobileMoney(): bool
+    {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function charge(PaymentIntent $intent, MobileMoneyNumber $number, MobileMoneyProvider $provider): MobileMoneyCharge
+    {
+        Log::channel('billing')->info('log.charge.started', [
+            'reference' => $intent->reference,
+            'amount' => $intent->amount,
+            'currency' => $intent->currency,
+            'phone' => $number->local,
+            'provider' => $provider->value,
+        ]);
+
+        return new MobileMoneyCharge(
+            status: 'send_otp',
+            reference: $intent->reference,
+            message: 'Enter any six digits to approve this simulated '.$provider->label().' charge.',
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function submitOtp(string $reference, string $otp): MobileMoneyCharge
+    {
+        Log::channel('billing')->info('log.charge.otp_submitted', [
+            'reference' => $reference,
+        ]);
+
+        return new MobileMoneyCharge(
+            status: 'success',
+            reference: $reference,
+            message: 'The simulated wallet approved the payment.',
         );
     }
 }

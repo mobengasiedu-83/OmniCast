@@ -12,6 +12,7 @@ use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\ContactSuppression;
 use App\Models\EmailMessage;
+use App\Services\Delivery\QueueTopology;
 use App\Services\Email\EmailDeliveryReport;
 use App\Services\Email\EmailDispatchResult;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +30,8 @@ use Illuminate\Support\Str;
  */
 class EmailTracker
 {
+    public function __construct(protected QueueTopology $queues) {}
+
     /**
      * Write the message row before the transport is asked to deliver it.
      */
@@ -224,6 +227,7 @@ class EmailTracker
         }
 
         DispatchCampaignJob::dispatch($campaign->id)
+            ->onQueue($this->queues->queueForCampaign($campaign))
             ->delay(now()->addMinutes(max($campaign->retry_delay_minutes, 1)));
     }
 

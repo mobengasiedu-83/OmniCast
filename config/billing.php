@@ -67,37 +67,42 @@ return [
     | The top-up packages, keyed by the slug a client submits at checkout.
     | Override the whole catalogue with the BILLING_PACKAGES JSON variable.
     |
+    | One price, your choice of channel: every package buys the listed volume of
+    | SMS, voice minutes or emails for the same money, so the three allocations of
+    | a package are worth each other (SMS ≈ GHS 0.04, voice GHS 0.375 a minute and
+    | email GHS 0.05 at the published price list).
+    |
     | @var array<string, array{name: string, price: float, popular: bool, tagline: string, units: array<string, int>}>
     */
     'packages' => (static function (): array {
         $packages = [
             'starter' => [
                 'name' => 'Starter',
-                'price' => 25.0,
+                'price' => 51.25,
                 'popular' => false,
                 'tagline' => 'Test one channel with a small audience.',
-                'units' => ['sms' => 1300, 'voice' => 380, 'email' => 2600],
+                'units' => ['sms' => 1300, 'voice' => 136, 'email' => 1025],
             ],
             'growth' => [
                 'name' => 'Growth',
-                'price' => 51.25,
+                'price' => 243.75,
                 'popular' => true,
                 'tagline' => 'The volume most campaigns settle into.',
-                'units' => ['sms' => 2700, 'voice' => 780, 'email' => 5200],
+                'units' => ['sms' => 6050, 'voice' => 650, 'email' => 4875],
             ],
             'business' => [
                 'name' => 'Business',
-                'price' => 250.0,
+                'price' => 2153.75,
                 'popular' => false,
                 'tagline' => 'For weekly national broadcasts.',
-                'units' => ['sms' => 13000, 'voice' => 3800, 'email' => 26000],
+                'units' => ['sms' => 55000, 'voice' => 5743, 'email' => 43075],
             ],
             'enterprise' => [
                 'name' => 'Enterprise',
-                'price' => 500.0,
+                'price' => 3990.0,
                 'popular' => false,
                 'tagline' => 'High volume across every channel.',
-                'units' => ['sms' => 26000, 'voice' => 7700, 'email' => 52000],
+                'units' => ['sms' => 100000, 'voice' => 10640, 'email' => 79800],
             ],
         ];
 

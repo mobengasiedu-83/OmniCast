@@ -15,6 +15,7 @@ use App\Services\Voice\StreamAmiTransport;
 use App\Services\Voice\VoiceGatewayManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Request;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Date;
@@ -57,6 +58,22 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureIdentity();
         $this->configureCommunicationLogging();
+        $this->configureDevelopmentProcesses();
+    }
+
+    /**
+     * Run the scheduler beside Horizon and Vite under `composer run dev`.
+     *
+     * The minute scheduler releases scheduled campaigns and sweeps stalled ones,
+     * so without it a locally launched campaign only moves once Horizon is fed.
+     */
+    protected function configureDevelopmentProcesses(): void
+    {
+        if (! class_exists(DevCommands::class)) {
+            return;
+        }
+
+        DevCommands::artisan('schedule:work');
     }
 
     /**

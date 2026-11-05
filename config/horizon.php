@@ -97,6 +97,10 @@ return [
     */
 
     'waits' => [
+        'redis:campaigns' => 120,
+        'redis:sms' => 60,
+        'redis:voice' => 60,
+        'redis:email' => 90,
         'redis:default' => 60,
     ],
 
@@ -183,47 +187,136 @@ return [
     |
     */
 
-    'memory_limit' => 64,
+    'memory_limit' => 128,
 
     /*
     |--------------------------------------------------------------------------
     | Queue Worker Configuration
     |--------------------------------------------------------------------------
     |
-    | Here you may define the queue worker settings used by your application
-    | in all environments. These supervisors and settings handle all your
-    | queued jobs and will be provisioned by Horizon during deployment.
+    | One supervisor per queue. Campaigns get their own pool so a long pass
+    | never blocks a channel submission, and each channel gets its own pool so
+    | SMS throughput, voice dialling and email relaying scale independently.
+    | The queue names must match config/queues.php.
     |
     */
 
     'defaults' => [
-        'supervisor-1' => [
+        'supervisor-campaigns' => [
+            'connection' => 'redis',
+            'queue' => ['campaigns'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 4,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 3,
+            'timeout' => 900,
+            'nice' => 0,
+        ],
+
+        'supervisor-sms' => [
+            'connection' => 'redis',
+            'queue' => ['sms'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 8,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 5,
+        ],
+
+        'supervisor-voice' => [
+            'connection' => 'redis',
+            'queue' => ['voice'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 4,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 300,
+            'nice' => 5,
+        ],
+
+        'supervisor-email' => [
+            'connection' => 'redis',
+            'queue' => ['email'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 4,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 180,
+            'nice' => 5,
+        ],
+
+        'supervisor-default' => [
             'connection' => 'redis',
             'queue' => ['default'],
             'balance' => 'auto',
             'autoScalingStrategy' => 'time',
-            'maxProcesses' => 1,
+            'maxProcesses' => 2,
             'maxTime' => 0,
             'maxJobs' => 0,
             'memory' => 128,
-            'tries' => 1,
+            'tries' => 3,
             'timeout' => 60,
-            'nice' => 0,
+            'nice' => 10,
         ],
     ],
 
     'environments' => [
         'production' => [
-            'supervisor-1' => [
+            'supervisor-campaigns' => [
                 'maxProcesses' => 10,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-sms' => [
+                'maxProcesses' => 16,
+                'balanceMaxShift' => 2,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-voice' => [
+                'maxProcesses' => 8,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-email' => [
+                'maxProcesses' => 6,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-default' => [
+                'maxProcesses' => 4,
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
         ],
 
         'local' => [
-            'supervisor-1' => [
-                'maxProcesses' => 3,
+            'supervisor-campaigns' => [
+                'maxProcesses' => 2,
+            ],
+            'supervisor-sms' => [
+                'maxProcesses' => 2,
+            ],
+            'supervisor-voice' => [
+                'maxProcesses' => 1,
+            ],
+            'supervisor-email' => [
+                'maxProcesses' => 1,
+            ],
+            'supervisor-default' => [
+                'maxProcesses' => 1,
             ],
         ],
     ],

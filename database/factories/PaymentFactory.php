@@ -29,7 +29,7 @@ class PaymentFactory extends Factory
             'provider_reference' => null,
             'status' => PaymentStatus::Pending,
             'currency' => 'GHS',
-            'amount' => 51.25,
+            'amount' => 243.75,
             'amount_paid' => 0,
             'package_key' => 'growth',
             'description' => 'Growth package top up',

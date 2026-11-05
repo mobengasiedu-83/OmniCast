@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Contracts\PaymentGateway;
+use App\Enums\MobileMoneyProvider;
 use App\Exceptions\PaymentGatewayException;
 use App\Models\Payment;
 use Illuminate\Http\Client\PendingRequest;
@@ -12,8 +13,11 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Paystack's hosted checkout: the client is redirected to Paystack, pays with a
- * card or mobile money, and comes back to the callback URL.
+ * Paystack, in both shapes this application needs it:
+ *
+ * - `initialize()` creates the hosted checkout the client is redirected to.
+ * - `charge()` prompts a mobile money wallet directly, on our own form, and
+ *   `submitOtp()` answers the code the wallet sends to the handset.
  *
  * Amounts travel in the subunit (pesewas for GHS, kobo for NGN): GHS 51.25 is
  * sent as 5125. The secret key is only ever read from configuration.
@@ -101,7 +105,60 @@ class PaystackGateway implements PaymentGateway
             paidAt: is_string($paidAt) && $paidAt !== '' ? Carbon::parse($paidAt) : ($successful ? now() : null),
             failureReason: $successful ? null : (is_string($failureReason) ? $failureReason : 'The payment was not completed.'),
             raw: $data,
+            status: is_string($data['status'] ?? null) ? $data['status'] : null,
         );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function supportsMobileMoney(): bool
+    {
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function charge(PaymentIntent $intent, MobileMoneyNumber $number, MobileMoneyProvider $provider): MobileMoneyCharge
+    {
+        $response = $this->http->post('charge', array_filter([
+            'email' => $intent->email,
+            'amount' => $intent->subunits(),
+            'currency' => $intent->currency,
+            'reference' => $intent->reference,
+            'mobile_money' => [
+                'phone' => $number->local,
+                'provider' => $provider->value,
+            ],
+            'metadata' => $intent->metadata === [] ? null : $intent->metadata,
+        ], fn (mixed $value): bool => $value !== null));
+
+        $payload = $this->payload($response, 'charge', $intent->reference);
+
+        Log::channel('billing')->info('paystack.charge.started', [
+            'reference' => $intent->reference,
+            'amount' => $intent->amount,
+            'currency' => $intent->currency,
+            'provider' => $provider->value,
+        ]);
+
+        return MobileMoneyCharge::fromGateway($intent->reference, $this->data($payload));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function submitOtp(string $reference, string $otp): MobileMoneyCharge
+    {
+        $response = $this->http->post('charge/submit_otp', [
+            'otp' => $otp,
+            'reference' => $reference,
+        ]);
+
+        $payload = $this->payload($response, 'submit_otp', $reference);
+
+        return MobileMoneyCharge::fromGateway($reference, $this->data($payload));
     }
 
     /**

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your {{ $title }} report</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#1f1b2e;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;padding:32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;padding:32px;">
+                    <tr>
+                        <td>
+                            <p style="margin:0 0 8px;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#6b4ae8;font-weight:600;">{{ config('app.name') }}</p>
+                            <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;">Your {{ $title }} report is ready</h1>
+                            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                                @if ($clientName)
+                                    Here is {{ $clientName }}&rsquo;s {{ strtolower($title) }} for {{ $period }}.
+                                @else
+                                    Here is the platform {{ strtolower($title) }} for {{ $period }}.
+                                @endif
+                                The CSV file is attached and also available from the reports screen.
+                            </p>
+                            <p style="margin:0 0 24px;font-size:15px;line-height:1.6;">
+                                {{ $rows }} row(s) were written to the file.
+                            </p>
+                            <p style="margin:0 0 24px;">
+                                <a href="{{ $reportsUrl }}" style="display:inline-block;background:#6b4ae8;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:10px;">Open reports</a>
+                            </p>
+                            <p style="margin:0;font-size:13px;line-height:1.6;color:#57526b;">Reports are generated from the delivery logs and the wallet ledger; a variance panel is shown on screen when the two disagree.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

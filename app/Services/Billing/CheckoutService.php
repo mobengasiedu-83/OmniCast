@@ -3,6 +3,7 @@
 namespace App\Services\Billing;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\MobileMoneyProvider;
 use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentGatewayException;
 use App\Models\Client;
@@ -39,58 +40,18 @@ class CheckoutService
      */
     public function start(Client $client, ?User $user, string $packageKey, string $callbackUrl): Payment
     {
-        $package = $this->packages->find($packageKey);
-
-        if ($package === null) {
-            throw ValidationException::withMessages([
-                'package' => 'Choose one of the wallet top up packages.',
-            ]);
-        }
+        $package = $this->package($packageKey);
 
         $gateway = $this->gateways->driver();
-        $wallet = $this->wallets->walletFor($client);
 
-        $payment = Payment::query()->create([
-            'client_id' => $client->id,
-            'wallet_id' => $wallet->id,
-            'user_id' => $user?->id,
-            'reference' => $this->paymentReference(),
-            'provider' => $gateway->name(),
-            'status' => PaymentStatus::Pending,
-            'currency' => $this->packages->currency(),
-            'amount' => $package['price'],
-            'amount_paid' => 0,
-            'package_key' => $package['key'],
-            'description' => $this->packages->describe($package['key']),
-            'metadata' => [
-                'package' => $package['key'],
-                'client_code' => $client->code,
-                'initiated_by' => $user?->email,
-            ],
-        ]);
-
-        $intent = new PaymentIntent(
-            reference: $payment->reference,
-            email: $this->payerEmail($client, $user),
-            amount: (float) $payment->amount,
-            currency: $payment->currency,
-            callbackUrl: $callbackUrl,
-            description: $payment->description,
-            metadata: [
-                'payment_id' => $payment->id,
-                'client_id' => $client->id,
-                'package' => $package['key'],
-            ],
-            channels: array_values(array_map('strval', (array) config('billing.paystack.channels', []))),
-        );
+        $payment = $this->openPayment($client, $user, $package, $gateway->name());
 
         try {
-            $initiation = $gateway->initialize($intent);
+            $initiation = $gateway->initialize(
+                $this->intentFor($payment, $client, $user, $package['key'], $callbackUrl),
+            );
         } catch (PaymentGatewayException $exception) {
-            $payment->forceFill([
-                'status' => PaymentStatus::Failed,
-                'failure_reason' => $exception->getMessage(),
-            ])->save();
+            $this->markFailed($payment, $exception->getMessage());
 
             throw $exception;
         }
@@ -105,7 +66,103 @@ class CheckoutService
     }
 
     /**
+     * Prompt a mobile money wallet directly, without a hosted checkout page.
+     *
+     * The payment stays open until the wallet answers: the client may have to
+     * submit the code the wallet texted them, or approve a prompt on the
+     * handset. Either way only `verify()` is able to credit the wallet.
+     *
+     * @throws ValidationException
+     * @throws PaymentGatewayException
+     */
+    public function startMobileMoney(
+        Client $client,
+        ?User $user,
+        string $packageKey,
+        MobileMoneyNumber $number,
+        MobileMoneyProvider $provider,
+    ): Payment {
+        $package = $this->package($packageKey);
+
+        $gateway = $this->gateways->driver();
+
+        if (! $gateway->supportsMobileMoney()) {
+            throw new PaymentGatewayException(
+                'The '.$gateway->name().' gateway cannot prompt a mobile money wallet. Pay on the hosted checkout instead.',
+            );
+        }
+
+        $payment = $this->openPayment($client, $user, $package, $gateway->name());
+
+        $this->rememberNumber($payment, $number, $provider);
+
+        try {
+            $charge = $gateway->charge(
+                $this->intentFor($payment, $client, $user, $package['key'], route('wallet.mobile-money.show', $payment)),
+                $number,
+                $provider,
+            );
+        } catch (PaymentGatewayException $exception) {
+            $this->markFailed($payment, $exception->getMessage());
+
+            throw $exception;
+        }
+
+        $payment = $this->recordCharge($payment, $charge);
+
+        if ($charge->isFailed()) {
+            return $this->markFailed($payment, $charge->message);
+        }
+
+        return $charge->isSuccessful() ? $this->verify($payment) : $payment;
+    }
+
+    /**
+     * Answer the code a mobile money wallet sent to the payer.
+     *
+     * A code the wallet rejects leaves the payment open, so the client can type
+     * the next one; only the gateway's verification can close the payment.
+     *
+     * @throws ValidationException
+     * @throws PaymentGatewayException
+     */
+    public function submitOtp(Payment $payment, string $otp): Payment
+    {
+        if (! $payment->status->isOpen()) {
+            throw ValidationException::withMessages([
+                'otp' => 'This payment is no longer waiting for a one time password.',
+            ]);
+        }
+
+        $gateway = $this->gateways->driver($payment->provider);
+
+        if (! $gateway->supportsMobileMoney()) {
+            throw new PaymentGatewayException(
+                'The '.$gateway->name().' gateway cannot prompt a mobile money wallet.',
+            );
+        }
+
+        try {
+            $charge = $gateway->submitOtp($payment->reference, $otp);
+        } catch (PaymentGatewayException $exception) {
+            throw ValidationException::withMessages(['otp' => $exception->getMessage()]);
+        }
+
+        $payment = $this->recordCharge($payment, $charge);
+
+        if ($charge->isFailed()) {
+            throw ValidationException::withMessages(['otp' => $charge->message]);
+        }
+
+        return $this->verify($payment);
+    }
+
+    /**
      * Ask the gateway what became of a payment and settle it.
+     *
+     * A wallet that has not answered yet (`pending`, `pay_offline`, `send_otp`)
+     * leaves the payment open: it has refused nothing, so failing it would
+     * throw away a charge the client can still approve on the phone.
      *
      * @throws PaymentGatewayException
      */
@@ -115,10 +172,52 @@ class CheckoutService
             return $payment;
         }
 
-        return $this->settle(
-            $payment,
-            $this->gateways->driver($payment->provider)->verify($payment),
-        );
+        $verification = $this->gateways->driver($payment->provider)->verify($payment);
+
+        if (! $verification->successful && $verification->isPending()) {
+            return $this->hold($payment, $verification);
+        }
+
+        return $this->settle($payment, $verification);
+    }
+
+    /**
+     * Keep a payment open while the wallet still has to answer it.
+     */
+    protected function hold(Payment $payment, PaymentVerification $verification): Payment
+    {
+        $metadata = array_merge((array) $payment->metadata, [
+            'verification' => $verification->raw,
+        ]);
+
+        if ($payment->isMobileMoney()) {
+            $mobileMoney = $this->mobileMoneyMetadata($payment);
+
+            if ($verification->status !== null) {
+                $mobileMoney['status'] = $verification->status;
+            }
+
+            if ($verification->failureReason !== null) {
+                $mobileMoney['message'] = $verification->failureReason;
+            }
+
+            $mobileMoney['checked_at'] = now()->toIso8601String();
+
+            $metadata['mobile_money'] = $mobileMoney;
+        }
+
+        $payment->forceFill([
+            'provider_reference' => $verification->providerReference ?? $payment->provider_reference,
+            'channel' => $verification->channel ?? $payment->channel,
+            'metadata' => $metadata,
+        ])->save();
+
+        Log::channel('billing')->info('payment.still.pending', [
+            'reference' => $payment->reference,
+            'status' => $verification->status,
+        ]);
+
+        return $payment->refresh();
     }
 
     /**
@@ -208,6 +307,8 @@ class CheckoutService
      * `charge.success` is settled against the gateway's own verify endpoint
      * rather than the payload, so a payload that was tampered with before the
      * signature was checked still cannot credit a wallet.
+     *
+     * @param  array<string, mixed>  $payload
      */
     public function handleEvent(string $event, array $payload): ?Payment
     {
@@ -281,6 +382,147 @@ class CheckoutService
             'issued_at' => $payment->paid_at ?? now(),
             'paid_at' => $payment->paid_at ?? now(),
         ]);
+    }
+
+    /**
+     * The catalogue entry a top up is bought from.
+     *
+     * @return array{key: string, name: string, price: float, popular: bool, tagline: string, units: list<array{service: string, label: string, quantity: int, formatted: string}>}
+     *
+     * @throws ValidationException
+     */
+    protected function package(string $packageKey): array
+    {
+        $package = $this->packages->find($packageKey);
+
+        if ($package === null) {
+            throw ValidationException::withMessages([
+                'package' => 'Choose one of the wallet top up packages.',
+            ]);
+        }
+
+        return $package;
+    }
+
+    /**
+     * Write the pending payment the charge is carried on.
+     *
+     * @param  array<string, mixed>  $package
+     */
+    protected function openPayment(Client $client, ?User $user, array $package, string $provider): Payment
+    {
+        return Payment::query()->create([
+            'client_id' => $client->id,
+            'wallet_id' => $this->wallets->walletFor($client)->id,
+            'user_id' => $user?->id,
+            'reference' => $this->paymentReference(),
+            'provider' => $provider,
+            'status' => PaymentStatus::Pending,
+            'currency' => $this->packages->currency(),
+            'amount' => $package['price'],
+            'amount_paid' => 0,
+            'package_key' => $package['key'],
+            'description' => $this->packages->describe((string) $package['key']),
+            'metadata' => [
+                'package' => $package['key'],
+                'client_code' => $client->code,
+                'initiated_by' => $user?->email,
+            ],
+        ]);
+    }
+
+    /**
+     * What the gateway is told about a payment we registered.
+     */
+    protected function intentFor(Payment $payment, Client $client, ?User $user, string $packageKey, string $callbackUrl): PaymentIntent
+    {
+        return new PaymentIntent(
+            reference: $payment->reference,
+            email: $this->payerEmail($client, $user),
+            amount: (float) $payment->amount,
+            currency: $payment->currency,
+            callbackUrl: $callbackUrl,
+            description: $payment->description,
+            metadata: [
+                'payment_id' => $payment->id,
+                'client_id' => $client->id,
+                'package' => $packageKey,
+            ],
+            channels: array_values(array_map('strval', (array) config('billing.paystack.channels', []))),
+        );
+    }
+
+    /**
+     * Remember the wallet the client asked us to charge.
+     */
+    protected function rememberNumber(Payment $payment, MobileMoneyNumber $number, MobileMoneyProvider $provider): void
+    {
+        $payment->forceFill([
+            'channel' => 'mobile_money',
+            'metadata' => array_merge((array) $payment->metadata, [
+                'mobile_money' => [
+                    'phone' => $number->local,
+                    'provider' => $provider->value,
+                    'provider_label' => $provider->label(),
+                ],
+            ]),
+        ])->save();
+    }
+
+    /**
+     * Write down what the wallet answered, so the checkout page can show it.
+     */
+    protected function recordCharge(Payment $payment, MobileMoneyCharge $charge): Payment
+    {
+        $payment->forceFill([
+            'provider_reference' => $charge->reference,
+            'metadata' => array_merge((array) $payment->metadata, [
+                'mobile_money' => array_merge($this->mobileMoneyMetadata($payment), [
+                    'status' => $charge->status,
+                    'message' => $charge->message,
+                    'requires_otp' => $charge->requiresOtp(),
+                    'updated_at' => now()->toIso8601String(),
+                    'response' => $charge->raw,
+                ]),
+            ]),
+        ])->save();
+
+        Log::channel('billing')->info('payment.charge.recorded', [
+            'reference' => $payment->reference,
+            'status' => $charge->status,
+        ]);
+
+        return $payment->refresh();
+    }
+
+    /**
+     * The mobile money block already written on a payment.
+     *
+     * @return array<string, mixed>
+     */
+    protected function mobileMoneyMetadata(Payment $payment): array
+    {
+        $mobileMoney = $payment->metadata['mobile_money'] ?? null;
+
+        return is_array($mobileMoney) ? $mobileMoney : [];
+    }
+
+    /**
+     * Close a payment the gateway refused.
+     */
+    protected function markFailed(Payment $payment, string $reason): Payment
+    {
+        $payment->forceFill([
+            'status' => PaymentStatus::Failed,
+            'failure_reason' => Str::limit($reason, 250, ''),
+        ])->save();
+
+        Log::channel('billing')->warning('payment.failed', [
+            'reference' => $payment->reference,
+            'reason' => $reason,
+        ]);
+
+        return $payment->refresh();
     }
 
     /**

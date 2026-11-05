@@ -27,6 +27,7 @@ enum Permission: string
     case ManageRates = 'rates.manage';
     case ViewReports = 'reports.view';
     case ExportReports = 'reports.export';
+    case ViewQueues = 'queues.view';
 
     public function label(): string
     {
@@ -51,6 +52,7 @@ enum Permission: string
             self::ManageRates => 'Manage Rates',
             self::ViewReports => 'View Reports',
             self::ExportReports => 'Export Reports',
+            self::ViewQueues => 'View Delivery Queues',
         };
     }
 

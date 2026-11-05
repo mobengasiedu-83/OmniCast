@@ -11,6 +11,7 @@ use App\Jobs\DispatchCampaignJob;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\VoiceCall;
+use App\Services\Delivery\QueueTopology;
 use App\Services\Voice\VoiceCallEventPayload;
 use App\Services\Voice\VoiceDispatchResult;
 use App\Services\Voice\VoiceIvrPlan;
@@ -29,7 +30,7 @@ use Illuminate\Support\Str;
  */
 class VoiceCallTracker
 {
-    public function __construct(protected ContactDndService $dnd) {}
+    public function __construct(protected ContactDndService $dnd, protected QueueTopology $queues) {}
 
     /**
      * Write the call row before the switch is asked to dial.
@@ -293,6 +294,7 @@ class VoiceCallTracker
         }
 
         DispatchCampaignJob::dispatch($campaign->id)
+            ->onQueue($this->queues->queueForCampaign($campaign))
             ->delay(now()->addMinutes(max($campaign->retry_delay_minutes, 1)));
     }
 

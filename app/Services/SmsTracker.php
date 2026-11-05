@@ -10,6 +10,7 @@ use App\Jobs\DispatchCampaignJob;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\SmsMessage;
+use App\Services\Delivery\QueueTopology;
 use App\Services\Sms\SmsDeliveryReport;
 use App\Services\Sms\SmsDispatchResult;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +27,8 @@ use Illuminate\Support\Str;
  */
 class SmsTracker
 {
+    public function __construct(protected QueueTopology $queues) {}
+
     /**
      * Write the message row before the provider is asked to deliver it.
      */
@@ -212,6 +215,7 @@ class SmsTracker
         }
 
         DispatchCampaignJob::dispatch($campaign->id)
+            ->onQueue($this->queues->queueForCampaign($campaign))
             ->delay(now()->addMinutes(max($campaign->retry_delay_minutes, 1)));
     }
 }
