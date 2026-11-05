@@ -12,6 +12,7 @@ import {
     WalletCards,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import ClientFilter from '@/components/client-filter';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
@@ -98,6 +99,7 @@ export default function WalletIndex({
     const [description, setDescription] = useState('');
     const [reference, setReference] = useState('');
     const [starting, setStarting] = useState<string | null>(null);
+    const confirm = useConfirm();
 
     const walletCurrency = wallet?.currency ?? currency;
 
@@ -121,8 +123,24 @@ export default function WalletIndex({
         });
     };
 
-    const creditManually = (event: FormEvent<HTMLFormElement>): void => {
+    const creditManually = async (
+        event: FormEvent<HTMLFormElement>,
+    ): Promise<void> => {
         event.preventDefault();
+
+        const amountLabel =
+            amount === '' ? 'this amount' : `${walletCurrency} ${amount}`;
+
+        const confirmed = await confirm({
+            title: `Credit ${amountLabel} to the wallet?`,
+            description:
+                'The balance increases as soon as you confirm. Mistakes have to be corrected with a separate adjustment.',
+            confirmLabel: 'Credit wallet',
+        });
+
+        if (!confirmed) {
+            return;
+        }
 
         router.post(
             urls.wallet.topUp,

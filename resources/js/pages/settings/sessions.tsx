@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { MonitorSmartphone, ShieldAlert } from 'lucide-react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,13 +21,39 @@ type PageProps = {
 };
 
 export default function AccountSessions({ sessions, supported }: PageProps) {
-    const endSession = (sessionId: string): void => {
-        router.delete(urls.account.sessions.destroy(sessionId), {
+    const confirm = useConfirm();
+
+    const endSession = async (session: SessionRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Sign out ${session.device}?`,
+            description:
+                'The device is signed out immediately and has to sign in again to get back in.',
+            confirmLabel: 'Sign out device',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        router.delete(urls.account.sessions.destroy(session.session_id), {
             preserveScroll: true,
         });
     };
 
-    const endOthers = (): void => {
+    const endOthers = async (): Promise<void> => {
+        const confirmed = await confirm({
+            title: 'Sign out every other session?',
+            description:
+                'All sessions besides this device end immediately. You stay signed in here.',
+            confirmLabel: 'Sign out other sessions',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
         router.delete(urls.account.sessions.destroyOthers, {
             preserveScroll: true,
         });
@@ -101,7 +128,7 @@ export default function AccountSessions({ sessions, supported }: PageProps) {
                                             variant="outline"
                                             size="sm"
                                             onClick={() =>
-                                                endSession(session.session_id)
+                                                void endSession(session)
                                             }
                                         >
                                             Sign out
@@ -129,7 +156,7 @@ export default function AccountSessions({ sessions, supported }: PageProps) {
                 <Button
                     variant="destructive"
                     disabled={others === 0}
-                    onClick={endOthers}
+                    onClick={() => void endOthers()}
                 >
                     Sign out other sessions
                 </Button>

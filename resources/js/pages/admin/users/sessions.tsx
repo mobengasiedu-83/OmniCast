@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { LogOut, MonitorSmartphone, Search, Users, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
 import Pagination from '@/components/pagination';
@@ -44,6 +45,8 @@ export default function AdminSessions({
 }: PageProps) {
     const [search, setSearch] = useState(filters.search);
 
+    const confirm = useConfirm();
+
     const submitSearch = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
 
@@ -54,8 +57,22 @@ export default function AdminSessions({
         );
     };
 
-    const signOut = (row: PlatformSessionRow): void => {
+    const signOut = async (row: PlatformSessionRow): Promise<void> => {
         if (row.user_id === null) {
+            return;
+        }
+
+        const confirmed = await confirm({
+            title: row.user_name
+                ? `Sign ${row.user_name} out of this device?`
+                : 'Sign this session out?',
+            description:
+                'The device is signed out immediately and the person has to sign in again.',
+            confirmLabel: 'Sign out session',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -235,7 +252,7 @@ export default function AdminSessions({
                                                         session.user_id === null
                                                     }
                                                     onClick={() =>
-                                                        signOut(session)
+                                                        void signOut(session)
                                                     }
                                                 >
                                                     <LogOut />

@@ -1,6 +1,7 @@
 import { Form } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useConfirm, type ConfirmOptions } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
@@ -31,6 +32,29 @@ export default function ManageTwoFactor(props: Props) {
     } = useTwoFactorAuth();
     const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
     const prevTwoFactorEnabled = useRef(twoFactorEnabled);
+    const confirm = useConfirm();
+
+    /**
+     * The disable switch lives in an Inertia <Form>, so the native submit is
+     * cancelled and re-dispatched only once the shared dialog is accepted.
+     */
+    const guardSubmit = (
+        event: MouseEvent<HTMLButtonElement>,
+        options: ConfirmOptions,
+    ): void => {
+        event.preventDefault();
+        const form = event.currentTarget.form;
+
+        if (form !== null && !form.reportValidity()) {
+            return;
+        }
+
+        void confirm(options).then((confirmed) => {
+            if (confirmed) {
+                form?.requestSubmit();
+            }
+        });
+    };
 
     useEffect(() => {
         if (prevTwoFactorEnabled.current && !twoFactorEnabled) {
@@ -66,6 +90,15 @@ export default function ManageTwoFactor(props: Props) {
                                     variant="destructive"
                                     type="submit"
                                     disabled={processing}
+                                    onClick={(event) =>
+                                        guardSubmit(event, {
+                                            title: 'Turn off two-factor authentication?',
+                                            description:
+                                                'Sign-in falls back to your password alone until you register an authenticator again.',
+                                            confirmLabel: 'Turn off 2FA',
+                                            tone: 'danger',
+                                        })
+                                    }
                                 >
                                     Disable 2FA
                                 </Button>

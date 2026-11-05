@@ -7,6 +7,7 @@ import {
     UsersRound,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import Field from '@/components/form-field';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ export default function SettingsTeam({
     can,
 }: PageProps) {
     const [inviteOpen, setInviteOpen] = useState(false);
+    const confirm = useConfirm();
 
     const form = useForm<{ email: string; name: string; role: string }>({
         email: '',
@@ -91,7 +93,19 @@ export default function SettingsTeam({
         );
     };
 
-    const revoke = (invitation: TeamInvitationRow): void => {
+    const revoke = async (invitation: TeamInvitationRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Revoke the invitation for ${invitation.email}?`,
+            description:
+                'The invitation link stops working immediately. You can invite the same address again later.',
+            confirmLabel: 'Revoke invitation',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
         router.delete(urls.account.team.destroy(invitation.id), {
             preserveScroll: true,
         });
@@ -243,7 +257,7 @@ export default function SettingsTeam({
                                                 size="sm"
                                                 className="text-destructive hover:text-destructive"
                                                 onClick={() =>
-                                                    revoke(invitation)
+                                                    void revoke(invitation)
                                                 }
                                             >
                                                 <UserRoundX />

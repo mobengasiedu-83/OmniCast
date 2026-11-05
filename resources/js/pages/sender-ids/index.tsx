@@ -1,6 +1,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { CheckCircle2, Fingerprint, Pencil, Plus, Search, ShieldX, Trash2, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import InputError from '@/components/input-error';
 import PageHeader from '@/components/page-header';
@@ -42,8 +43,8 @@ function formatDate(value: string | null): string {
 export default function SenderIdsIndex({ senderIds, filters, stats, channels, statuses, clients, can }: PageProps) {
     const [search, setSearch] = useState(filters.search);
     const [rejecting, setRejecting] = useState<SenderIdRow | null>(null);
-    const [withdrawing, setWithdrawing] = useState<SenderIdRow | null>(null);
     const rejectForm = useForm({ reason: '' });
+    const confirm = useConfirm();
 
     const hasFilters = Boolean(filters.search || filters.channel || filters.status || filters.client_id);
 
@@ -97,14 +98,22 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
         });
     };
 
-    const withdraw = (): void => {
-        if (!withdrawing) {
+    const withdraw = async (senderId: SenderIdRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Withdraw ${senderId.name}?`,
+            description:
+                'The request is removed from the review queue. This cannot be undone.',
+            confirmLabel: 'Withdraw request',
+            cancelLabel: 'Keep request',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
             return;
         }
 
-        router.delete(urls.senderIds.destroy(withdrawing.id), {
+        router.delete(urls.senderIds.destroy(senderId.id), {
             preserveScroll: true,
-            onSuccess: () => setWithdrawing(null),
         });
     };
 
@@ -324,7 +333,9 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
-                                                            onClick={() => setWithdrawing(senderId)}
+                                                            onClick={() =>
+                                                                void withdraw(senderId)
+                                                            }
                                                         >
                                                             <Trash2 />
                                                             Withdraw
@@ -373,27 +384,6 @@ export default function SenderIdsIndex({ senderIds, filters, stats, channels, st
                                 </Button>
                             </DialogFooter>
                         </form>
-                    </DialogContent>
-                </Dialog>
-
-                <Dialog open={withdrawing !== null} onOpenChange={(open) => !open && setWithdrawing(null)}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Withdraw {withdrawing?.name}</DialogTitle>
-                            <DialogDescription>
-                                The request is removed from the review queue. This cannot be undone.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setWithdrawing(null)}>
-                                Keep request
-                            </Button>
-                            <Button type="button" variant="destructive" onClick={withdraw}>
-                                <Trash2 />
-                                Withdraw request
-                            </Button>
-                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>

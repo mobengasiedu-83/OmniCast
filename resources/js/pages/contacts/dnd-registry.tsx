@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { BarChart3, Plus, ShieldBan, UserX, Users } from 'lucide-react';
 import { type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import ClientFilter from '@/components/client-filter';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
@@ -67,6 +68,26 @@ export default function ContactDndRegistry({
         suppressionForm.post(urls.contacts.storeSuppression, {
             preserveScroll: true,
             onSuccess: () => suppressionForm.reset('identifier'),
+        });
+    };
+
+    const confirm = useConfirm();
+
+    /** Lifting a suppression re-opens a channel, so ask before the delete fires. */
+    const lift = async (suppression: ContactSuppressionRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Lift the ${suppression.channel.toUpperCase()} suppression?`,
+            description: `${suppression.identifier} can receive messages again once this entry is removed.`,
+            confirmLabel: 'Lift suppression',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        router.delete(urls.contacts.liftSuppression(suppression.id), {
+            preserveScroll: true,
         });
     };
 
@@ -326,16 +347,7 @@ export default function ContactDndRegistry({
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() =>
-                                                router.delete(
-                                                    urls.contacts.liftSuppression(
-                                                        suppression.id,
-                                                    ),
-                                                    {
-                                                        preserveScroll: true,
-                                                    },
-                                                )
-                                            }
+                                            onClick={() => void lift(suppression)}
                                         >
                                             Lift
                                         </Button>

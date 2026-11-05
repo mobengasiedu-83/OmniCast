@@ -1,6 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { Ban, MailWarning, Plus, Search, ShieldBan, ShieldCheck, SlidersHorizontal, Upload, Users } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm, type ConfirmOptions } from '@/components/confirm-dialog';
 import ClientFilter from '@/components/client-filter';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
@@ -91,6 +92,7 @@ export default function ContactsIndex({
     const [bulkAction, setBulkAction] = useState<BulkAction>('add_to_list');
     const [bulkValue, setBulkValue] = useState('');
     const [processing, setProcessing] = useState(false);
+    const confirm = useConfirm();
 
     const apply = (overrides: Record<string, string | number | null>): void => {
         setSelected([]);
@@ -134,9 +136,49 @@ export default function ContactsIndex({
         );
     };
 
+    /** Bulk edits can delete or suppress contacts, so those ask for a confirmation first. */
+    const bulkConfirmation = (): ConfirmOptions | null => {
+        const people = `${selected.length} contact${selected.length === 1 ? '' : 's'}`;
+
+        switch (bulkAction) {
+            case 'delete':
+                return {
+                    title: `Delete ${people}?`,
+                    description:
+                        'The selected contacts leave the book. Numbers on the DND registry stay blocked if they are imported again.',
+                    confirmLabel: 'Delete contacts',
+                    tone: 'danger',
+                };
+            case 'mark_dnd':
+                return {
+                    title: `Mark ${people} as DND?`,
+                    description:
+                        'Every channel is blocked for these contacts until the suppression is lifted.',
+                    confirmLabel: 'Mark as DND',
+                    tone: 'danger',
+                };
+            case 'clear_dnd':
+                return {
+                    title: `Clear DND for ${people}?`,
+                    description:
+                        'The suppressions are lifted, so campaigns can reach these contacts again.',
+                    confirmLabel: 'Clear DND',
+                    tone: 'danger',
+                };
+            default:
+                return null;
+        }
+    };
+
     /** Every bulk operation hits one endpoint so the audit trail stays uniform. */
-    const runBulk = (): void => {
+    const runBulk = async (): Promise<void> => {
         if (selected.length === 0 || bulkBlocked) {
+            return;
+        }
+
+        const confirmation = bulkConfirmation();
+
+        if (confirmation !== null && !(await confirm(confirmation))) {
             return;
         }
 
@@ -423,7 +465,7 @@ export default function ContactsIndex({
                             )}
 
                             <Button
-                                onClick={runBulk}
+                                onClick={() => void runBulk()}
                                 disabled={processing || bulkBlocked}
                             >
                                 {processing ? 'Applying…' : 'Apply'}

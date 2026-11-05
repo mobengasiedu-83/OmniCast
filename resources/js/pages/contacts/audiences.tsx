@@ -9,6 +9,7 @@ import {
     Users,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import ClientFilter from '@/components/client-filter';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
@@ -80,6 +81,7 @@ export default function ContactAudiences({
     const editForm = useForm({ name: '', description: '' });
     const [editingSegment, setEditingSegment] = useState<number | null>(null);
     const [survivors, setSurvivors] = useState<Record<string, number>>({});
+    const confirm = useConfirm();
 
     const submitTag = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
@@ -166,6 +168,61 @@ export default function ContactAudiences({
                     }),
             },
         );
+    };
+
+    /** Tags, lists and segments are shared, so every delete asks first. */
+    const removeTag = async (
+        tag: TagOption & { contacts_count: number },
+    ): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Delete the "${tag.name}" tag?`,
+            description: `${tag.contacts_count} contact${tag.contacts_count === 1 ? '' : 's'} lose this tag. The contacts themselves stay in the book.`,
+            confirmLabel: 'Delete tag',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        router.delete(urls.contacts.deleteTag(tag.id), {
+            preserveScroll: true,
+        });
+    };
+
+    const removeList = async (list: ContactListOption): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Delete the "${list.name}" list?`,
+            description: `${list.contacts_count} contact${list.contacts_count === 1 ? '' : 's'} leave this list. The contacts themselves stay in the book.`,
+            confirmLabel: 'Delete list',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        router.delete(urls.contacts.deleteList(list.id), {
+            preserveScroll: true,
+        });
+    };
+
+    const removeSegment = async (segment: ContactSegmentRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Delete the "${segment.name}" segment?`,
+            description:
+                'The saved filters are removed. Contacts matching them are untouched.',
+            confirmLabel: 'Delete segment',
+            tone: 'danger',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        router.delete(urls.contacts.deleteSegment(segment.id), {
+            preserveScroll: true,
+        });
     };
 
     return (
@@ -289,16 +346,7 @@ export default function ContactAudiences({
                                             <button
                                                 type="button"
                                                 aria-label={`Remove ${tag.name}`}
-                                                onClick={() =>
-                                                    router.delete(
-                                                        urls.contacts.deleteTag(
-                                                            tag.id,
-                                                        ),
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
+                                                onClick={() => void removeTag(tag)}
                                                 className="px-1 text-muted-foreground hover:text-destructive"
                                             >
                                                 ×
@@ -372,16 +420,7 @@ export default function ContactAudiences({
                                             <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                onClick={() =>
-                                                    router.delete(
-                                                        urls.contacts.deleteList(
-                                                            list.id,
-                                                        ),
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
+                                                onClick={() => void removeList(list)}
                                             >
                                                 Delete
                                             </Button>
@@ -830,14 +869,7 @@ export default function ContactAudiences({
                                                     size="sm"
                                                     variant="ghost"
                                                     onClick={() =>
-                                                        router.delete(
-                                                            urls.contacts.deleteSegment(
-                                                                segment.id,
-                                                            ),
-                                                            {
-                                                                preserveScroll: true,
-                                                            },
-                                                        )
+                                                        void removeSegment(segment)
                                                     }
                                                 >
                                                     Delete

@@ -11,6 +11,7 @@ import {
     X,
 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import Field from '@/components/form-field';
 import InputError from '@/components/input-error';
@@ -116,6 +117,7 @@ export default function AdminUsersIndex({
     const [createOpen, setCreateOpen] = useState(false);
     const [editing, setEditing] = useState<ManagedUserRow | null>(null);
     const [suspending, setSuspending] = useState<ManagedUserRow | null>(null);
+    const confirm = useConfirm();
 
     const createForm = useForm<UserFormValues>({
         name: '',
@@ -218,7 +220,17 @@ export default function AdminUsersIndex({
         });
     };
 
-    const reactivate = (user: ManagedUserRow): void => {
+    const reactivate = async (user: ManagedUserRow): Promise<void> => {
+        const confirmed = await confirm({
+            title: `Reactivate ${user.name}?`,
+            description: `${user.email} regains sign-in access immediately with the roles it already has.`,
+            confirmLabel: 'Reactivate account',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
         router.post(
             urls.admin.users.reactivate(user.id),
             {},
@@ -514,7 +526,9 @@ export default function AdminUsersIndex({
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() =>
-                                                                reactivate(user)
+                                                                void reactivate(
+                                                                    user,
+                                                                )
                                                             }
                                                         >
                                                             Reactivate

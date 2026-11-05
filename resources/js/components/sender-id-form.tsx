@@ -1,5 +1,6 @@
 import { Link, useForm } from '@inertiajs/react';
 import { type FormEvent } from 'react';
+import { useConfirm } from '@/components/confirm-dialog';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,12 +36,11 @@ export default function SenderIdForm({
     cancelHref: string;
 }) {
     const form = useForm<SenderIdFormValues>({ ...defaults, ...initial });
+    const confirm = useConfirm();
 
     const channel = channels.find((option) => option.value === form.data.channel) ?? channels[0];
 
-    const submit = (event: FormEvent<HTMLFormElement>): void => {
-        event.preventDefault();
-
+    const send = (): void => {
         if (method === 'put') {
             form.put(action);
 
@@ -48,6 +48,41 @@ export default function SenderIdForm({
         }
 
         form.post(action);
+    };
+
+    /**
+     * Every submission lands in the compliance review queue, so the client is
+     * told how long approval takes before the request leaves the form.
+     */
+    const submit = (event: FormEvent<HTMLFormElement>): void => {
+        event.preventDefault();
+
+        const name = form.data.name.trim();
+        const incomplete =
+            name === '' ||
+            form.data.purpose.trim() === '' ||
+            (clients.length > 0 && form.data.client_id === '');
+
+        // Nothing the server would accept yet: let it return its field errors.
+        if (incomplete) {
+            send();
+
+            return;
+        }
+
+        const resubmitting = method === 'put';
+
+        void confirm({
+            title: `${resubmitting ? 'Resubmit' : 'Submit'} "${name}" for approval?`,
+            description:
+                'Compliance reviews every sender ID by hand, so approval can take up to 24 hours. You can keep working while it is reviewed, but the sender ID cannot be used in a campaign until it is approved.',
+            confirmLabel: resubmitting ? 'Resubmit for approval' : 'Submit for approval',
+            cancelLabel: 'Keep editing',
+        }).then((confirmed) => {
+            if (confirmed) {
+                send();
+            }
+        });
     };
 
     const changeChannel = (value: string): void => {
