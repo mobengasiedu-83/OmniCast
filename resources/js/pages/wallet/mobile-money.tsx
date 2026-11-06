@@ -1,6 +1,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Clock, Smartphone } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import AmountSlider from '@/components/amount-slider';
 import InputError from '@/components/input-error';
 import PageHeader from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,8 @@ import {
 } from '@/components/ui/select';
 import { urls } from '@/lib/urls';
 import type {
+    BillingRate,
+    BillingSlider,
     MobileMoneyProviderOption,
     WalletMobileMoneyPayment,
     WalletPackage,
@@ -34,6 +37,10 @@ type PageProps = {
     packages: WalletPackage[];
     providers: MobileMoneyProviderOption[];
     selected: string | null;
+    selected_amount: number | null;
+    rates: BillingRate[];
+    slider: BillingSlider;
+    dynamic_pricing: boolean;
     limits: { min: number; max: number };
     payment: WalletMobileMoneyPayment | null;
     gateway: { driver: string; live: boolean; mobile_money: boolean };
@@ -52,21 +59,33 @@ export default function WalletMobileMoney({
     packages,
     providers,
     selected,
+    selected_amount,
+    rates,
+    slider,
+    dynamic_pricing,
     limits,
     payment,
     gateway,
 }: PageProps) {
     const form = useForm<{
         package: string;
+        amount: string;
         phone: string;
         provider: string;
         client_id: number | null;
     }>({
-        package: selected ?? packages[0]?.key ?? '',
+        package:
+            selected ??
+            (selected_amount === null ? (packages[0]?.key ?? '') : ''),
+        amount: selected_amount === null ? '' : selected_amount.toFixed(2),
         phone: '',
         provider: providers[0]?.value ?? '',
         client_id: client?.id ?? null,
     });
+
+    const [customAmount, setCustomAmount] = useState(
+        selected_amount ?? slider.default,
+    );
 
     const otp = useForm<{ otp: string }>({ otp: '' });
 
@@ -184,12 +203,13 @@ export default function WalletMobileMoney({
                                             <button
                                                 key={pkg.key}
                                                 type="button"
-                                                onClick={() =>
+                                                onClick={() => {
                                                     form.setData(
                                                         'package',
                                                         pkg.key,
-                                                    )
-                                                }
+                                                    );
+                                                    form.setData('amount', '');
+                                                }}
                                                 className={
                                                     form.data.package ===
                                                     pkg.key
@@ -208,6 +228,74 @@ export default function WalletMobileMoney({
                                     </div>
                                     <InputError message={form.errors.package} />
                                 </div>
+
+                                {dynamic_pricing && rates.length > 0 && (
+                                    <div className="space-y-3 rounded-xl border border-dashed border-border/70 p-4">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="space-y-0.5">
+                                                <p className="text-sm font-medium">
+                                                    Or choose your own amount
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Drag to any amount from{' '}
+                                                    {money(
+                                                        limits.min,
+                                                        currency,
+                                                    )}{' '}
+                                                    to{' '}
+                                                    {money(
+                                                        limits.max,
+                                                        currency,
+                                                    )}{' '}
+                                                    and the wallet is prompted
+                                                    for exactly that.
+                                                </p>
+                                            </div>
+
+                                            {form.data.amount !== '' && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        form.setData(
+                                                            'amount',
+                                                            '',
+                                                        );
+                                                        form.setData(
+                                                            'package',
+                                                            packages[0]?.key ??
+                                                                '',
+                                                        );
+                                                    }}
+                                                >
+                                                    Use a package
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        <AmountSlider
+                                            id="mobile-money-amount"
+                                            currency={currency}
+                                            rates={rates}
+                                            slider={slider}
+                                            limits={limits}
+                                            value={customAmount}
+                                            onChange={(value) => {
+                                                setCustomAmount(value);
+                                                form.setData(
+                                                    'amount',
+                                                    value.toFixed(2),
+                                                );
+                                                form.setData('package', '');
+                                            }}
+                                        />
+
+                                        <InputError
+                                            message={form.errors.amount}
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="grid gap-1.5">
@@ -273,7 +361,9 @@ export default function WalletMobileMoney({
                                         <p className="text-sm font-medium">
                                             {chosen
                                                 ? `${chosen.name} · ${money(chosen.price, currency)}`
-                                                : 'Choose a package'}
+                                                : form.data.amount !== ''
+                                                  ? `Custom top up · ${money(Number(form.data.amount), currency)}`
+                                                  : 'Choose a package or an amount'}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             Top ups run from{' '}
@@ -285,7 +375,9 @@ export default function WalletMobileMoney({
                                         type="submit"
                                         disabled={
                                             form.processing ||
-                                            form.data.phone === ''
+                                            form.data.phone === '' ||
+                                            (form.data.package === '' &&
+                                                form.data.amount === '')
                                         }
                                     >
                                         <Smartphone className="size-4" />

@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\LoginAuditController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\PricingController as AdminPricingController;
 use App\Http\Controllers\Admin\QueueController;
 use App\Http\Controllers\Admin\RateCardController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
@@ -98,6 +99,9 @@ Route::middleware(['auth', 'verified', 'platform'])
 
             Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
             Route::put('packages/{package}', [PackageController::class, 'update'])->name('packages.update');
+
+            Route::get('pricing', [AdminPricingController::class, 'index'])->name('pricing.index');
+            Route::put('pricing', [AdminPricingController::class, 'update'])->name('pricing.update');
         });
 
         Route::middleware('can:reports.view')->group(function (): void {

@@ -134,6 +134,10 @@ export const urls = {
             update: (packageKey: string) =>
                 path(`/admin/packages/${packageKey}`),
         },
+        pricing: {
+            index: path('/admin/pricing'),
+            update: path('/admin/pricing'),
+        },
         payments: {
             index: path('/admin/payments'),
             verify: (payment: number) =>

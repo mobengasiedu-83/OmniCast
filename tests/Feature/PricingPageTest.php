@@ -17,13 +17,31 @@ it('shows the published price list to a visitor', function (): void {
                     ...array_column($package['units'], 'quantity'),
                 ])
                 ->all() === [
-                    ['starter', 51.25, 1300, 136, 1025],
-                    ['growth', 243.75, 6050, 650, 4875],
-                    ['business', 2153.75, 55000, 5743, 43075],
-                    ['enterprise', 3990, 100000, 10640, 79800],
+                    ['starter', 51.25, 1281, 170, 1025],
+                    ['growth', 243.75, 6093, 812, 4875],
+                    ['business', 2153.75, 53843, 7179, 43075],
+                    ['enterprise', 3990, 99750, 13300, 79800],
                 ])
             ->where('limits.min', 1)
             ->where('limits.max', 100000),
+        );
+});
+
+it('names each package and marks the popular one', function (): void {
+    $this->get(route('pricing'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('packages', fn (Collection $packages): bool => $packages
+                ->map(fn (array $package): array => [
+                    $package['name'],
+                    $package['popular'],
+                ])
+                ->all() === [
+                    ['Launch', false],
+                    ['Boost', true],
+                    ['Scale', false],
+                    ['Max', false],
+                ])
         );
 });
 

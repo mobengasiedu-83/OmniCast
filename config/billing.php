@@ -46,9 +46,59 @@ return [
         'website' => env('BILLING_ISSUER_WEBSITE') ?: null,
     ],
 
+    /*
+    | The published price list every channel quantity is derived from.
+    |
+    | A client buys credit, not a channel, so one amount has to be quotable in
+    | SMS, voice minutes and emails at once. These are the selling rates: the
+    | "choose your amount" slider divides the amount by each one to show what
+    | the money buys, and a wallet package without an explicit allocation is
+    | presented the same way.
+    |
+    | The units are the ones campaigns are billed in:
+    |
+    |   sms   — one unit is a part of up to 160 characters to one number, so a
+    |           longer message costs one unit for each part it splits into.
+    |   voice — one unit is a minute of the call to one number.
+    |   email — one unit is one email to one address.
+    |
+    | Consumption is still priced from the rate card (see RateResolver); these
+    | rates are what the platform publishes to buyers.
+    */
+    'rates' => [
+        'sms' => (float) env('BILLING_RATE_SMS', 0.04),
+        'voice' => (float) env('BILLING_RATE_VOICE', 0.30),
+        'email' => (float) env('BILLING_RATE_EMAIL', 0.05),
+    ],
+
+    /*
+    | Whether a client may name the amount they pay.
+    |
+    | With the slider on, the wallet and the price list offer "choose your own
+    | amount" beside the packages: the client drags to the amount they want and
+    | sees what it buys in SMS, voice minutes and emails. The platform team can
+    | switch it off from Admin → Dynamic pricing, which stores
+    | `billing.dynamic_pricing.enabled`; the wallet then sells packages only and
+    | a submitted amount is refused at checkout.
+    */
+    'dynamic_pricing' => (bool) env('BILLING_DYNAMIC_PRICING', true),
+
     'limits' => [
         'min_top_up' => (float) env('BILLING_MIN_TOP_UP', 1),
         'max_top_up' => (float) env('BILLING_MAX_TOP_UP', 100000),
+
+        /*
+        | The range the "choose your amount" slider is drawn over. It sits
+        | inside the top-up limits: the slider is a convenience, so it covers
+        | the amounts most clients pay, while the typed amount field still
+        | accepts anything between the limits above.
+        */
+        'slider' => [
+            'min' => (float) env('BILLING_SLIDER_MIN', 10),
+            'max' => (float) env('BILLING_SLIDER_MAX', 5000),
+            'step' => (float) env('BILLING_SLIDER_STEP', 10),
+            'default' => (float) env('BILLING_SLIDER_DEFAULT', 100),
+        ],
     ],
 
     'paystack' => [
@@ -83,8 +133,9 @@ return [
     |
     | One price, your choice of channel: every package buys the listed volume of
     | SMS, voice minutes or emails for the same money, so the three allocations of
-    | a package are worth each other (SMS ≈ GHS 0.04, voice GHS 0.375 a minute and
-    | email GHS 0.05 at the published price list).
+    | a package are worth each other. The allocation is derived from `rates`
+    | above (price ÷ rate, rounded down) unless the package spells out its own
+    | `units`, which only a deliberately sweetened bundle such as `sample` does.
     |
     | A package carries `enabled` for its default availability. The platform team
     | switches it on or off from Admin → Wallet packages, which stores a
@@ -92,42 +143,38 @@ return [
     | hidden package stays configured but leaves the price list and is refused at
     | checkout.
     |
-    | @var array<string, array{name: string, price: float, popular: bool, tagline: string, units: array<string, int>, enabled?: bool}>
+    | @var array<string, array{name: string, price: float, popular: bool, tagline: string, units?: array<string, int>, enabled?: bool}>
     */
     'packages' => (static function (): array {
         $packages = [
             'starter' => [
-                'name' => 'Starter',
+                'name' => 'Launch',
                 'price' => 51.25,
                 'popular' => false,
-                'tagline' => 'Test one channel with a small audience.',
-                'units' => ['sms' => 1300, 'voice' => 136, 'email' => 1025],
+                'tagline' => 'Start broadcasting with a small audience.',
             ],
             'growth' => [
-                'name' => 'Growth',
+                'name' => 'Boost',
                 'price' => 243.75,
                 'popular' => true,
-                'tagline' => 'The volume most campaigns settle into.',
-                'units' => ['sms' => 6050, 'voice' => 650, 'email' => 4875],
+                'tagline' => 'Grow your campaigns across channels.',
             ],
             'business' => [
-                'name' => 'Business',
+                'name' => 'Scale',
                 'price' => 2153.75,
                 'popular' => false,
-                'tagline' => 'For weekly national broadcasts.',
-                'units' => ['sms' => 55000, 'voice' => 5743, 'email' => 43075],
+                'tagline' => 'Reach larger audiences with flexibility.',
             ],
             'enterprise' => [
-                'name' => 'Enterprise',
+                'name' => 'Max',
                 'price' => 3990.0,
                 'popular' => false,
-                'tagline' => 'High volume across every channel.',
-                'units' => ['sms' => 100000, 'voice' => 10640, 'email' => 79800],
+                'tagline' => 'Built for high-volume campaigns.',
             ],
 
             /*
             | Ten pesewas to prove the live gateway end to end: the sample buys the
-            | Starter allocation for almost nothing, so a real card or mobile money
+            | Launch allocation for almost nothing, so a real card or mobile money
             | charge can be settled and refunded without moving real money. It ships
             | hidden and is switched on from Admin → Wallet packages, so a
             | production catalogue never sells it by accident.
@@ -137,7 +184,7 @@ return [
                 'price' => 0.10,
                 'popular' => false,
                 'tagline' => 'Ten-pesewa test top up for the live gateway.',
-                'units' => ['sms' => 1300, 'voice' => 136, 'email' => 1025],
+                'units' => ['sms' => 1281, 'voice' => 170, 'email' => 1025],
                 'enabled' => false,
             ],
         ];

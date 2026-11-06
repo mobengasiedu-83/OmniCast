@@ -9,16 +9,22 @@ import {
     Wallet as WalletIcon,
     type LucideIcon,
 } from 'lucide-react';
+import { useState } from 'react';
+import AmountSlider from '@/components/amount-slider';
 import { Button } from '@/components/ui/button';
+import { urls } from '@/lib/urls';
 import { cn } from '@/lib/utils';
 import { dashboard, home } from '@/routes';
 import { create as clientSignup } from '@/routes/client-registration';
-import type { WalletPackage } from '@/types';
+import type { BillingRate, BillingSlider, WalletPackage } from '@/types';
 
 type PageProps = {
     currency: string;
     packages: WalletPackage[];
     limits: { min: number; max: number };
+    rates: BillingRate[];
+    slider: BillingSlider;
+    dynamic_pricing: boolean;
 };
 
 /**
@@ -37,11 +43,48 @@ function money(value: number, currency: string): string {
     })}`;
 }
 
-export default function Pricing({ currency, packages, limits }: PageProps) {
+/**
+ * How a service is named when a rate is quoted in a sentence ("GHS 0.04/SMS").
+ */
+const RATE_LABELS: Record<string, string> = {
+    sms: 'SMS',
+    voice: 'Voice minute',
+    email: 'Email',
+};
+
+/**
+ * The published rates written into the capacity footnote, read from the same
+ * rates the slider quotes so the two never disagree after an admin edit.
+ */
+function rateSummary(rates: BillingRate[], currency: string): string {
+    const parts = rates.map(
+        (rate) =>
+            `${money(rate.unit_price, currency)}/${RATE_LABELS[rate.service] ?? rate.label}`,
+    );
+
+    if (parts.length <= 1) {
+        return parts.join('');
+    }
+
+    return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+export default function Pricing({
+    currency,
+    packages,
+    limits,
+    rates,
+    slider,
+    dynamic_pricing,
+}: PageProps) {
     const { auth } = usePage().props;
+    const [customAmount, setCustomAmount] = useState(slider.default);
 
     const primaryHref = auth.user ? dashboard() : clientSignup();
     const primaryLabel = auth.user ? 'Open dashboard' : 'Create an account';
+    const customHref = auth.user
+        ? `${urls.wallet.index}?amount=${customAmount.toFixed(2)}`
+        : primaryHref;
 
     return (
         <>
@@ -79,6 +122,16 @@ export default function Pricing({ currency, packages, limits }: PageProps) {
                     </div>
                 </div>
             </section>
+
+            <div className="mb-5 max-w-2xl space-y-2">
+                <h2 className="text-2xl font-semibold tracking-tight">
+                    Choose your top-up
+                </h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                    Buy any amount, any time. Your new purchase adds to your
+                    existing balance. No subscriptions or downgrades.
+                </p>
+            </div>
 
             <section
                 aria-label="Wallet packages"
@@ -163,11 +216,54 @@ export default function Pricing({ currency, packages, limits }: PageProps) {
                 ))}
             </section>
 
+            {dynamic_pricing && rates.length > 0 && (
+                <section
+                    aria-label="Choose your own amount"
+                    className="mt-6 rounded-2xl border border-border/70 bg-card p-6"
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1">
+                            <h2 className="font-semibold">
+                                Choose your own amount
+                            </h2>
+                            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                                Drag to any amount from{' '}
+                                {money(slider.min, currency)} to{' '}
+                                {money(slider.max, currency)} and see what it
+                                buys in SMS, voice minutes and emails before you
+                                pay.
+                            </p>
+                        </div>
+                        <Button variant="outline" asChild>
+                            <Link href={customHref}>
+                                {auth.user
+                                    ? 'Top up this amount'
+                                    : 'Get started'}
+                                <ArrowRight />
+                            </Link>
+                        </Button>
+                    </div>
+
+                    <AmountSlider
+                        id="pricing-amount"
+                        className="mt-5"
+                        currency={currency}
+                        rates={rates}
+                        slider={slider}
+                        limits={limits}
+                        value={customAmount}
+                        onChange={setCustomAmount}
+                    />
+                </section>
+            )}
+
             <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                A package buys its allocation on any one channel: the three
-                lines are what the same money is worth in SMS, voice minutes and
-                emails. Mix them across campaigns — the wallet holds credit, not
-                a channel.
+                Capacity figures use indicative rates of{' '}
+                {rateSummary(rates, currency)}. A package buys its allocation on
+                any one channel: the three lines are what the same money is
+                worth in SMS, voice minutes and emails. Voice billing depends on
+                billable call duration and rounding rules. All channels share
+                the same {currency} balance.
             </p>
 
             <section className="mt-12 grid gap-4 sm:grid-cols-3">

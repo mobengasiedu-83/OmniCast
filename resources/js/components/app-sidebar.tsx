@@ -261,6 +261,11 @@ export function AppSidebar() {
                       href: urls.admin.packages.index,
                       icon: PackageCheck,
                   },
+                  {
+                      title: 'Dynamic pricing',
+                      href: urls.admin.pricing.index,
+                      icon: Tags,
+                  },
               ]
             : []),
         ...(canViewRates

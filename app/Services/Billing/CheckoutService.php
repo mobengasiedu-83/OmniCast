@@ -20,16 +20,26 @@ use Illuminate\Validation\ValidationException;
  * Runs a wallet top up: open a payment, hand the client to the gateway, and
  * settle the ledger and the invoice once the money has actually arrived.
  *
+ * A top up is either a catalogue package or an amount the client chose on the
+ * amount slider. Both end up as a price, a description and an allocation, so
+ * the rest of the flow — gateway, ledger, invoice — treats them the same.
+ *
  * Settlement is idempotent. A webhook may arrive after the client already came
  * back from the callback, and Paystack retries a webhook it did not get a 200
  * for, so only the first settlement credits the wallet.
  */
 class CheckoutService
 {
+    /**
+     * The package key a client-chosen amount is recorded under.
+     */
+    public const CUSTOM_PACKAGE = 'custom';
+
     public function __construct(
         protected WalletService $wallets,
         protected PaymentGatewayManager $gateways,
         protected PackageCatalogue $packages,
+        protected CreditEstimator $estimator,
     ) {}
 
     /**
@@ -38,17 +48,22 @@ class CheckoutService
      * @throws ValidationException
      * @throws PaymentGatewayException
      */
-    public function start(Client $client, ?User $user, string $packageKey, string $callbackUrl): Payment
-    {
-        $package = $this->package($packageKey);
+    public function start(
+        Client $client,
+        ?User $user,
+        ?string $packageKey,
+        string $callbackUrl,
+        ?float $amount = null,
+    ): Payment {
+        $topUp = $this->topUp($packageKey, $amount);
 
         $gateway = $this->gateways->driver();
 
-        $payment = $this->openPayment($client, $user, $package, $gateway->name());
+        $payment = $this->openPayment($client, $user, $topUp, $gateway->name());
 
         try {
             $initiation = $gateway->initialize(
-                $this->intentFor($payment, $client, $user, $package['key'], $callbackUrl),
+                $this->intentFor($payment, $client, $user, (string) $topUp['key'], $callbackUrl),
             );
         } catch (PaymentGatewayException $exception) {
             $this->markFailed($payment, $exception->getMessage());
@@ -78,11 +93,12 @@ class CheckoutService
     public function startMobileMoney(
         Client $client,
         ?User $user,
-        string $packageKey,
+        ?string $packageKey,
         MobileMoneyNumber $number,
         MobileMoneyProvider $provider,
+        ?float $amount = null,
     ): Payment {
-        $package = $this->package($packageKey);
+        $topUp = $this->topUp($packageKey, $amount);
 
         $gateway = $this->gateways->driver();
 
@@ -92,13 +108,13 @@ class CheckoutService
             );
         }
 
-        $payment = $this->openPayment($client, $user, $package, $gateway->name());
+        $payment = $this->openPayment($client, $user, $topUp, $gateway->name());
 
         $this->rememberNumber($payment, $number, $provider);
 
         try {
             $charge = $gateway->charge(
-                $this->intentFor($payment, $client, $user, $package['key'], route('wallet.mobile-money.show', $payment)),
+                $this->intentFor($payment, $client, $user, (string) $topUp['key'], route('wallet.mobile-money.show', $payment)),
                 $number,
                 $provider,
             );
@@ -405,11 +421,62 @@ class CheckoutService
     }
 
     /**
+     * The top up being paid for: a catalogue package, or an amount the client
+     * chose on the slider.
+     *
+     * @return array{key: string, price: float, description: string, units: list<array{service: string, label: string, quantity: int, formatted: string}>}
+     *
+     * @throws ValidationException
+     */
+    protected function topUp(?string $packageKey, ?float $amount): array
+    {
+        if ($amount !== null) {
+            if (! $this->estimator->dynamicPricingEnabled()) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Choosing your own amount is switched off. Choose one of the wallet top up packages.',
+                ]);
+            }
+
+            return $this->customTopUp($amount);
+        }
+
+        $package = $this->package((string) $packageKey);
+
+        return [
+            'key' => $package['key'],
+            'price' => $package['price'],
+            'description' => $this->packages->describe($package['key']),
+            'units' => $package['units'],
+        ];
+    }
+
+    /**
+     * Shape an amount the client priced themselves into what it buys.
+     *
+     * The estimator holds the amount inside the top up limits, so a payload
+     * that slipped through validation still cannot charge below the minimum or
+     * above the maximum.
+     *
+     * @return array{key: string, price: float, description: string, units: list<array{service: string, label: string, quantity: int, formatted: string}>}
+     */
+    protected function customTopUp(float $amount): array
+    {
+        $estimate = $this->estimator->estimate($amount);
+
+        return [
+            'key' => self::CUSTOM_PACKAGE,
+            'price' => $estimate['amount'],
+            'description' => $this->estimator->describe($estimate['amount']),
+            'units' => $estimate['lines'],
+        ];
+    }
+
+    /**
      * Write the pending payment the charge is carried on.
      *
-     * @param  array<string, mixed>  $package
+     * @param  array{key: string, price: float, description: string, units: list<array<string, mixed>>}  $topUp
      */
-    protected function openPayment(Client $client, ?User $user, array $package, string $provider): Payment
+    protected function openPayment(Client $client, ?User $user, array $topUp, string $provider): Payment
     {
         return Payment::query()->create([
             'client_id' => $client->id,
@@ -419,12 +486,13 @@ class CheckoutService
             'provider' => $provider,
             'status' => PaymentStatus::Pending,
             'currency' => $this->packages->currency(),
-            'amount' => $package['price'],
+            'amount' => $topUp['price'],
             'amount_paid' => 0,
-            'package_key' => $package['key'],
-            'description' => $this->packages->describe((string) $package['key']),
+            'package_key' => $topUp['key'],
+            'description' => $topUp['description'],
             'metadata' => [
-                'package' => $package['key'],
+                'package' => $topUp['key'],
+                'units' => $topUp['units'],
                 'client_code' => $client->code,
                 'initiated_by' => $user?->email,
             ],

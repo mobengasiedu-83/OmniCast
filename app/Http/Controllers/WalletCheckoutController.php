@@ -47,6 +47,7 @@ class WalletCheckoutController extends Controller
                 user: $request->user(),
                 packageKey: $request->packageKey(),
                 callbackUrl: route('wallet.checkout.callback'),
+                amount: $request->amount(),
             );
         } catch (PaymentGatewayException $exception) {
             return back()->with('toast', [

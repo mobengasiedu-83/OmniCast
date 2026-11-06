@@ -22,22 +22,14 @@ use App\Services\PlatformConfiguration;
 class PackageCatalogue
 {
     /**
-     * The service labels and the order they are shown in.
-     *
-     * @var array<string, string>
-     */
-    private const SERVICES = [
-        'sms' => 'SMS',
-        'voice' => 'Voice minutes',
-        'email' => 'Emails',
-    ];
-
-    /**
      * The platform setting group that records package availability.
      */
     private const SETTINGS_GROUP = 'billing';
 
-    public function __construct(protected PlatformConfiguration $configuration) {}
+    public function __construct(
+        protected PlatformConfiguration $configuration,
+        protected CreditEstimator $estimator,
+    ) {}
 
     /**
      * The packages on sale, in the order they are configured.
@@ -239,10 +231,7 @@ class PackageCatalogue
      */
     public function limits(): array
     {
-        return [
-            'min' => (float) config('billing.limits.min_top_up', 1),
-            'max' => (float) config('billing.limits.max_top_up', 100000),
-        ];
+        return $this->estimator->limits();
     }
 
     /**
@@ -250,7 +239,7 @@ class PackageCatalogue
      */
     public function currency(): string
     {
-        return (string) config('billing.currency', 'GHS');
+        return $this->estimator->currency();
     }
 
     /**
@@ -280,30 +269,54 @@ class PackageCatalogue
      */
     protected function present(string $key, array $package): array
     {
-        $units = [];
-
-        foreach (self::SERVICES as $service => $label) {
-            $quantity = (int) ($package['units'][$service] ?? 0);
-
-            if ($quantity <= 0) {
-                continue;
-            }
-
-            $units[] = [
-                'service' => $service,
-                'label' => $label,
-                'quantity' => $quantity,
-                'formatted' => number_format($quantity),
-            ];
-        }
+        $price = round((float) ($package['price'] ?? 0), 2);
 
         return [
             'key' => $key,
             'name' => (string) ($package['name'] ?? ucfirst($key)),
-            'price' => round((float) ($package['price'] ?? 0), 2),
+            'price' => $price,
             'popular' => (bool) ($package['popular'] ?? false),
             'tagline' => (string) ($package['tagline'] ?? ''),
-            'units' => $units,
+            'units' => $this->units($package, $price),
+        ];
+    }
+
+    /**
+     * The allocation shown on the package card.
+     *
+     * A package that states its own `units` keeps them: that is how a
+     * deliberately sweetened bundle such as the ten-pesewa sample carries a
+     * larger allocation than its price buys. Every other package is quoted from
+     * the published rates, exactly as the amount slider quotes a custom top up,
+     * so the card and the slider never disagree.
+     *
+     * @param  array{units?: array<string, int>}  $package
+     * @return list<array{service: string, label: string, quantity: int, formatted: string}>
+     */
+    protected function units(array $package, float $price): array
+    {
+        $configured = $package['units'] ?? null;
+
+        $lines = is_array($configured) && $configured !== []
+            ? $this->estimator->lines($configured)
+            : $this->estimator->estimate($price)['lines'];
+
+        return array_values(array_map($this->presentUnit(...), $lines));
+    }
+
+    /**
+     * One allocation in the shape the package card and the admin screen read.
+     *
+     * @param  array{service: string, label: string, quantity: int, formatted: string}  $line
+     * @return array{service: string, label: string, quantity: int, formatted: string}
+     */
+    protected function presentUnit(array $line): array
+    {
+        return [
+            'service' => $line['service'],
+            'label' => $line['label'],
+            'quantity' => $line['quantity'],
+            'formatted' => $line['formatted'],
         ];
     }
 

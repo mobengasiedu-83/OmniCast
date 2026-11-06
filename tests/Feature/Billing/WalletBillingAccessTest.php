@@ -42,13 +42,13 @@ it('shows the published package price list', function (): void {
                     ],
                 ])
                 ->all() === [
-                    'starter' => [51.25, 1300, 136, 1025],
-                    'growth' => [243.75, 6050, 650, 4875],
-                    'business' => [2153.75, 55000, 5743, 43075],
-                    'enterprise' => [3990, 100000, 10640, 79800],
+                    'starter' => [51.25, 1281, 170, 1025],
+                    'growth' => [243.75, 6093, 812, 4875],
+                    'business' => [2153.75, 53843, 7179, 43075],
+                    'enterprise' => [3990, 99750, 13300, 79800],
                 ])
             ->where('packages.0.units.1.label', 'Voice minutes')
-            ->where('packages.0.units.1.formatted', '136'),
+            ->where('packages.0.units.1.formatted', '170'),
         );
 });
 

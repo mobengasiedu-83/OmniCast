@@ -14,6 +14,7 @@ import {
 import { useState, type FormEvent } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import ClientFilter from '@/components/client-filter';
+import AmountSlider from '@/components/amount-slider';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
 import Pagination from '@/components/pagination';
@@ -40,6 +41,8 @@ import {
 } from '@/components/ui/table';
 import { urls } from '@/lib/urls';
 import type {
+    BillingRate,
+    BillingSlider,
     ClientOption,
     Paginated,
     WalletInvoiceRow,
@@ -59,6 +62,10 @@ type PageProps = {
     currency: string;
     packages: WalletPackage[];
     limits: { min: number; max: number };
+    rates: BillingRate[];
+    slider: BillingSlider;
+    dynamic_pricing: boolean;
+    prefill_amount: number | null;
     gateway: { driver: string; live: boolean; mobile_money: boolean };
     payments: WalletPaymentRow[];
     invoices: WalletInvoiceRow[];
@@ -90,6 +97,10 @@ export default function WalletIndex({
     currency,
     packages,
     limits,
+    rates,
+    slider,
+    dynamic_pricing,
+    prefill_amount,
     gateway,
     payments,
     invoices,
@@ -99,6 +110,9 @@ export default function WalletIndex({
     const [description, setDescription] = useState('');
     const [reference, setReference] = useState('');
     const [starting, setStarting] = useState<string | null>(null);
+    const [customAmount, setCustomAmount] = useState(
+        prefill_amount ?? slider.default,
+    );
     const confirm = useConfirm();
 
     const walletCurrency = wallet?.currency ?? currency;
@@ -119,6 +133,34 @@ export default function WalletIndex({
     const startMobileMoney = (packageKey: string): void => {
         router.get(urls.wallet.mobileMoney.create, {
             package: packageKey,
+            client_id: client?.id ?? null,
+        });
+    };
+
+    /**
+     * Pay the amount the client chose on the slider, rather than a package
+     * price. The gateway opens exactly like a package checkout; the server
+     * prices the top up from the published rates.
+     */
+    const startCustomAmount = (): void => {
+        setStarting('custom');
+
+        router.post(
+            urls.wallet.checkout,
+            {
+                amount: customAmount.toFixed(2),
+                client_id: client?.id ?? null,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setStarting(null),
+            },
+        );
+    };
+
+    const startCustomMobileMoney = (): void => {
+        router.get(urls.wallet.mobileMoney.create, {
+            amount: customAmount.toFixed(2),
             client_id: client?.id ?? null,
         });
     };
@@ -287,6 +329,68 @@ export default function WalletIndex({
                                     Your role can see the wallet but not fund
                                     it.
                                 </p>
+                            )}
+
+                            {dynamic_pricing && rates.length > 0 && (
+                                <div className="space-y-3 rounded-xl border border-dashed border-border/70 p-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium">
+                                            Choose your own amount
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Drag to the amount you want to pay
+                                            and see what it buys in SMS, voice
+                                            minutes and emails. Any amount from{' '}
+                                            {money(limits.min, currency)} to{' '}
+                                            {money(limits.max, currency)} is
+                                            accepted.
+                                        </p>
+                                    </div>
+
+                                    <AmountSlider
+                                        id="wallet-amount"
+                                        currency={currency}
+                                        rates={rates}
+                                        slider={slider}
+                                        limits={limits}
+                                        value={customAmount}
+                                        onChange={setCustomAmount}
+                                        disabled={
+                                            !can.checkout || starting !== null
+                                        }
+                                    />
+
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            disabled={
+                                                !can.checkout ||
+                                                starting !== null
+                                            }
+                                            onClick={startCustomAmount}
+                                        >
+                                            <ExternalLink className="size-4" />
+                                            {starting === 'custom'
+                                                ? 'Opening checkout…'
+                                                : `Pay ${money(customAmount, currency)}`}
+                                        </Button>
+
+                                        {gateway.mobile_money && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                disabled={
+                                                    !can.checkout ||
+                                                    starting !== null
+                                                }
+                                                onClick={startCustomMobileMoney}
+                                            >
+                                                <Smartphone className="size-4" />
+                                                Mobile money
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
                             )}
                         </CardContent>
                     </Card>

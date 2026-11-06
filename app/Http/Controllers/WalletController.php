@@ -12,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Services\Billing\CreditEstimator;
 use App\Services\Billing\PackageCatalogue;
 use App\Services\Billing\PaymentGatewayManager;
 use App\Services\WalletService;
@@ -29,6 +30,7 @@ class WalletController extends Controller
         protected WalletService $wallets,
         protected PackageCatalogue $packages,
         protected PaymentGatewayManager $gateways,
+        protected CreditEstimator $estimator,
     ) {}
 
     /**
@@ -89,6 +91,12 @@ class WalletController extends Controller
             'client' => $client === null ? null : ['id' => $client->id, 'name' => $client->name],
             'currency' => $this->packages->currency(),
             'packages' => $this->packages->all(),
+            'rates' => $this->estimator->rates(),
+            'slider' => $this->estimator->slider(),
+            'dynamic_pricing' => $this->estimator->dynamicPricingEnabled(),
+            'prefill_amount' => $request->filled('amount')
+                ? $this->estimator->clamp($request->float('amount'))
+                : null,
             'limits' => $this->packages->limits(),
             'gateway' => [
                 'driver' => (string) config('billing.driver', 'paystack'),

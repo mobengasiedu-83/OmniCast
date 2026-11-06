@@ -11,6 +11,7 @@ use App\Http\Requests\Billing\MobileMoneyOtpRequest;
 use App\Models\Payment;
 use App\Models\Wallet;
 use App\Services\Billing\CheckoutService;
+use App\Services\Billing\CreditEstimator;
 use App\Services\Billing\PackageCatalogue;
 use App\Services\Billing\PaymentGatewayManager;
 use App\Services\WalletService;
@@ -37,6 +38,7 @@ class MobileMoneyCheckoutController extends Controller
         protected WalletService $wallets,
         protected PackageCatalogue $packages,
         protected PaymentGatewayManager $gateways,
+        protected CreditEstimator $estimator,
     ) {}
 
     /**
@@ -63,6 +65,10 @@ class MobileMoneyCheckoutController extends Controller
             'packages' => $this->packages->all(),
             'providers' => MobileMoneyProvider::options(),
             'selected' => in_array($selected, $this->packages->keys(), true) ? $selected : null,
+            'selected_amount' => $request->filled('amount') ? $this->estimator->clamp($request->float('amount')) : null,
+            'rates' => $this->estimator->rates(),
+            'slider' => $this->estimator->slider(),
+            'dynamic_pricing' => $this->estimator->dynamicPricingEnabled(),
             'limits' => $this->packages->limits(),
             'payment' => null,
             'gateway' => $this->gatewayProps(),
@@ -87,6 +93,7 @@ class MobileMoneyCheckoutController extends Controller
                 packageKey: $request->packageKey(),
                 number: $request->number(),
                 provider: $request->provider(),
+                amount: $request->amount(),
             );
         } catch (PaymentGatewayException $exception) {
             return back()->with('toast', [

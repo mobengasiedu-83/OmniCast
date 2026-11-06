@@ -594,6 +594,37 @@ export type WalletPackage = {
     units: WalletPackageUnit[];
 };
 
+/**
+ * One service on the published price list: what a single unit costs and what
+ * that unit is counted in.
+ */
+export type BillingRate = {
+    service: string;
+    label: string;
+    unit: string;
+    note: string;
+    unit_price: number;
+    price_formatted: string;
+};
+
+/**
+ * The range the amount slider is drawn over, and the amount it starts on.
+ */
+export type BillingSlider = {
+    min: number;
+    max: number;
+    step: number;
+    default: number;
+};
+
+/**
+ * What a chosen amount buys on one channel.
+ */
+export type BillingQuoteLine = BillingRate & {
+    quantity: number;
+    formatted: string;
+};
+
 export type WalletPaymentRow = {
     id: number;
     reference: string;
