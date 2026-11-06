@@ -33,6 +33,7 @@ class CampaignDispatcher
         protected EmailGateway $email,
         protected CampaignCostEstimator $costs,
         protected SmsSegmenter $segmenter,
+        protected MessagePersonalizer $personalizer,
         protected WalletService $wallet,
         protected PlatformConfiguration $configuration,
         protected ContactEligibility $eligibility,
@@ -91,10 +92,6 @@ class CampaignDispatcher
         $smsPartCost = $this->costs->smsPartCost($campaign->client);
         $voiceCallCost = $this->costs->voiceCallCost($campaign->client);
         $emailRecipientCost = $this->costs->emailRecipientCost($campaign->client);
-        $smsParts = $campaign->channel->requiresSmsContent()
-            ? max($this->segmenter->segmentsFor((string) $campaign->sms_message), 1)
-            : 0;
-        $smsCostPerRecipient = round($smsParts * $smsPartCost, WalletService::PRECISION);
 
         $spend = $this->wallet->chargedFor($campaign);
         $broke = false;
@@ -102,9 +99,9 @@ class CampaignDispatcher
         $campaign->campaignContacts()
             ->with('contact')
             ->whereIn('status', [CampaignContactStatus::Pending->value, CampaignContactStatus::Queued->value])
-            ->chunkById(200, function (Collection $rows) use ($campaign, $reservation, $smsCostPerRecipient, $voiceCallCost, $emailRecipientCost, &$spend, &$broke): void {
+            ->chunkById(200, function (Collection $rows) use ($campaign, $reservation, $smsPartCost, $voiceCallCost, $emailRecipientCost, &$spend, &$broke): void {
                 foreach ($rows as $row) {
-                    if (! $this->dispatchTo($campaign, $reservation, $row, $smsCostPerRecipient, $voiceCallCost, $emailRecipientCost, $spend)) {
+                    if (! $this->dispatchTo($campaign, $reservation, $row, $smsPartCost, $voiceCallCost, $emailRecipientCost, $spend)) {
                         $broke = true;
 
                         return;
@@ -154,7 +151,7 @@ class CampaignDispatcher
         Campaign $campaign,
         ?BillingReservation $reservation,
         CampaignContact $row,
-        float $smsCostPerRecipient,
+        float $smsPartCost,
         float $voiceCallCost,
         float $emailCostPerRecipient,
         float &$spend,
@@ -192,7 +189,7 @@ class CampaignDispatcher
             }
 
             $unitCost = match ($channel) {
-                Channel::Sms => $smsCostPerRecipient,
+                Channel::Sms => $this->smsCostFor($campaign, $contact, $smsPartCost),
                 Channel::Voice => $voiceCallCost,
                 Channel::Email => $emailCostPerRecipient,
                 default => 0.0,
@@ -211,7 +208,7 @@ class CampaignDispatcher
             $this->pacer->await($channel, $campaign->client);
 
             $delivered = match ($channel) {
-                Channel::Sms => $this->sendSms($campaign, $row, $contact, $smsCostPerRecipient),
+                Channel::Sms => $this->sendSms($campaign, $row, $contact, $unitCost),
                 Channel::Voice => $this->callVoice($campaign, $row, $contact, $voiceCallCost),
                 Channel::Email => $this->sendEmail($campaign, $row, $contact, $emailCostPerRecipient),
                 default => false,
@@ -294,6 +291,21 @@ class CampaignDispatcher
     }
 
     /**
+     * The billable cost of the SMS this recipient will actually receive.
+     *
+     * The placeholder values change the length of the copy, so the segment count
+     * the message is billed at is worked out from the rendered body rather than
+     * from the template.
+     */
+    protected function smsCostFor(Campaign $campaign, Contact $contact, float $smsPartCost): float
+    {
+        $body = $this->personalizer->render((string) $campaign->sms_message, $contact);
+        $parts = max($this->segmenter->segmentsFor($body), 1);
+
+        return round($parts * $smsPartCost, WalletService::PRECISION);
+    }
+
+    /**
      * Log the message, then ask the provider to deliver it.
      *
      * The row is written before the submission so a receipt that arrives faster
@@ -309,7 +321,7 @@ class CampaignDispatcher
             return false;
         }
 
-        $body = (string) $campaign->sms_message;
+        $body = $this->personalizer->render((string) $campaign->sms_message, $contact);
 
         $message = $this->smsTracker->start(
             $campaign,
@@ -348,8 +360,8 @@ class CampaignDispatcher
         $to = trim((string) $contact->email);
         $from = trim((string) ($campaign->senderId?->name ?? config('email.from.address')));
         $fromName = trim((string) ($campaign->client?->name ?? config('email.from.name')));
-        $subject = trim((string) $campaign->email_subject);
-        $body = (string) $campaign->email_body;
+        $subject = trim($this->personalizer->render((string) $campaign->email_subject, $contact));
+        $body = $this->personalizer->render((string) $campaign->email_body, $contact);
 
         if ($to === '' || $from === '' || $body === '') {
             return false;

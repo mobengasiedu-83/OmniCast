@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { analyzeSms } from '@/lib/sms';
 import { urls } from '@/lib/urls';
 import type { CampaignFormOptions, CampaignFormValues } from '@/types';
 
@@ -61,6 +62,19 @@ const ivrActions = [
     { value: 'repeat', label: 'Replay the prompt' },
     { value: 'callback', label: 'Request a callback' },
     { value: 'opt_out', label: 'Opt the recipient out' },
+];
+
+/**
+ * The placeholders the dispatcher fills in per recipient, shown under the copy
+ * fields so operators know what they may address a contact by.
+ */
+const placeholders = [
+    '{{first_name}}',
+    '{{last_name}}',
+    '{{full_name}}',
+    '{{phone}}',
+    '{{email}}',
+    '{{company}}',
 ];
 
 /**
@@ -116,6 +130,7 @@ export default function CampaignForm({
         requiresSms &&
         (senderOptions.length === 0 || form.data.sender_id === '');
     const needsClient = options.clients.length > 0;
+    const smsAnalysis = analyzeSms(form.data.sms_message);
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
@@ -409,9 +424,25 @@ export default function CampaignForm({
                                 maxLength={1600}
                                 placeholder="Hello {{first_name}}, your account balance is due…"
                             />
+                            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>
+                                    {smsAnalysis.units} of{' '}
+                                    {smsAnalysis.capacity} characters ·{' '}
+                                    {smsAnalysis.segments}{' '}
+                                    {smsAnalysis.segments === 1
+                                        ? 'SMS'
+                                        : 'SMS (multipart)'}
+                                </span>
+                                <span>
+                                    {smsAnalysis.encoding === 'unicode'
+                                        ? 'Unicode · 70 characters per SMS'
+                                        : 'GSM-7 · 160 characters per SMS'}
+                                </span>
+                            </div>
                             <p className="text-xs text-muted-foreground">
-                                {form.data.sms_message.length} of 1600
-                                characters
+                                Each recipient's own values replace the
+                                placeholders {placeholders.join(', ')} before
+                                the message is sent.
                             </p>
                             <InputError message={form.errors.sms_message} />
                         </div>
@@ -490,6 +521,12 @@ export default function CampaignForm({
                                     {form.data.email_format === 'html'
                                         ? 'Markup is rendered inside the branded broadcast shell, and a plain-text alternative is generated automatically.'
                                         : 'Sent exactly as typed, with no markup.'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Each recipient's own values replace the
+                                    placeholders {placeholders.join(', ')} in
+                                    the subject and body before the message is
+                                    sent.
                                 </p>
                                 <InputError message={form.errors.email_body} />
                             </div>
