@@ -3,6 +3,7 @@
 use App\Enums\Role as RoleEnum;
 use App\Enums\SenderIdChannel;
 use App\Enums\SenderIdStatus;
+use App\Mail\SenderIdDecisionMail;
 use App\Mail\SenderIdRequestedMail;
 use App\Models\CallerId;
 use App\Models\Client;
@@ -344,4 +345,88 @@ it('forbids operators and other tenants from changing a request', function (): v
     $this->actingAs($outsider)->get(route('sender-ids.edit', $request))->assertForbidden();
 
     expect($request->refresh()->name)->toBe('OMNICAST');
+});
+it('emails the requester once their request is approved', function (): void {
+    Mail::fake();
+
+    [, , $user] = clientWithWallet();
+
+    $this->actingAs($user)
+        ->post(route('sender-ids.store'), [
+            'channel' => 'sms',
+            'name' => 'OMNICAST',
+            'country' => 'GH',
+            'purpose' => 'Transactional alerts for customers',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $senderId = SenderId::query()->sole();
+    $officer = platformUser(RoleEnum::ComplianceOfficer);
+
+    $this->actingAs($officer)
+        ->post(route('sender-ids.approve', $senderId))
+        ->assertRedirect()
+        ->assertSessionHas('toast.message', fn (string $message): bool => str_contains($message, 'The requester has been emailed.'));
+
+    Mail::assertQueued(SenderIdDecisionMail::class, fn (SenderIdDecisionMail $mail): bool => $mail->hasTo($user->email)
+        && $mail->decision === SenderIdStatus::Approved
+        && $mail->senderId->is($senderId)
+        && $mail->reviewer?->is($officer) === true
+        && $mail->envelope()->subject === 'Your sms sender ID OMNICAST is approved');
+});
+
+it('emails the requester the reason their request was rejected', function (): void {
+    Mail::fake();
+
+    [, , $user] = clientWithWallet();
+
+    $this->actingAs($user)
+        ->post(route('sender-ids.store'), [
+            'channel' => 'sms',
+            'name' => 'OMNICAST',
+            'country' => 'GH',
+            'purpose' => 'Transactional alerts for customers',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $senderId = SenderId::query()->sole();
+    $officer = platformUser(RoleEnum::ComplianceOfficer);
+
+    $this->actingAs($officer)
+        ->post(route('sender-ids.reject', $senderId), ['reason' => 'Brand does not match the registered company'])
+        ->assertRedirect();
+
+    Mail::assertQueued(SenderIdDecisionMail::class, fn (SenderIdDecisionMail $mail): bool => $mail->hasTo($user->email)
+        && $mail->decision === SenderIdStatus::Rejected
+        && $mail->senderId->rejection_reason === 'Brand does not match the registered company'
+        && $mail->envelope()->subject === 'Your sms sender ID OMNICAST was not approved');
+});
+
+it('addresses the client when nobody is recorded as the requester', function (): void {
+    Mail::fake();
+
+    [$client] = clientWithWallet();
+    $officer = platformUser(RoleEnum::ComplianceOfficer);
+    $senderId = SenderId::factory()->for($client)->create(['name' => 'OMNICAST', 'created_by' => null]);
+
+    $this->actingAs($officer)->post(route('sender-ids.approve', $senderId))->assertRedirect();
+
+    Mail::assertQueued(SenderIdDecisionMail::class, fn (SenderIdDecisionMail $mail): bool => $mail->hasTo($client->email)
+        && $mail->requester === null);
+});
+
+it('keeps a decision when the request carries no address to email', function (): void {
+    Mail::fake();
+
+    $client = Client::factory()->create(['email' => null]);
+    $officer = platformUser(RoleEnum::ComplianceOfficer);
+    $senderId = SenderId::factory()->for($client)->create(['name' => 'OMNICAST', 'created_by' => null]);
+
+    $this->actingAs($officer)
+        ->post(route('sender-ids.approve', $senderId))
+        ->assertRedirect()
+        ->assertSessionHas('toast.message', 'OMNICAST · SMS approved.');
+
+    expect($senderId->refresh()->status)->toBe(SenderIdStatus::Approved);
+    Mail::assertNothingQueued();
 });

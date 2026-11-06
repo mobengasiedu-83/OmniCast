@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\Permission;
 use App\Enums\SenderIdChannel;
 use App\Enums\SenderIdStatus;
+use App\Mail\SenderIdDecisionMail;
 use App\Mail\SenderIdRequestedMail;
 use App\Models\CallerId;
 use App\Models\SenderId;
@@ -75,6 +76,8 @@ class SenderIdWorkflow
 
         $this->provisionVoiceCallerId($senderId, $reviewer);
 
+        $this->notifyRequester($senderId, SenderIdStatus::Approved, $reviewer);
+
         return $senderId;
     }
 
@@ -89,6 +92,8 @@ class SenderIdWorkflow
             'approved_at' => null,
             'approved_by' => $reviewer->id,
         ])->save();
+
+        $this->notifyRequester($senderId, SenderIdStatus::Rejected, $reviewer);
 
         return $senderId;
     }
@@ -129,6 +134,43 @@ class SenderIdWorkflow
         }
 
         return $reviewers->count();
+    }
+
+    /**
+     * Email the person who asked for the sender ID once it has been decided.
+     *
+     * The requester is the account user that submitted the request; when a
+     * platform operator raised it on a client's behalf there is nobody to
+     * address, so the client's own contact address is used instead.
+     */
+    public function notifyRequester(SenderId $senderId, SenderIdStatus $decision, ?User $reviewer = null): bool
+    {
+        $senderId->loadMissing(['requester:id,name,email', 'client:id,name,email']);
+
+        $email = $this->requesterEmail($senderId);
+
+        if ($email === '') {
+            Log::warning('Sender ID decided but the requester has no email address.', [
+                'sender_id' => $senderId->id,
+                'status' => $decision->value,
+            ]);
+
+            return false;
+        }
+
+        Mail::to($email)->queue(new SenderIdDecisionMail($senderId, $decision, $senderId->requester, $reviewer));
+
+        return true;
+    }
+
+    /**
+     * The address a decision email reaches for this request, or an empty string.
+     */
+    public function requesterEmail(SenderId $senderId): string
+    {
+        $senderId->loadMissing(['requester:id,name,email', 'client:id,name,email']);
+
+        return trim((string) ($senderId->requester?->email ?? $senderId->client?->email));
     }
 
     /**

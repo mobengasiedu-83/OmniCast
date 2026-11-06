@@ -149,7 +149,7 @@ class SenderIdController extends Controller
 
         return back()->with('toast', [
             'type' => 'success',
-            'message' => "{$senderId->displayName()} approved.",
+            'message' => "{$senderId->displayName()} approved.".$this->requesterNotified($senderId),
         ]);
     }
 
@@ -168,7 +168,7 @@ class SenderIdController extends Controller
 
         return back()->with('toast', [
             'type' => 'warning',
-            'message' => "{$senderId->displayName()} rejected.",
+            'message' => "{$senderId->displayName()} rejected.".$this->requesterNotified($senderId),
         ]);
     }
 
@@ -274,5 +274,15 @@ class SenderIdController extends Controller
             fn (SenderIdStatus $status): array => ['value' => $status->value, 'label' => $status->label()],
             SenderIdStatus::cases(),
         );
+    }
+
+    /**
+     * Tell the reviewer whether the decision email reached the requester.
+     */
+    protected function requesterNotified(SenderId $senderId): string
+    {
+        return $this->workflow->requesterEmail($senderId) === ''
+            ? ''
+            : ' The requester has been emailed.';
     }
 }
