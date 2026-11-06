@@ -94,7 +94,7 @@ class WalletCheckoutController extends Controller
             return $this->backToWallet('error', $payment->failure_reason ?? 'The payment was not completed.');
         }
 
-        return $this->backToWallet('success', $payment->currency.' '
+        return $this->toDashboard('success', $payment->currency.' '
             .number_format((float) $payment->amount_paid, 2).' added to the wallet.');
     }
 
@@ -131,8 +131,24 @@ class WalletCheckoutController extends Controller
      */
     protected function backToWallet(string $type, string $message): RedirectResponse
     {
+        return $this->redirectWithToast('wallet.index', $type, $message);
+    }
+
+    /**
+     * Send the client to their dashboard now that the money has landed.
+     */
+    protected function toDashboard(string $type, string $message): RedirectResponse
+    {
+        return $this->redirectWithToast('dashboard', $type, $message);
+    }
+
+    /**
+     * Redirect to a named route carrying the toast the client should see.
+     */
+    protected function redirectWithToast(string $route, string $type, string $message): RedirectResponse
+    {
         return redirect()
-            ->route('wallet.index')
+            ->route($route)
             ->with('toast', ['type' => $type, 'message' => $message]);
     }
 }

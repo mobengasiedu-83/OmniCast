@@ -222,11 +222,12 @@ class MobileMoneyCheckoutController extends Controller
     }
 
     /**
-     * The charge landed: the wallet is credited and the receipt raised.
+     * The charge landed: the wallet is credited and the receipt raised, so the
+     * client is sent on to their dashboard.
      */
     protected function settled(Payment $payment): RedirectResponse
     {
-        return redirect()->route('wallet.index')->with('toast', [
+        return redirect()->route('dashboard')->with('toast', [
             'type' => 'success',
             'message' => $payment->currency.' '.number_format((float) $payment->amount_paid, 2)
                 .' added to the wallet.',

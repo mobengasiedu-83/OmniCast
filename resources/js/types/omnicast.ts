@@ -711,6 +711,32 @@ export type InvoiceStats = {
     billed: number;
 };
 
+/** One of the client's own purchases, as the invoices screen lists it. */
+export type PurchaseRow = {
+    id: number;
+    number: string;
+    status: string;
+    status_label: string;
+    currency: string;
+    subtotal: number;
+    tax: number;
+    total: number;
+    description: string;
+    payment_reference: string | null;
+    channel: string | null;
+    issued_at: string | null;
+    paid_at: string | null;
+    download_url: string;
+};
+
+/** The headline figures shown above the client's purchases. */
+export type PurchaseSummary = {
+    currency: string;
+    count: number;
+    paid: number;
+    spent: number;
+};
+
 export type RateRow = {
     id: number;
     destination: string;

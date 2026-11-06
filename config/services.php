@@ -51,4 +51,17 @@ return [
         ],
     ],
 
+    /*
+    | Cloudflare Turnstile guards the sign-in form. The check is only armed when
+    | TURNSTILE_ENABLED is on and both keys are present, so local and test runs
+    | keep the plain form and production turns on the challenge.
+    */
+    'turnstile' => [
+        'enabled' => filter_var(env('TURNSTILE_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
+        'timeout' => (int) env('TURNSTILE_TIMEOUT', 10),
+    ],
+
 ];

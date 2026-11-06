@@ -50,7 +50,7 @@ it('credits the wallet and raises an invoice once the gateway confirms', functio
 
     $this->actingAs($this->user)
         ->get(route('wallet.checkout.callback', ['reference' => $payment->reference]))
-        ->assertRedirect(route('wallet.index'))
+        ->assertRedirect(route('dashboard'))
         ->assertSessionHas('toast');
 
     $payment->refresh();
@@ -78,8 +78,8 @@ it('never credits the wallet twice when the callback is replayed', function (): 
 
     $callback = route('wallet.checkout.callback', ['reference' => $payment->reference]);
 
-    $this->actingAs($this->user)->get($callback)->assertRedirect(route('wallet.index'));
-    $this->actingAs($this->user)->get($callback)->assertRedirect(route('wallet.index'));
+    $this->actingAs($this->user)->get($callback)->assertRedirect(route('dashboard'));
+    $this->actingAs($this->user)->get($callback)->assertRedirect(route('dashboard'));
 
     expect(WalletTransaction::query()->count())->toBe(1)
         ->and(Invoice::query()->count())->toBe(1)

@@ -81,7 +81,7 @@ it('credits the wallet once the network accepts the code', function (): void {
 
     $this->actingAs($this->user)
         ->post(route('wallet.mobile-money.otp', $payment), ['otp' => '123456'])
-        ->assertRedirect(route('wallet.index'));
+        ->assertRedirect(route('dashboard'));
 
     $payment->refresh();
 
@@ -228,7 +228,7 @@ it('prompts and settles on the log driver without a live key', function (): void
 
     $this->actingAs($this->user)
         ->post(route('wallet.mobile-money.otp', $payment), ['otp' => '123456'])
-        ->assertRedirect(route('wallet.index'));
+        ->assertRedirect(route('dashboard'));
 
     expect($payment->refresh()->status)->toBe(PaymentStatus::Paid)
         ->and((float) $this->wallet->refresh()->balance)->toBe(round(10.0 + (float) $payment->amount, 2));

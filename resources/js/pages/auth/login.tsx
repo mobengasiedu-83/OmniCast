@@ -2,6 +2,7 @@ import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
+import TurnstileWidget from '@/components/turnstile-widget';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -15,9 +16,15 @@ import PasskeyVerify from '@/components/passkey-verify';
 type Props = {
     status?: string;
     canResetPassword: boolean;
+    turnstile?: {
+        enabled: boolean;
+        site_key: string | null;
+    };
 };
 
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login({ status, canResetPassword, turnstile }: Props) {
+    const turnstileSiteKey =
+        turnstile?.enabled === true ? (turnstile.site_key ?? null) : null;
     return (
         <>
             <Head title="Log in" />
@@ -81,6 +88,17 @@ export default function Login({ status, canResetPassword }: Props) {
                                 />
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>
+
+                            {turnstileSiteKey !== null && (
+                                <div className="grid gap-2">
+                                    <TurnstileWidget siteKey={turnstileSiteKey} />
+                                    <InputError
+                                        message={
+                                            errors['cf-turnstile-response']
+                                        }
+                                    />
+                                </div>
+                            )}
 
                             <Button
                                 type="submit"

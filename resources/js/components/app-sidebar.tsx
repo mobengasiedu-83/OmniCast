@@ -235,6 +235,15 @@ export function AppSidebar() {
                   },
               ]
             : []),
+        ...(canViewWallet && !isPlatformUser
+            ? [
+                  {
+                      title: 'Purchases',
+                      href: urls.invoices.index,
+                      icon: ReceiptText,
+                  },
+              ]
+            : []),
         ...(canManageWallet
             ? [
                   {

@@ -32,6 +32,20 @@ return [
     */
     'support_email' => env('BILLING_SUPPORT_EMAIL', 'billing@sysup360.com'),
 
+    /*
+    | The platform's own letterhead, printed on every invoice document a client
+    | downloads. The name falls back to the application name and the e-mail to
+    | the support address, so a valid invoice is issued out of the box; the
+    | registered company details are supplied through the environment.
+    */
+    'issuer' => [
+        'name' => env('BILLING_ISSUER_NAME') ?: env('APP_NAME', 'SysUp360 OmniCast'),
+        'address' => env('BILLING_ISSUER_ADDRESS') ?: 'Accra, Ghana',
+        'phone' => env('BILLING_ISSUER_PHONE') ?: null,
+        'email' => env('BILLING_ISSUER_EMAIL') ?: env('BILLING_SUPPORT_EMAIL', 'billing@sysup360.com'),
+        'website' => env('BILLING_ISSUER_WEBSITE') ?: null,
+    ],
+
     'limits' => [
         'min_top_up' => (float) env('BILLING_MIN_TOP_UP', 1),
         'max_top_up' => (float) env('BILLING_MAX_TOP_UP', 100000),

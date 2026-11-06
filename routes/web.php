@@ -10,6 +10,7 @@ use App\Http\Controllers\ContactDndController;
 use App\Http\Controllers\ContactListController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailWebhookController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MobileMoneyCheckoutController;
 use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\PricingController;
@@ -155,6 +156,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('wallet.mobile-money.otp');
     Route::post('wallet/mobile-money/{payment}/refresh', [MobileMoneyCheckoutController::class, 'refresh'])
         ->name('wallet.mobile-money.refresh');
+
+    Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('invoices/{invoice}/download', [InvoiceController::class, 'download'])
+        ->name('invoices.download');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/campaigns', [ReportController::class, 'campaigns'])->name('reports.campaigns');

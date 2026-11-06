@@ -104,6 +104,10 @@ export const urls = {
                 path(`/wallet/mobile-money/${payment}/refresh`),
         },
     },
+    invoices: {
+        index: path('/invoices'),
+        download: (invoice: number) => path(`/invoices/${invoice}/download`),
+    },
     reports: {
         index: path('/reports'),
         campaigns: path('/reports/campaigns'),
