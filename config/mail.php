@@ -80,11 +80,19 @@ return [
         | than transactional mail. A relay that needs no authentication and no
         | TLS leaves the username, password and scheme empty.
         |
+        | Leaving the scheme empty is not enough to keep an unencrypted relay
+        | plaintext: Symfony still sends STARTTLS whenever the EHLO reply lists it,
+        | which fails against a relay holding a self-signed certificate. The
+        | `auto_tls` DSN option is the switch that stops that upgrade, so it is off
+        | by default here and only switched on for a relay with a trusted
+        | certificate.
+        |
         */
 
         'broadcast' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_BROADCAST_SCHEME'),
+            'auto_tls' => filter_var(env('MAIL_BROADCAST_AUTO_TLS', false), FILTER_VALIDATE_BOOL),
             'host' => env('MAIL_BROADCAST_HOST', '127.0.0.1'),
             'port' => (int) env('MAIL_BROADCAST_PORT', 2525),
             'username' => env('MAIL_BROADCAST_USERNAME'),
