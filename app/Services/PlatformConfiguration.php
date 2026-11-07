@@ -8,6 +8,13 @@ use App\Models\PlatformSetting;
 /** Resolves configuration in order: global defaults, plan defaults, then tenant overrides. */
 class PlatformConfiguration
 {
+    /**
+     * The platform-wide module switches, resolved once per instance.
+     *
+     * @var array<string, bool>
+     */
+    private array $moduleSwitches = [];
+
     public function resolve(string $group, string $key, mixed $default = null, ?Client $client = null, array $plan = []): mixed
     {
         $setting = PlatformSetting::query()->where('group', $group)->where('key', $key)->first();
@@ -45,11 +52,35 @@ class PlatformConfiguration
         return filter_var($this->resolve('feature_flags', $key, $default, $client), FILTER_VALIDATE_BOOL);
     }
 
+    /**
+     * Whether the platform team still offers a delivery module to any tenant.
+     *
+     * This is the universal switch the module screen writes. It is read
+     * straight from the setting rather than through the plan chain, because
+     * disabling a module has to take it away from every tenant at once.
+     */
+    public function moduleEnabled(string $module): bool
+    {
+        if (array_key_exists($module, $this->moduleSwitches)) {
+            return $this->moduleSwitches[$module];
+        }
+
+        $setting = PlatformSetting::query()
+            ->where('group', 'channels')
+            ->where('key', $module.'.enabled')
+            ->first();
+
+        return $this->moduleSwitches[$module] = $setting === null
+            || filter_var($setting->value, FILTER_VALIDATE_BOOL);
+    }
+
     public function channelEnabled(string $channel, ?Client $client = null): bool
     {
-        $default = filter_var($this->resolve('channels', $channel.'.enabled', true, $client), FILTER_VALIDATE_BOOL);
+        if (! $this->moduleEnabled($channel)) {
+            return false;
+        }
 
-        return $this->enabled('channels.'.$channel, $default, $client);
+        return $this->enabled('channels.'.$channel, true, $client);
     }
 
     /**

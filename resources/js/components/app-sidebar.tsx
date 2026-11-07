@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
     BarChart3,
+    Blocks,
     ChartLine,
     ClipboardCheck,
     CreditCard,
@@ -51,7 +52,7 @@ import {
 import { urls } from '@/lib/urls';
 import clients from '@/routes/admin/clients';
 import registrations from '@/routes/admin/client-registrations';
-import type { Auth, NavItem } from '@/types';
+import type { Auth, ModuleAvailability, ModuleKey, NavItem } from '@/types';
 
 const platformNavItems: NavItem[] = [
     {
@@ -61,61 +62,87 @@ const platformNavItems: NavItem[] = [
     },
 ];
 
-const messagingNavItems: NavItem[] = [
-    {
-        title: 'Campaigns',
-        href: urls.campaigns.index,
-        icon: Megaphone,
-    },
-    {
-        title: 'Contacts',
-        href: urls.contacts.index,
-        icon: Users,
-        children: [
-            {
-                title: 'All contacts',
-                href: urls.contacts.index,
-                icon: Users,
-            },
-            {
-                title: 'Audiences',
-                href: urls.contacts.audiences,
-                icon: Tags,
-            },
-            {
-                title: 'DND',
-                href: urls.contacts.dndRegistry,
-                icon: ShieldBan,
-            },
-        ],
-    },
-    {
-        title: 'Sender IDs',
-        href: urls.senderIds.index,
-        icon: Fingerprint,
-    },
-    {
-        title: 'Voice calls',
-        href: urls.reports.voice,
-        icon: PhoneCall,
-    },
-    {
-        title: 'SMS messages',
-        href: urls.reports.sms,
-        icon: MessageSquareText,
-    },
-    {
-        title: 'Email messages',
-        href: urls.reports.email,
-        icon: Mail,
-    },
-];
+const messagingNavItems = (modules: ModuleAvailability): NavItem[] => {
+    const enabled = (module: ModuleKey): boolean => modules?.[module] ?? true;
+    const anyModule = enabled('sms') || enabled('voice') || enabled('email');
+
+    return [
+        {
+            title: 'Campaigns',
+            href: urls.campaigns.index,
+            icon: Megaphone,
+        },
+        {
+            title: 'Contacts',
+            href: urls.contacts.index,
+            icon: Users,
+            children: [
+                {
+                    title: 'All contacts',
+                    href: urls.contacts.index,
+                    icon: Users,
+                },
+                {
+                    title: 'Audiences',
+                    href: urls.contacts.audiences,
+                    icon: Tags,
+                },
+                {
+                    title: 'DND',
+                    href: urls.contacts.dndRegistry,
+                    icon: ShieldBan,
+                },
+            ],
+        },
+        ...(anyModule
+            ? [
+                  {
+                      title: 'Sender IDs',
+                      href: urls.senderIds.index,
+                      icon: Fingerprint,
+                  },
+              ]
+            : []),
+        ...(enabled('voice')
+            ? [
+                  {
+                      title: 'Voice calls',
+                      href: urls.reports.voice,
+                      icon: PhoneCall,
+                  },
+              ]
+            : []),
+        ...(enabled('sms')
+            ? [
+                  {
+                      title: 'SMS messages',
+                      href: urls.reports.sms,
+                      icon: MessageSquareText,
+                  },
+              ]
+            : []),
+        ...(enabled('email')
+            ? [
+                  {
+                      title: 'Email messages',
+                      href: urls.reports.email,
+                      icon: Mail,
+                  },
+              ]
+            : []),
+    ];
+};
 
 const identityNavItems: NavItem[] = [
     {
         title: 'Global settings',
         href: urls.admin.settings.index,
         icon: Settings,
+    },
+    {
+        title: 'Module availability',
+        href: urls.admin.settings.modules,
+        icon: Blocks,
     },
     {
         title: 'Client plans',
@@ -211,7 +238,10 @@ const platformReportsNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    const { auth, modules } = usePage<{
+        auth: Auth;
+        modules: ModuleAvailability;
+    }>().props;
 
     const isPlatformUser = auth?.isPlatformUser ?? false;
     const permissions = auth?.permissions ?? [];
@@ -386,7 +416,7 @@ export function AppSidebar() {
 
             <SidebarContent className="gap-2">
                 <NavMain items={platformNavItems} label="Platform" />
-                <NavMain items={messagingNavItems} label="Messaging" />
+                <NavMain items={messagingNavItems(modules)} label="Messaging" />
                 {templateNavItems.length > 0 && (
                     <NavMain items={templateNavItems} label="Templates" />
                 )}

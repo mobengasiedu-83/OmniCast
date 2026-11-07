@@ -9,6 +9,7 @@ use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
 use App\Models\User;
+use App\Services\ModuleAvailability;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +18,10 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __construct(protected WalletService $wallets) {}
+    public function __construct(
+        protected WalletService $wallets,
+        protected ModuleAvailability $modules,
+    ) {}
 
     /**
      * Show the delivery overview for the signed-in user.
@@ -60,6 +64,7 @@ class DashboardController extends Controller
                 'is_low' => $wallet->isLow(),
             ],
             'channelBreakdown' => collect(Channel::cases())
+                ->filter(fn (Channel $channel): bool => $this->modules->allowsChannel($channel, $user->client))
                 ->map(fn (Channel $channel): array => [
                     'channel' => $channel->value,
                     'label' => $channel->label(),

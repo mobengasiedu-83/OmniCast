@@ -7,7 +7,9 @@ use App\Enums\ClientDocumentType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Clients\StoreClientDocumentRequest;
 use App\Models\ClientDocument;
+use App\Models\ClientEntitlement;
 use App\Models\ClientResourceRequest;
+use App\Services\ModuleAvailability;
 use App\Services\PlatformConfiguration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +19,7 @@ use Inertia\Response;
 
 class ClientSettingsController extends Controller
 {
-    public function edit(Request $request): Response
+    public function edit(Request $request, ModuleAvailability $modules): Response
     {
         abort_unless($request->user()->client_id, 403);
         $client = $request->user()->client;
@@ -52,11 +54,13 @@ class ClientSettingsController extends Controller
                 'label' => $type->label(),
                 'is_required' => in_array($type, $client->accountType()->identificationTypes(), true),
             ], $client->accountType()->identificationTypes()),
-            'entitlements' => $client->entitlements->map(fn ($entitlement): array => [
-                'service' => $entitlement->service->label(),
-                'is_enabled' => $entitlement->is_enabled,
-                'quota' => $entitlement->quotaLabel(),
-            ])->values()->all(),
+            'entitlements' => $client->entitlements
+                ->filter(fn (ClientEntitlement $entitlement): bool => $modules->enabled($entitlement->service, $client))
+                ->map(fn (ClientEntitlement $entitlement): array => [
+                    'service' => $entitlement->service->label(),
+                    'is_enabled' => $entitlement->is_enabled,
+                    'quota' => $entitlement->quotaLabel(),
+                ])->values()->all(),
             'timezones' => timezone_identifiers_list(),
             'locales' => config('app.supported_locales', ['en']),
         ]);
@@ -110,6 +114,7 @@ class ClientSettingsController extends Controller
         $client->phone = $validated['phone'] ?? null;
         $client->timezone = $validated['timezone'];
         $client->settings = [
+            ...($client->settings ?? []),
             'locale' => $validated['locale'],
             'branding' => $validated['branding'] ?? [],
             'notification_preferences' => $validated['notification_preferences'] ?? [],

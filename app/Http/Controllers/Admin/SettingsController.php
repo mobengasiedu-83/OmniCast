@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Concerns\RecordsActivity;
+use App\Enums\ClientService;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\ClientEntitlement;
 use App\Models\ClientResourceRequest;
 use App\Models\PlatformSetting;
 use App\Services\CountryCatalog;
+use App\Services\ModuleAvailability;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -114,6 +118,99 @@ class SettingsController extends Controller
         return $isSecret || ($group === 'providers' && preg_match('/(?:password|secret|token|api[_\.]?key)$/i', $key) === 1);
     }
 
+    /**
+     * The universal switches that take a module away from every client.
+     */
+    public function modules(ModuleAvailability $modules): Response
+    {
+        Gate::authorize('users.manage');
+
+        return Inertia::render('admin/settings/modules', [
+            'modules' => array_map(fn (ClientService $module): array => [
+                'value' => $module->value,
+                'label' => $module->label(),
+                'description' => $this->moduleDescriptions()[$module->value],
+                'enabled' => $modules->universallyEnabled($module),
+                'clients_disabled' => ClientEntitlement::query()
+                    ->where('service', $module->value)
+                    ->where('is_enabled', false)
+                    ->count(),
+            ], ClientService::cases()),
+        ]);
+    }
+
+    /**
+     * Store the universal switches in one request.
+     */
+    public function updateModules(Request $request): RedirectResponse
+    {
+        Gate::authorize('users.manage');
+
+        $validated = $request->validate([
+            'modules' => ['required', 'array', 'min:1'],
+            'modules.*.value' => ['required', 'string', Rule::enum(ClientService::class)],
+            'modules.*.enabled' => ['required', 'boolean'],
+        ]);
+
+        $changed = [];
+
+        foreach ($validated['modules'] as $attributes) {
+            $module = ClientService::from($attributes['value']);
+            $enabled = (bool) $attributes['enabled'];
+            $setting = PlatformSetting::query()->firstOrNew([
+                'group' => 'channels',
+                'key' => $module->value.'.enabled',
+            ]);
+            $setting->value = $enabled ? '1' : '0';
+            $setting->is_secret = false;
+            $setting->updated_by = $request->user()->id;
+            $setting->save();
+            $changed[$module->value] = $enabled;
+        }
+
+        $this->recordActivity('updated module availability', properties: ['modules' => $changed]);
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Module availability saved for every client.',
+        ]);
+    }
+
+    /**
+     * The plan codes the platform has configured, always including the default.
+     *
+     * Plan settings are stored as "{code}.{key}", so the code is the first
+     * segment. The keys come back as a base collection because removing
+     * duplicates has to compare strings rather than read model keys.
+     *
+     * @return Collection<int, string>
+     */
+    private function planCodes(): Collection
+    {
+        return PlatformSetting::query()
+            ->where('group', 'plans')
+            ->pluck('key')
+            ->map(fn (string $key): string => explode('.', $key, 2)[0])
+            ->prepend('default')
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
+    /**
+     * The wording the module screen shows under each switch.
+     *
+     * @return array<string, string>
+     */
+    private function moduleDescriptions(): array
+    {
+        return [
+            ClientService::Sms->value => 'Sender IDs, SMS campaigns and the SMS delivery report.',
+            ClientService::Email->value => 'Email campaigns and the email delivery report.',
+            ClientService::Voice->value => 'Caller IDs, voice campaigns and the voice delivery report.',
+        ];
+    }
+
     public function requests(): Response
     {
         Gate::authorize('users.manage');
@@ -126,9 +223,7 @@ class SettingsController extends Controller
     public function plans(): Response
     {
         Gate::authorize('users.manage');
-        $planCodes = PlatformSetting::query()->where('group', 'plans')->get()->map(
-            fn (PlatformSetting $setting): string => explode('.', $setting->key, 2)[0],
-        )->unique()->values()->prepend('default')->unique()->sort()->values();
+        $planCodes = $this->planCodes();
 
         return Inertia::render('admin/settings/plans', [
             'plans' => $planCodes,
@@ -143,9 +238,7 @@ class SettingsController extends Controller
     public function assignPlan(Request $request, Client $client): RedirectResponse
     {
         Gate::authorize('users.manage');
-        $planCodes = PlatformSetting::query()->where('group', 'plans')->get()->map(
-            fn (PlatformSetting $setting): string => explode('.', $setting->key, 2)[0],
-        )->unique()->prepend('default')->unique()->values()->all();
+        $planCodes = $this->planCodes()->values()->all();
         $validated = $request->validate(['plan_code' => ['required', 'string', Rule::in($planCodes)]]);
         $settings = $client->settings ?? [];
         $settings['plan_code'] = $validated['plan_code'];

@@ -7,6 +7,7 @@ use App\Enums\ClientAccountType;
 use App\Enums\ClientDocumentType;
 use App\Enums\ClientService;
 use App\Enums\ClientStatus;
+use App\Enums\ClientTheme;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -61,6 +62,14 @@ class Client extends Model
             'archived_at' => 'datetime',
             'settings' => 'array',
         ];
+    }
+
+    /**
+     * The colour theme this tenant has chosen for its workspace.
+     */
+    public function theme(): ClientTheme
+    {
+        return ClientTheme::resolve($this->settings['theme'] ?? null);
     }
 
     /**

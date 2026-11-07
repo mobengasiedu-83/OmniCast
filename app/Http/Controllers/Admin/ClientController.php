@@ -17,6 +17,7 @@ use App\Models\ClientEntitlement;
 use App\Models\ClientRegistration;
 use App\Models\User;
 use App\Services\ClientLifecycle;
+use App\Services\ModuleAvailability;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +35,10 @@ class ClientController extends Controller
     /**
      * Create a new controller instance.
      */
-    public function __construct(protected ClientLifecycle $lifecycle) {}
+    public function __construct(
+        protected ClientLifecycle $lifecycle,
+        protected ModuleAvailability $modules,
+    ) {}
 
     /**
      * List every tenant on the platform.
@@ -373,6 +377,7 @@ class ClientController extends Controller
                 'service' => $service->value,
                 'service_label' => $service->label(),
                 'is_enabled' => $entitlement?->is_enabled ?? true,
+                'platform_enabled' => $this->modules->universallyEnabled($service),
                 'monthly_quota' => $entitlement?->monthly_quota,
                 'daily_quota' => $entitlement?->daily_quota,
                 'notes' => $entitlement?->notes,

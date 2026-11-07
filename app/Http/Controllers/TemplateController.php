@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Channel;
 use App\Enums\TemplateStatus;
 use App\Http\Controllers\Concerns\PresentsTemplates;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Http\Requests\Template\TemplateRequest;
+use App\Models\Client;
 use App\Models\MessageTemplate;
 use App\Models\User;
+use App\Services\ModuleAvailability;
 use App\Services\TemplateLibrary;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +27,10 @@ class TemplateController extends Controller
 {
     use PresentsTemplates, ResolvesTenantClient;
 
-    public function __construct(protected TemplateLibrary $library) {}
+    public function __construct(
+        protected TemplateLibrary $library,
+        protected ModuleAvailability $modules,
+    ) {}
 
     /**
      * List the templates the signed-in user may use for a campaign.
@@ -56,7 +60,7 @@ class TemplateController extends Controller
             'templates' => $templates,
             'filters' => $filters,
             'categories' => $this->categoryOptions($request),
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($user->client),
             'statuses' => $this->statusOptions(),
             'counts' => $this->channelCounts($user),
             'stats' => [
@@ -253,7 +257,7 @@ class TemplateController extends Controller
     {
         return [
             'categories' => $this->categoryOptions($request),
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($this->tenantClient($request)),
             'statuses' => $this->statusOptions(),
             'clients' => $this->selectableClients($request),
             'tenantClientId' => $this->tenantClient($request)?->id,
@@ -261,14 +265,13 @@ class TemplateController extends Controller
     }
 
     /**
+     * The channels this tenant can still write a template for.
+     *
      * @return list<array<string, string>>
      */
-    protected function channelOptions(): array
+    protected function channelOptions(?Client $client = null): array
     {
-        return array_map(
-            fn (Channel $channel): array => ['value' => $channel->value, 'label' => $channel->label()],
-            Channel::cases(),
-        );
+        return $this->modules->channelOptions($client);
     }
 
     /**
@@ -291,9 +294,9 @@ class TemplateController extends Controller
     {
         $counts = ['all' => $this->library->query($user)->count()];
 
-        foreach (Channel::cases() as $channel) {
-            $counts[$channel->value] = $this->library->query($user)
-                ->where('channel', $channel->value)
+        foreach ($this->channelOptions($user->client) as $channel) {
+            $counts[$channel['value']] = $this->library->query($user)
+                ->where('channel', $channel['value'])
                 ->count();
         }
 

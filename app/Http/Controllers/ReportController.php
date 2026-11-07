@@ -7,12 +7,14 @@ use App\Enums\Permission;
 use App\Enums\ReportType;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Models\Campaign;
+use App\Models\Client;
 use App\Models\EmailMessage;
 use App\Models\ReportExport;
 use App\Models\SmsMessage;
 use App\Models\User;
 use App\Models\VoiceCall;
 use App\Services\EmailMessageReport;
+use App\Services\ModuleAvailability;
 use App\Services\Reporting\CampaignPerformanceReport;
 use App\Services\Reporting\ContactOutcomeReport;
 use App\Services\Reporting\OverviewReport;
@@ -34,6 +36,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ReportController extends Controller
 {
     use ResolvesTenantClient;
+
+    public function __construct(protected ModuleAvailability $modules) {}
 
     /**
      * Show delivery and spend reporting for a date range.
@@ -58,7 +62,7 @@ class ReportController extends Controller
                 'days' => $period->days(),
             ],
             ...$overview->for(ReportScope::forUser($user), $period, $channel),
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($user->client),
             'can' => [
                 'export' => Gate::allows(Permission::ExportReports->value),
             ],
@@ -91,7 +95,7 @@ class ReportController extends Controller
                 'days' => $period->days(),
             ],
             'report' => $reports->for(ReportScope::forUser($user), $period, $filters),
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($user->client),
             'campaigns' => $this->campaignOptions($user),
             'can' => [
                 'export' => Gate::allows(Permission::ExportReports->value),
@@ -328,16 +332,13 @@ class ReportController extends Controller
     }
 
     /**
-     * The channel options a filter offers.
+     * The channel options a filter offers, limited to live modules.
      *
      * @return list<array{value: string, label: string}>
      */
-    protected function channelOptions(): array
+    protected function channelOptions(?Client $client = null): array
     {
-        return array_map(
-            fn (Channel $channel): array => ['value' => $channel->value, 'label' => $channel->label()],
-            Channel::cases(),
-        );
+        return $this->modules->channelOptions($client);
     }
 
     /**

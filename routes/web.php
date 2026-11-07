@@ -180,9 +180,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/campaigns', [ReportController::class, 'campaigns'])->name('reports.campaigns');
     Route::get('reports/contacts', [ReportController::class, 'contacts'])->name('reports.contacts');
-    Route::get('reports/voice', [ReportController::class, 'voice'])->name('reports.voice');
-    Route::get('reports/sms', [ReportController::class, 'sms'])->name('reports.sms');
-    Route::get('reports/email', [ReportController::class, 'email'])->name('reports.email');
+    Route::get('reports/voice', [ReportController::class, 'voice'])->name('reports.voice')->middleware('module:voice');
+    Route::get('reports/sms', [ReportController::class, 'sms'])->name('reports.sms')->middleware('module:sms');
+    Route::get('reports/email', [ReportController::class, 'email'])->name('reports.email')->middleware('module:email');
 
     Route::get('reports/exports', [ReportController::class, 'exportHistory'])->name('reports.exports.index');
     Route::post('reports/exports', [ReportController::class, 'storeExport'])->name('reports.exports.store');

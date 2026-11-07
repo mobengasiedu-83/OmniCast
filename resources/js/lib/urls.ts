@@ -137,6 +137,7 @@ export const urls = {
     admin: {
         settings: {
             index: path('/admin/settings'),
+            modules: path('/admin/settings/modules'),
             plans: path('/admin/settings/plans'),
             assignPlan: (client: number) =>
                 path(`/admin/settings/plans/${client}`),

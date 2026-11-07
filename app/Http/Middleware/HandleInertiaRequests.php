@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Services\ModuleAvailability;
 use App\Services\PlatformConfiguration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -61,6 +62,7 @@ class HandleInertiaRequests extends Middleware
                 'clientName' => fn (): ?string => $account?->client?->name,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'modules' => fn (): array => app(ModuleAvailability::class)->forClient($account?->client),
             'flash' => [
                 'toast' => fn (): mixed => $request->session()->get('toast'),
                 'import' => fn (): mixed => $request->session()->get('import'),

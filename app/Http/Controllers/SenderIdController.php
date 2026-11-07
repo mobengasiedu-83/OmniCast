@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ClientService;
 use App\Enums\SenderIdChannel;
 use App\Enums\SenderIdStatus;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Http\Requests\SenderId\SenderIdRequest;
 use App\Models\Client;
 use App\Models\SenderId;
+use App\Services\ModuleAvailability;
 use App\Services\SenderIdWorkflow;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +23,10 @@ class SenderIdController extends Controller
 {
     use ResolvesTenantClient;
 
-    public function __construct(protected SenderIdWorkflow $workflow) {}
+    public function __construct(
+        protected SenderIdWorkflow $workflow,
+        protected ModuleAvailability $modules,
+    ) {}
 
     /**
      * List the sender IDs requested by the client tenant.
@@ -72,7 +77,7 @@ class SenderIdController extends Controller
                 'approved' => $this->scopedQuery($request, $client)->where('status', SenderIdStatus::Approved->value)->count(),
                 'rejected' => $this->scopedQuery($request, $client)->where('status', SenderIdStatus::Rejected->value)->count(),
             ],
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($client),
             'statuses' => $this->statusOptions(),
             'clients' => $this->selectableClients($request),
             'can' => [
@@ -192,13 +197,20 @@ class SenderIdController extends Controller
     /**
      * The tenant-scoped sender ID query shared by the listing and its counters.
      *
+     * A tenant never sees identities that belong to a module it has switched
+     * off, while the platform team keeps its full cross-client view.
+     *
      * @return Builder<SenderId>
      */
     protected function scopedQuery(Request $request, ?Client $client): Builder
     {
         return SenderId::query()
             ->forUser($request->user())
-            ->when($client !== null, fn (Builder $query) => $query->where($query->qualifyColumn('client_id'), $client->id));
+            ->when($client !== null, fn (Builder $query) => $query->where($query->qualifyColumn('client_id'), $client->id))
+            ->when($client !== null, fn (Builder $query) => $query->whereIn(
+                $query->qualifyColumn('channel'),
+                array_column($this->channelOptions($client), 'value'),
+            ));
     }
 
     /**
@@ -242,27 +254,41 @@ class SenderIdController extends Controller
         $client = $this->tenantClient($request);
 
         return [
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($client),
             'clients' => $this->selectableClients($request),
             'tenantClientId' => $client?->id,
         ];
     }
 
     /**
+     * The sender identity channels this tenant may still request.
+     *
      * @return list<array<string, mixed>>
      */
-    protected function channelOptions(): array
+    protected function channelOptions(?Client $client = null): array
     {
-        return array_map(fn (SenderIdChannel $channel): array => [
-            'value' => $channel->value,
-            'label' => $channel->label(),
-            'description' => $channel->description(),
-            'identifier_label' => $channel->identifierLabel(),
-            'placeholder' => $channel->placeholder(),
-            'hint' => $channel->hint(),
-            'requires_country' => $channel->requiresCountry(),
-            'max_length' => $channel->maxLength(),
-        ], SenderIdChannel::cases());
+        $options = [];
+
+        foreach (SenderIdChannel::cases() as $channel) {
+            $module = ClientService::tryFrom($channel->value);
+
+            if ($module !== null && ! $this->modules->enabled($module, $client)) {
+                continue;
+            }
+
+            $options[] = [
+                'value' => $channel->value,
+                'label' => $channel->label(),
+                'description' => $channel->description(),
+                'identifier_label' => $channel->identifierLabel(),
+                'placeholder' => $channel->placeholder(),
+                'hint' => $channel->hint(),
+                'requires_country' => $channel->requiresCountry(),
+                'max_length' => $channel->maxLength(),
+            ];
+        }
+
+        return $options;
     }
 
     /**

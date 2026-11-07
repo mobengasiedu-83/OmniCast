@@ -66,6 +66,8 @@ Route::middleware(['auth', 'verified', 'platform'])
 
             Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
             Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
+            Route::get('settings/modules', [SettingsController::class, 'modules'])->name('settings.modules');
+            Route::put('settings/modules', [SettingsController::class, 'updateModules'])->name('settings.modules.update');
             Route::get('settings/plans', [SettingsController::class, 'plans'])->name('settings.plans');
             Route::put('settings/plans/{client}', [SettingsController::class, 'assignPlan'])->name('settings.plans.assign');
             Route::get('resource-requests', [SettingsController::class, 'requests'])->name('resource-requests.index');

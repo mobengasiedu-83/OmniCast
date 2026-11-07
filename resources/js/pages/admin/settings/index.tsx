@@ -50,11 +50,18 @@ export default function SettingsIndex({
                 title="Platform settings"
                 description="Configure global, plan and client defaults. Secret values are encrypted and never returned to the browser."
                 actions={
-                    <Button asChild variant="outline">
-                        <Link href={urls.admin.settings.plans}>
-                            Assign client plans
-                        </Link>
-                    </Button>
+                    <>
+                        <Button asChild variant="outline">
+                            <Link href={urls.admin.settings.modules}>
+                                Module availability
+                            </Link>
+                        </Button>
+                        <Button asChild variant="outline">
+                            <Link href={urls.admin.settings.plans}>
+                                Assign client plans
+                            </Link>
+                        </Button>
+                    </>
                 }
             />
             <Form {...update.form()} className="space-y-6">

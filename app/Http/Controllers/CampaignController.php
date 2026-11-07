@@ -12,6 +12,7 @@ use App\Http\Requests\Campaign\RejectCampaignRequest;
 use App\Models\CallerId;
 use App\Models\Campaign;
 use App\Models\CampaignVersion;
+use App\Models\Client;
 use App\Models\ContactList;
 use App\Models\ContactSegment;
 use App\Models\MessageTemplate;
@@ -20,6 +21,7 @@ use App\Services\CampaignReadiness;
 use App\Services\CampaignService;
 use App\Services\ContactSegmentQuery;
 use App\Services\EmailMessageReport;
+use App\Services\ModuleAvailability;
 use App\Services\PlatformConfiguration;
 use App\Services\SmsMessageReport;
 use App\Services\TemplateLibrary;
@@ -44,6 +46,7 @@ class CampaignController extends Controller
         protected SmsMessageReport $smsReport,
         protected EmailMessageReport $emailReport,
         protected TemplateLibrary $library,
+        protected ModuleAvailability $modules,
     ) {}
 
     /**
@@ -77,7 +80,7 @@ class CampaignController extends Controller
             'campaigns' => $campaigns,
             'filters' => $filters,
             'statuses' => $this->statusOptions(),
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($this->tenantClient($request)),
             'can' => [
                 'create' => Gate::allows('create', Campaign::class),
             ],
@@ -575,7 +578,7 @@ class CampaignController extends Controller
                 ->orderBy('number')
                 ->get(['id', 'number', 'label'])
                 ->all(),
-            'channels' => $this->channelOptions(),
+            'channels' => $this->channelOptions($client),
             'outboundCallerId' => $this->readiness->outboundCallerId($client),
         ];
     }
@@ -592,13 +595,15 @@ class CampaignController extends Controller
     }
 
     /**
+     * The channels this tenant may still pick from.
+     *
+     * A switched-off module never reaches the wizard, so a tenant can only
+     * start a campaign on something they can actually deliver.
+     *
      * @return list<array{value: string, label: string}>
      */
-    protected function channelOptions(): array
+    protected function channelOptions(?Client $client = null): array
     {
-        return array_map(
-            fn (Channel $channel): array => ['value' => $channel->value, 'label' => $channel->label()],
-            Channel::cases(),
-        );
+        return $this->modules->channelOptions($client);
     }
 }

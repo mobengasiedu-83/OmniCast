@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureAccountIsVerified;
+use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsurePlatformUser;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -35,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'platform' => EnsurePlatformUser::class,
+            'module' => EnsureModuleEnabled::class,
             'verified' => EnsureAccountIsVerified::class,
         ]);
 

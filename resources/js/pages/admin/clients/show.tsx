@@ -3,6 +3,7 @@ import { useState, type MouseEvent } from 'react';
 import { useConfirm, type ConfirmOptions } from '@/components/confirm-dialog';
 import PageHeader from '@/components/page-header';
 import StatusBadge from '@/components/status-badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -67,6 +68,7 @@ type Entitlement = {
     service: string;
     service_label: string;
     is_enabled: boolean;
+    platform_enabled: boolean;
     monthly_quota: number | null;
     daily_quota: number | null;
     notes: string | null;
@@ -259,8 +261,13 @@ export default function ClientShow({
                                                 value={item.service}
                                             />
                                             <div>
-                                                <p className="font-medium">
+                                                <p className="flex flex-wrap items-center gap-2 font-medium">
                                                     {item.service_label}
+                                                    {!item.platform_enabled && (
+                                                        <Badge variant="destructive">
+                                                            Off platform-wide
+                                                        </Badge>
+                                                    )}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     Current: {item.quota_label}
