@@ -17,6 +17,9 @@ use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\TemplateApprovalController;
+use App\Http\Controllers\Admin\TemplateController as AdminTemplateController;
+use App\Http\Controllers\Admin\TemplateUsageController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -118,6 +121,26 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::post('reports/exports', [AdminReportController::class, 'storeExport'])
                 ->middleware('can:reports.export')
                 ->name('reports.exports.store');
+        });
+
+        Route::middleware('can:templates.manage')->group(function (): void {
+            Route::get('templates', [AdminTemplateController::class, 'index'])->name('templates.index');
+            Route::get('templates/create', [AdminTemplateController::class, 'create'])->name('templates.create');
+            Route::post('templates', [AdminTemplateController::class, 'store'])->name('templates.store');
+            Route::get('templates/{template}/edit', [AdminTemplateController::class, 'edit'])->name('templates.edit');
+            Route::put('templates/{template}', [AdminTemplateController::class, 'update'])->name('templates.update');
+            Route::post('templates/{template}/archive', [AdminTemplateController::class, 'archive'])->name('templates.archive');
+            Route::delete('templates/{template}', [AdminTemplateController::class, 'destroy'])->name('templates.destroy');
+        });
+
+        Route::middleware('can:templates.approve')->group(function (): void {
+            Route::get('template-approvals', [TemplateApprovalController::class, 'index'])->name('template-approvals.index');
+            Route::post('template-approvals/{template}/approve', [TemplateApprovalController::class, 'approve'])->name('template-approvals.approve');
+            Route::post('template-approvals/{template}/reject', [TemplateApprovalController::class, 'reject'])->name('template-approvals.reject');
+        });
+
+        Route::middleware('can:templates.view')->group(function (): void {
+            Route::get('template-usage', [TemplateUsageController::class, 'index'])->name('template-usage.index');
         });
 
         Route::middleware('can:rates.view')->group(function (): void {

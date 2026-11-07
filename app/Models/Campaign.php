@@ -32,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $contact_segment_id
  * @property int|null $sender_id
  * @property int|null $caller_id
+ * @property int|null $message_template_id
  * @property string|null $sms_message
  * @property SmsEncoding|null $sms_encoding
  * @property string|null $email_subject
@@ -74,7 +75,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'reference', 'idempotency_key', 'client_id', 'duplicated_from_id', 'name', 'channel', 'status', 'current_version',
-    'contact_list_id', 'contact_segment_id', 'sender_id', 'caller_id',
+    'contact_list_id', 'contact_segment_id', 'sender_id', 'caller_id', 'message_template_id',
     'sms_message', 'sms_encoding', 'email_subject', 'email_body', 'email_format',
     'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
     'ivr_enabled', 'ivr_prompt', 'ivr_timeout_seconds', 'ivr_max_attempts', 'ivr_options',
@@ -162,6 +163,16 @@ class Campaign extends Model
     public function callerId(): BelongsTo
     {
         return $this->belongsTo(CallerId::class, 'caller_id');
+    }
+
+    /**
+     * The library template the copy started from, if any.
+     *
+     * @return BelongsTo<MessageTemplate, $this>
+     */
+    public function messageTemplate(): BelongsTo
+    {
+        return $this->belongsTo(MessageTemplate::class, 'message_template_id');
     }
 
     /**

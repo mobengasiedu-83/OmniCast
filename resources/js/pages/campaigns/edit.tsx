@@ -14,6 +14,7 @@ type EditableCampaign = {
     contact_segment_id: number | null;
     sender_id: number | null;
     caller_id: number | null;
+    message_template_id: number | null;
     sms_message: string | null;
     email_subject: string | null;
     email_body: string | null;
@@ -55,6 +56,7 @@ function initialValues(
         contact_segment_id: text(campaign.contact_segment_id),
         sender_id: text(campaign.sender_id),
         caller_id: text(campaign.caller_id),
+        message_template_id: text(campaign.message_template_id),
         sms_message: text(campaign.sms_message),
         email_subject: text(campaign.email_subject),
         email_body: text(campaign.email_body),

@@ -7,10 +7,12 @@ use App\Enums\EmailFormat;
 use App\Enums\Permission;
 use App\Enums\SenderIdChannel;
 use App\Enums\SenderIdStatus;
+use App\Enums\TemplateStatus;
 use App\Models\Client;
 use App\Services\PlatformConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 use Illuminate\Validation\Validator;
 
 class CampaignRequest extends FormRequest
@@ -68,6 +70,11 @@ class CampaignRequest extends FormRequest
                 }),
             ],
             'caller_id' => ['nullable', 'integer', Rule::exists('caller_ids', 'id')->where('client_id', $clientId)],
+            'message_template_id' => [
+                'nullable',
+                'integer',
+                $this->templateRule($clientId, $channel),
+            ],
             'sms_message' => [Rule::requiredIf($requiresSms), 'nullable', 'string', 'max:1600'],
             'email_subject' => [Rule::requiredIf($requiresEmail), 'nullable', 'string', 'max:255'],
             'email_body' => [Rule::requiredIf($requiresEmail), 'nullable', 'string', 'max:100000'],
@@ -141,6 +148,36 @@ class CampaignRequest extends FormRequest
     }
 
     /**
+     * A campaign may only point at a template its own tenant can use: the
+     * platform catalogue, a copy the tenant owns, and one written for the
+     * channel the campaign is about to send on.
+     *
+     * @return Exists
+     */
+    protected function templateRule(mixed $clientId, ?Channel $channel): mixed
+    {
+        return Rule::exists('message_templates', 'id')
+            ->where(function ($query) use ($clientId, $channel): void {
+                $query->whereNull('deleted_at')
+                    ->where(function ($query) use ($clientId): void {
+                        $query->whereNull('client_id');
+
+                        if (is_numeric($clientId)) {
+                            $query->orWhere('client_id', (int) $clientId);
+                        }
+                    });
+
+                if ($channel !== null) {
+                    $query->whereIn('channel', array_map(
+                        fn (Channel $deliveryChannel): string => $deliveryChannel->value,
+                        $channel->deliveryChannels(),
+                    ));
+                }
+            })
+            ->whereIn('status', [TemplateStatus::Draft->value, TemplateStatus::Active->value]);
+    }
+
+    /**
      * The campaign attributes that may be persisted.
      *
      * @return array<string, mixed>
@@ -149,6 +186,7 @@ class CampaignRequest extends FormRequest
     {
         return $this->safe()->only([
             'client_id', 'name', 'channel', 'contact_list_id', 'contact_segment_id', 'sender_id', 'caller_id',
+            'message_template_id',
             'sms_message', 'email_subject', 'email_body', 'email_format',
             'voice_script', 'voice_recording_path', 'voice_max_duration_seconds',
             'ivr_enabled', 'ivr_prompt', 'ivr_timeout_seconds', 'ivr_max_attempts', 'ivr_options',

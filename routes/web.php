@@ -18,6 +18,8 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SenderIdController;
 use App\Http\Controllers\Settings\ClientSettingsController;
 use App\Http\Controllers\SmsWebhookController;
+use App\Http\Controllers\TemplateCategoryController;
+use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\VoiceWebhookController;
 use App\Http\Controllers\WalletCheckoutController;
 use App\Http\Controllers\WalletController;
@@ -136,6 +138,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('sender-ids/{senderId}/approve', [SenderIdController::class, 'approve'])->name('sender-ids.approve');
     Route::post('sender-ids/{senderId}/reject', [SenderIdController::class, 'reject'])->name('sender-ids.reject');
     Route::delete('sender-ids/{senderId}', [SenderIdController::class, 'destroy'])->name('sender-ids.destroy');
+
+    Route::get('templates', [TemplateController::class, 'index'])->name('templates.index');
+    Route::get('templates/create', [TemplateController::class, 'create'])->name('templates.create');
+    Route::post('templates', [TemplateController::class, 'store'])->name('templates.store');
+    Route::get('templates/{template}/edit', [TemplateController::class, 'edit'])->name('templates.edit');
+    Route::put('templates/{template}', [TemplateController::class, 'update'])->name('templates.update');
+    Route::delete('templates/{template}', [TemplateController::class, 'destroy'])->name('templates.destroy');
+    Route::post('templates/{template}/customise', [TemplateController::class, 'customise'])->name('templates.customise');
+    Route::post('templates/{template}/favourite', [TemplateController::class, 'favourite'])->name('templates.favourite');
+
+    Route::get('template-categories', [TemplateCategoryController::class, 'index'])->name('template-categories.index');
+    Route::post('template-categories', [TemplateCategoryController::class, 'store'])->name('template-categories.store');
+    Route::put('template-categories/{category}', [TemplateCategoryController::class, 'update'])->name('template-categories.update');
+    Route::delete('template-categories/{category}', [TemplateCategoryController::class, 'destroy'])->name('template-categories.destroy');
 
     Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
     Route::post('wallet/top-up', [WalletController::class, 'topUp'])->name('wallet.top-up');

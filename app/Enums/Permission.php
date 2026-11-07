@@ -20,6 +20,10 @@ enum Permission: string
     case ViewSenderIds = 'sender-ids.view';
     case ManageSenderIds = 'sender-ids.manage';
     case ApproveSenderIds = 'sender-ids.approve';
+    case ViewTemplates = 'templates.view';
+    case ManageTemplates = 'templates.manage';
+    case ApproveTemplates = 'templates.approve';
+    case ManageTemplateCategories = 'template-categories.manage';
     case ViewWallet = 'wallet.view';
     case ManageWallet = 'wallet.manage';
     case TopUpWallet = 'wallet.top-up';
@@ -45,6 +49,10 @@ enum Permission: string
             self::ViewSenderIds => 'View Sender IDs',
             self::ManageSenderIds => 'Manage Sender IDs',
             self::ApproveSenderIds => 'Approve Sender IDs',
+            self::ViewTemplates => 'View Templates',
+            self::ManageTemplates => 'Manage Templates',
+            self::ApproveTemplates => 'Approve Templates',
+            self::ManageTemplateCategories => 'Manage Template Categories',
             self::ViewWallet => 'View Wallet',
             self::ManageWallet => 'Manage Wallet',
             self::TopUpWallet => 'Top Up Wallet',

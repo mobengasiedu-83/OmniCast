@@ -279,6 +279,24 @@ export type CampaignFormOptions = {
     callerIds: { id: number; number: string; label: string | null }[];
     channels: SelectOption[];
     outboundCallerId: string | null;
+    templates: CampaignTemplateOption[];
+};
+
+/**
+ * A template as the campaign editor needs it: enough to preview the copy the
+ * picker offers and to drop it into the campaign body.
+ */
+export type CampaignTemplateOption = {
+    id: number;
+    name: string;
+    channel: string;
+    channel_label: string;
+    subject: string | null;
+    body: string;
+    category: string | null;
+    variables: string[];
+    is_system: boolean;
+    usage_count: number;
 };
 
 export type CampaignFormValues = {
@@ -288,6 +306,7 @@ export type CampaignFormValues = {
     contact_segment_id: string;
     sender_id: string;
     caller_id: string;
+    message_template_id: string;
     sms_message: string;
     email_subject: string;
     email_body: string;
@@ -1292,4 +1311,77 @@ export type ChannelDeliveryReport = {
     totals: ChannelDeliveryTotals;
     daily: ChannelDeliveryPoint[];
     byClient: ChannelDeliveryClientRow[];
+};
+
+/**
+ * A category the library files templates under. Platform categories are shared
+ * with every tenant, tenant categories stay inside the account that made them.
+ */
+export type TemplateCategoryOption = {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    sort_order: number;
+    is_system: boolean;
+    templates_count: number;
+};
+
+/**
+ * A template as the library, the catalogue and the review queue present it.
+ */
+export type TemplateRow = {
+    id: number;
+    name: string;
+    channel: string;
+    channel_label: string;
+    status: string;
+    status_label: string;
+    description: string | null;
+    subject: string | null;
+    body: string;
+    language: string;
+    variables: string[];
+    category: { id: number; name: string; slug: string } | null;
+    client: string | null;
+    client_id: number | null;
+    is_system: boolean;
+    usage_count: number;
+    campaigns_count: number;
+    author: string | null;
+    approved_at: string | null;
+    rejection_reason: string | null;
+    updated_at: string | null;
+    is_favourite: boolean;
+    can: {
+        update: boolean;
+        delete: boolean;
+        approve: boolean;
+        use: boolean;
+    };
+};
+
+/**
+ * A template on the platform's usage report: who owns it and when it was last
+ * copied into a campaign.
+ */
+export type TemplateUsageRow = TemplateRow & {
+    ownership: string;
+    last_used_at: string | null;
+};
+
+/**
+ * The editable fields of a template. The editor keeps every value as a string
+ * so an untouched select or input round-trips exactly what the server sent.
+ */
+export type TemplateFormValues = {
+    name: string;
+    channel: string;
+    template_category_id: string;
+    language: string;
+    description: string;
+    subject: string;
+    body: string;
+    status: string;
+    client_id: string;
 };

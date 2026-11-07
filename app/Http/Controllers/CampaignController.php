@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
+use App\Enums\TemplateStatus;
+use App\Http\Controllers\Concerns\PresentsTemplates;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Http\Requests\Campaign\CampaignRequest;
 use App\Http\Requests\Campaign\RejectCampaignRequest;
@@ -12,6 +14,7 @@ use App\Models\Campaign;
 use App\Models\CampaignVersion;
 use App\Models\ContactList;
 use App\Models\ContactSegment;
+use App\Models\MessageTemplate;
 use App\Models\SenderId;
 use App\Services\CampaignReadiness;
 use App\Services\CampaignService;
@@ -19,6 +22,7 @@ use App\Services\ContactSegmentQuery;
 use App\Services\EmailMessageReport;
 use App\Services\PlatformConfiguration;
 use App\Services\SmsMessageReport;
+use App\Services\TemplateLibrary;
 use App\Services\VoiceCallReport;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
@@ -29,7 +33,7 @@ use Inertia\Response;
 
 class CampaignController extends Controller
 {
-    use ResolvesTenantClient;
+    use PresentsTemplates, ResolvesTenantClient;
 
     public function __construct(
         protected CampaignService $campaigns,
@@ -39,6 +43,7 @@ class CampaignController extends Controller
         protected VoiceCallReport $voiceReport,
         protected SmsMessageReport $smsReport,
         protected EmailMessageReport $emailReport,
+        protected TemplateLibrary $library,
     ) {}
 
     /**
@@ -86,9 +91,16 @@ class CampaignController extends Controller
     {
         Gate::authorize('create', Campaign::class);
 
+        $template = $this->requestedTemplate($request);
+
         return Inertia::render('campaigns/create', [
             ...$this->formOptions($request),
             'campaign' => null,
+            'initial' => $template === null ? [] : [
+                'channel' => $template->channel->value,
+                'message_template_id' => (string) $template->id,
+                ...$this->templateCopy($template),
+            ],
         ]);
     }
 
@@ -98,6 +110,10 @@ class CampaignController extends Controller
     public function store(CampaignRequest $request): RedirectResponse
     {
         $campaign = $this->campaigns->create($request->campaignAttributes(), $request->user());
+
+        if ($campaign->wasRecentlyCreated) {
+            $this->library->recordCampaignUsage($campaign);
+        }
 
         return to_route('campaigns.show', $campaign)->with('toast', [
             'type' => $campaign->wasRecentlyCreated ? 'success' : 'warning',
@@ -122,6 +138,7 @@ class CampaignController extends Controller
             'creator:id,name',
             'approver:id,name',
             'audioReviewer:id,name',
+            'messageTemplate:id,name,channel',
         ]);
 
         $statusCounts = $campaign->campaignContacts()
@@ -170,6 +187,11 @@ class CampaignController extends Controller
                 'email_body' => $campaign->email_body,
                 'email_format' => $campaign->email_format->value,
                 'voice_script' => $campaign->voice_script,
+                'template' => $campaign->messageTemplate === null ? null : [
+                    'id' => $campaign->messageTemplate->id,
+                    'name' => $campaign->messageTemplate->name,
+                    'channel' => $campaign->messageTemplate->channel->value,
+                ],
                 'voice_recording_path' => $campaign->voice_recording_path,
                 'voice_max_duration_seconds' => $campaign->voice_max_duration_seconds,
                 'ivr_enabled' => (bool) $campaign->ivr_enabled,
@@ -245,6 +267,7 @@ class CampaignController extends Controller
                 'contact_segment_id' => $campaign->contact_segment_id,
                 'sender_id' => $campaign->sender_id,
                 'caller_id' => $campaign->caller_id,
+                'message_template_id' => $campaign->message_template_id,
                 'sms_message' => $campaign->sms_message,
                 'email_subject' => $campaign->email_subject,
                 'email_body' => $campaign->email_body,
@@ -274,7 +297,13 @@ class CampaignController extends Controller
     {
         Gate::authorize('update', $campaign);
 
+        $previousTemplateId = $campaign->message_template_id;
+
         $this->campaigns->update($campaign, $request->campaignAttributes());
+
+        if ($campaign->message_template_id !== $previousTemplateId) {
+            $this->library->recordCampaignUsage($campaign);
+        }
 
         return to_route('campaigns.show', $campaign)->with('toast', [
             'type' => 'success',
@@ -457,6 +486,41 @@ class CampaignController extends Controller
     }
 
     /**
+     * The template the editor was opened from, when the user clicked "Use
+     * template" in the library.
+     */
+    protected function requestedTemplate(Request $request): ?MessageTemplate
+    {
+        $templateId = $request->integer('template');
+
+        if ($templateId <= 0) {
+            return null;
+        }
+
+        return MessageTemplate::query()
+            ->visibleTo($this->tenantClient($request)?->id)
+            ->whereIn('status', [TemplateStatus::Draft->value, TemplateStatus::Active->value])
+            ->find($templateId);
+    }
+
+    /**
+     * The copy a picked template puts into the campaign body.
+     *
+     * @return array<string, string>
+     */
+    protected function templateCopy(MessageTemplate $template): array
+    {
+        return match ($template->channel) {
+            Channel::Voice => ['voice_script' => $template->body],
+            Channel::Email => [
+                'email_subject' => $template->subject ?? '',
+                'email_body' => $template->body,
+            ],
+            default => ['sms_message' => $template->body],
+        };
+    }
+
+    /**
      * Options shared by the create and edit screens.
      *
      * @return array<string, mixed>
@@ -468,6 +532,14 @@ class CampaignController extends Controller
         return [
             'clients' => $this->selectableClients($request),
             'tenantClientId' => $client?->id,
+            'templates' => MessageTemplate::query()
+                ->visibleTo($client?->id)
+                ->whereIn('status', [TemplateStatus::Draft->value, TemplateStatus::Active->value])
+                ->with('category:id,name,slug')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (MessageTemplate $template): array => $this->templatePickerRow($template))
+                ->all(),
             'contactLists' => $client === null ? [] : ContactList::query()
                 ->where('client_id', $client->id)
                 ->withCount('contacts')

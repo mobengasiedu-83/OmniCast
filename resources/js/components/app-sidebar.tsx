@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
+    BarChart3,
     ChartLine,
     ClipboardCheck,
     CreditCard,
@@ -10,6 +11,8 @@ import {
     Gauge,
     KeyRound,
     LayoutDashboard,
+    LayoutTemplate,
+    LibraryBig,
     Mail,
     MailPlus,
     Megaphone,
@@ -223,7 +226,50 @@ export function AppSidebar() {
     const canViewRates = isPlatformUser && permissions.includes('rates.view');
     const canViewQueues = isPlatformUser && permissions.includes('queues.view');
     const canViewReports = permissions.includes('reports.view');
+    const canViewTemplates = permissions.includes('templates.view');
+    const canManageTemplates =
+        isPlatformUser && permissions.includes('templates.manage');
+    const canApproveTemplates = permissions.includes('templates.approve');
     const isClientUser = !isPlatformUser && (auth?.clientId ?? null) !== null;
+
+    /**
+     * The library every operator browses, plus the platform's catalogue,
+     * review queue and usage report for the team that maintains it.
+     */
+    const templateNavItems: NavItem[] = [
+        ...(canViewTemplates
+            ? [
+                  {
+                      title: 'Templates',
+                      href: urls.templates.index,
+                      icon: LayoutTemplate,
+                  },
+              ]
+            : []),
+        ...(canManageTemplates
+            ? [
+                  {
+                      title: 'Catalogue',
+                      href: urls.admin.templates.index,
+                      icon: LibraryBig,
+                  },
+                  {
+                      title: 'Template usage',
+                      href: urls.admin.templateUsage.index,
+                      icon: BarChart3,
+                  },
+              ]
+            : []),
+        ...(canApproveTemplates
+            ? [
+                  {
+                      title: 'Template reviews',
+                      href: urls.admin.templateApprovals.index,
+                      icon: ClipboardCheck,
+                  },
+              ]
+            : []),
+    ];
 
     const billingNavItems: NavItem[] = [
         ...(canViewWallet
@@ -341,6 +387,9 @@ export function AppSidebar() {
             <SidebarContent className="gap-2">
                 <NavMain items={platformNavItems} label="Platform" />
                 <NavMain items={messagingNavItems} label="Messaging" />
+                {templateNavItems.length > 0 && (
+                    <NavMain items={templateNavItems} label="Templates" />
+                )}
                 {billingNavItems.length > 0 && (
                     <NavMain items={billingNavItems} label="Billing" />
                 )}

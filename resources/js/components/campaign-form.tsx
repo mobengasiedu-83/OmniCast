@@ -1,6 +1,7 @@
 import { Link, useForm } from '@inertiajs/react';
 import { type FormEvent, useState } from 'react';
 import InputError from '@/components/input-error';
+import TemplatePicker from '@/components/template-picker';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -21,7 +22,11 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { analyzeSms } from '@/lib/sms';
 import { urls } from '@/lib/urls';
-import type { CampaignFormOptions, CampaignFormValues } from '@/types';
+import type {
+    CampaignFormOptions,
+    CampaignFormValues,
+    CampaignTemplateOption,
+} from '@/types';
 
 const defaults: CampaignFormValues = {
     name: '',
@@ -30,6 +35,7 @@ const defaults: CampaignFormValues = {
     contact_segment_id: '',
     sender_id: '',
     caller_id: '',
+    message_template_id: '',
     sms_message: '',
     email_subject: '',
     email_body: '',
@@ -76,6 +82,47 @@ const placeholders = [
     '{{email}}',
     '{{company}}',
 ];
+
+/**
+ * Whether a template can be delivered over the channel the campaign sends on.
+ *
+ * A multi-channel campaign runs SMS and voice, so either copy fits it; an email
+ * campaign only has email templates to work with.
+ */
+function templateFitsChannel(
+    templateChannel: string,
+    campaignChannel: string,
+): boolean {
+    if (templateChannel === campaignChannel) {
+        return true;
+    }
+
+    if (campaignChannel === 'multi_channel') {
+        return templateChannel === 'sms' || templateChannel === 'voice';
+    }
+
+    return templateChannel === 'multi_channel' && campaignChannel !== 'email';
+}
+
+/**
+ * The field a template's copy belongs in on the campaign being written.
+ */
+function templateBody(
+    template: CampaignTemplateOption,
+): Partial<CampaignFormValues> {
+    if (template.channel === 'email') {
+        return {
+            email_subject: template.subject ?? '',
+            email_body: template.body,
+        };
+    }
+
+    if (template.channel === 'voice') {
+        return { voice_script: template.body };
+    }
+
+    return { sms_message: template.body };
+}
 
 /**
  * A key that stays stable for this form mount, so a retried submit cannot
@@ -131,6 +178,26 @@ export default function CampaignForm({
         (senderOptions.length === 0 || form.data.sender_id === '');
     const needsClient = options.clients.length > 0;
     const smsAnalysis = analyzeSms(form.data.sms_message);
+
+    /**
+     * The templates written for the channel the campaign sends on, so the
+     * picker never offers copy that cannot be delivered.
+     */
+    const channelTemplates = options.templates.filter((template) =>
+        templateFitsChannel(template.channel, form.data.channel),
+    );
+
+    /**
+     * Copy a template into the campaign body and remember which one it came
+     * from, so the platform can report how often each template is used.
+     */
+    const applyTemplate = (template: CampaignTemplateOption | null): void => {
+        form.setData((data) => ({
+            ...data,
+            message_template_id: template === null ? '' : String(template.id),
+            ...(template === null ? {} : templateBody(template)),
+        }));
+    };
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
@@ -408,6 +475,13 @@ export default function CampaignForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-3">
+                    <TemplatePicker
+                        templates={channelTemplates}
+                        value={form.data.message_template_id}
+                        onSelect={applyTemplate}
+                    />
+                    <InputError message={form.errors.message_template_id} />
+
                     {requiresSms && (
                         <div className="grid gap-1.5">
                             <Label htmlFor="sms_message">SMS message</Label>

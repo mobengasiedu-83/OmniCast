@@ -3,13 +3,18 @@ import { Megaphone } from 'lucide-react';
 import CampaignForm from '@/components/campaign-form';
 import PageHeader from '@/components/page-header';
 import { urls } from '@/lib/urls';
-import type { CampaignFormOptions } from '@/types';
+import type { CampaignFormOptions, CampaignFormValues } from '@/types';
 
 type PageProps = CampaignFormOptions & {
     campaign: null;
+    /**
+     * The template the editor was opened from, when the operator pressed "Use
+     * template" in the library.
+     */
+    initial?: Partial<CampaignFormValues>;
 };
 
-export default function CampaignsCreate(options: PageProps) {
+export default function CampaignsCreate({ initial, ...options }: PageProps) {
     return (
         <>
             <Head title="New campaign" />
@@ -30,6 +35,7 @@ export default function CampaignsCreate(options: PageProps) {
                             options.tenantClientId === null
                                 ? ''
                                 : String(options.tenantClientId),
+                        ...initial,
                     }}
                     submitLabel="Save draft"
                     cancelHref={urls.campaigns.index}

@@ -87,6 +87,18 @@ export const urls = {
         reject: (senderId: number) => path(`/sender-ids/${senderId}/reject`),
         destroy: (senderId: number) => path(`/sender-ids/${senderId}`),
     },
+    templates: {
+        index: path('/templates'),
+        create: path('/templates/create'),
+        store: path('/templates'),
+        edit: (template: number) => path(`/templates/${template}/edit`),
+        update: (template: number) => path(`/templates/${template}`),
+        destroy: (template: number) => path(`/templates/${template}`),
+        customise: (template: number) =>
+            path(`/templates/${template}/customise`),
+        favourite: (template: number) =>
+            path(`/templates/${template}/favourite`),
+    },
     wallet: {
         index: path('/wallet'),
         topUp: path('/wallet/top-up'),
@@ -217,6 +229,27 @@ export const urls = {
         },
         queues: {
             index: path('/admin/queues'),
+        },
+        templates: {
+            index: path('/admin/templates'),
+            create: path('/admin/templates/create'),
+            store: path('/admin/templates'),
+            edit: (template: number) =>
+                path(`/admin/templates/${template}/edit`),
+            update: (template: number) => path(`/admin/templates/${template}`),
+            destroy: (template: number) => path(`/admin/templates/${template}`),
+            archive: (template: number) =>
+                path(`/admin/templates/${template}/archive`),
+        },
+        templateApprovals: {
+            index: path('/admin/template-approvals'),
+            approve: (template: number) =>
+                path(`/admin/template-approvals/${template}/approve`),
+            reject: (template: number) =>
+                path(`/admin/template-approvals/${template}/reject`),
+        },
+        templateUsage: {
+            index: path('/admin/template-usage'),
         },
         reports: {
             index: path('/admin/reports'),
