@@ -8,6 +8,7 @@ use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\MessageTemplate;
 use App\Models\SenderId;
+use App\Models\TemplateCategory;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -36,7 +37,9 @@ beforeEach(function (): void {
 });
 
 it('offers the editor only the catalogue and tenant copies still in use', function (): void {
-    $catalogue = MessageTemplate::factory()->create(['name' => 'Catalogue reminder']);
+    $category = TemplateCategory::factory()->create(['name' => 'Finance & Collections']);
+
+    $catalogue = MessageTemplate::factory()->inCategory($category)->create(['name' => 'Catalogue reminder']);
     $own = MessageTemplate::factory()->forClient($this->client)->create(['name' => 'Own reminder']);
 
     MessageTemplate::factory()->forClient(Client::factory()->create())->create(['name' => 'Foreign reminder']);
@@ -57,6 +60,8 @@ it('offers the editor only the catalogue and tenant copies still in use', functi
             ->where('templates.0.is_system', true)
             ->where('templates.1.id', $own->id)
             ->where('templates.1.is_system', false)
+            ->where('templates.0.category', $category->name)
+            ->where('templates.1.category', null)
             ->where('templates.0.variables', ['{{first_name}}', '{{company_name}}'])
         );
 });

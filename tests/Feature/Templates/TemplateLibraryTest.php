@@ -27,8 +27,9 @@ it('lists the catalogue, the tenant copies and the operator favourites', functio
         ->forClient(Client::factory()->create())
         ->create(['name' => 'Foreign reminder']);
 
-    MessageTemplate::factory()->create(['name' => 'Archived reminder'])
-        ->update(['status' => TemplateStatus::Archived]);
+    $archived = MessageTemplate::factory()
+        ->status(TemplateStatus::Archived)
+        ->create(['name' => 'Archived reminder']);
 
     $own->favouritedBy()->attach($this->user);
 
@@ -46,7 +47,14 @@ it('lists the catalogue, the tenant copies and the operator favourites', functio
             ->where('stats.mine', 1)
             ->where('stats.favourites', 1)
             ->where('can.create', true)
-            ->where('templates.data.1.id', $catalogue->id));
+            ->where('templates.data', function ($rows) use ($own, $catalogue, $archived): bool {
+                $ids = $rows->pluck('id')->sort()->values()->all();
+                $expected = [$own->id, $catalogue->id, $archived->id];
+
+                sort($expected);
+
+                return $ids === $expected;
+            }));
 });
 
 it('filters the library by category, channel and ownership', function (): void {
@@ -93,7 +101,7 @@ it('shows a new template the categories the tenant may file it under', function 
         ->assertInertia(fn (Assert $page) => $page
             ->component('templates/create')
             ->has('categories', 2)
-            ->where('categories.1.name', 'Private')
+            ->where('categories', fn ($categories): bool => $categories->pluck('name')->sort()->values()->all() === ['Finance & Collections', 'Private'])
             ->has('channels')
             ->has('statuses'));
 });
@@ -120,7 +128,6 @@ it('saves a tenant template under the signed-in account', function (): void {
         ->and($template->created_by)->toBe($this->user->id)
         ->and($template->variableTags())->toBe(['{{first_name}}', '{{due_date}}']);
 });
-
 
 it('opens a tenant template in the editor and refuses the catalogue copy', function (): void {
     $own = MessageTemplate::factory()->forClient($this->client)->create(['name' => 'Own reminder']);
@@ -178,4 +185,3 @@ it('toggles a template on the operator shortlist', function (): void {
 
     expect($catalogue->favouritedBy()->whereKey($this->user->id)->exists())->toBeFalse();
 });
-
