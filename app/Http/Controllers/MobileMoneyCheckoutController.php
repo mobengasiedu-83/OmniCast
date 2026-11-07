@@ -118,6 +118,10 @@ class MobileMoneyCheckoutController extends Controller
 
     /**
      * The prompt, the code form or the wait, for a charge already registered.
+     *
+     * The page is the same component the form uses, so it carries the estimator
+     * as well as the charge: the editor reads the slider and the rate card as it
+     * mounts, whatever the wallet is doing.
      */
     public function show(Payment $payment): Response|RedirectResponse
     {
@@ -133,6 +137,12 @@ class MobileMoneyCheckoutController extends Controller
             'packages' => $this->packages->all(),
             'providers' => MobileMoneyProvider::options(),
             'selected' => $payment->package_key,
+            'selected_amount' => $payment->package_key === null
+                ? $this->estimator->clamp((float) $payment->amount)
+                : null,
+            'rates' => $this->estimator->rates(),
+            'slider' => $this->estimator->slider(),
+            'dynamic_pricing' => $this->estimator->dynamicPricingEnabled(),
             'limits' => $this->packages->limits(),
             'payment' => $this->presentPayment($payment),
             'gateway' => $this->gatewayProps(),

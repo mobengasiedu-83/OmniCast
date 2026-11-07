@@ -208,6 +208,43 @@ it('shows the form with the networks it can prompt', function (): void {
         );
 });
 
+it('reopens a pending charge with the estimator the form mounts with', function (): void {
+    $payment = pendingMobileMoneyPayment($this->client, $this->wallet);
+
+    $this->actingAs($this->user)
+        ->get(route('wallet.mobile-money.show', $payment))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('wallet/mobile-money')
+            ->where('payment.id', $payment->id)
+            ->where('payment.requires_otp', true)
+            ->where('selected_amount', null)
+            ->has('rates')
+            ->has('slider.default')
+            ->has('dynamic_pricing')
+            ->has('limits')
+            ->has('providers', 3),
+        );
+});
+
+it('reopens a custom top up on the amount the client chose', function (): void {
+    $payment = Payment::factory()->for($this->client)->custom(250.0)->create([
+        'wallet_id' => $this->wallet->id,
+        'provider' => 'paystack',
+        'channel' => 'mobile_money',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get(route('wallet.mobile-money.show', $payment))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('wallet/mobile-money')
+            ->where('selected', null)
+            ->where('selected_amount', fn (mixed $amount): bool => (float) $amount === 250.0),
+        );
+});
+
 it('prompts and settles on the log driver without a live key', function (): void {
     config()->set('billing.driver', 'log');
 
