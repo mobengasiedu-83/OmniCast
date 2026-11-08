@@ -1,6 +1,19 @@
 import { withBasePath as path } from '@/lib/base-path';
 
 /**
+ * The origin production is served from.
+ *
+ * The API reference prints absolute URLs (base URL, `links.*` hrefs, webhook
+ * callbacks), so it states the production origin instead of whichever host the
+ * reader happens to be browsing — a client reading the docs from staging must
+ * still copy the address their integration will call.
+ */
+export const productionOrigin = 'https://omnicast.sysup360.com';
+
+/** The versioned base URL every documented request is built on. */
+export const apiBaseUrl = `${productionOrigin}/api/v1`;
+
+/**
  * The URIs served by `routes/web.php`.
  *
  * These mirror the Laravel route table so pages can link to and post to the
@@ -13,6 +26,10 @@ import { withBasePath as path } from '@/lib/base-path';
  */
 export const urls = {
     dashboard: path('/dashboard'),
+    documentation: {
+        userManual: path('/user-manual'),
+        apiDocs: path('/api-docs'),
+    },
     emailImages: path('/email/images'),
     login: path('/login'),
     approvals: {
@@ -257,9 +274,12 @@ export const urls = {
             index: path('/admin/webhooks'),
             store: path('/admin/webhooks'),
             update: (endpoint: number) => path(`/admin/webhooks/${endpoint}`),
-            toggle: (endpoint: number) => path(`/admin/webhooks/${endpoint}/toggle`),
-            rotate: (endpoint: number) => path(`/admin/webhooks/${endpoint}/rotate`),
-            test: (endpoint: number) => path(`/admin/webhooks/${endpoint}/test`),
+            toggle: (endpoint: number) =>
+                path(`/admin/webhooks/${endpoint}/toggle`),
+            rotate: (endpoint: number) =>
+                path(`/admin/webhooks/${endpoint}/rotate`),
+            test: (endpoint: number) =>
+                path(`/admin/webhooks/${endpoint}/test`),
             destroy: (endpoint: number) => path(`/admin/webhooks/${endpoint}`),
             replay: (delivery: number) =>
                 path(`/admin/webhook-deliveries/${delivery}/replay`),
@@ -318,14 +338,16 @@ export const urls = {
         webhooks: {
             index: path('/settings/webhooks'),
             store: path('/settings/webhooks'),
-            update: (endpoint: number) => path(`/settings/webhooks/${endpoint}`),
+            update: (endpoint: number) =>
+                path(`/settings/webhooks/${endpoint}`),
             toggle: (endpoint: number) =>
                 path(`/settings/webhooks/${endpoint}/toggle`),
             rotate: (endpoint: number) =>
                 path(`/settings/webhooks/${endpoint}/rotate`),
             test: (endpoint: number) =>
                 path(`/settings/webhooks/${endpoint}/test`),
-            destroy: (endpoint: number) => path(`/settings/webhooks/${endpoint}`),
+            destroy: (endpoint: number) =>
+                path(`/settings/webhooks/${endpoint}`),
         },
     },
     invitations: {

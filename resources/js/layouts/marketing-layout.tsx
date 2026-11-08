@@ -5,7 +5,7 @@ import BrandMark from '@/components/brand-mark';
 import PoweredBy from '@/components/powered-by';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { dashboard, home, login, pricing } from '@/routes';
+import { apiDocs, dashboard, home, login, pricing, userManual } from '@/routes';
 import { create as clientSignup } from '@/routes/client-registration';
 
 /**
@@ -20,8 +20,14 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
         currentPath === href.replace(/\/+$/, '');
 
     const links = [
-        { label: 'Product', href: home(), active: isActive(home.url()) },
+        { label: 'Products', href: home(), active: isActive(home.url()) },
         { label: 'Pricing', href: pricing(), active: isActive(pricing.url()) },
+        {
+            label: 'User Manual',
+            href: userManual(),
+            active: isActive(userManual.url()),
+        },
+        { label: 'API Docs', href: apiDocs(), active: isActive(apiDocs.url()) },
     ];
 
     return (
@@ -38,7 +44,7 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
                 </Link>
 
                 <div className="flex items-center gap-1 sm:gap-2">
-                    <nav className="mr-1 hidden items-center gap-1 sm:mr-3 sm:flex">
+                    <nav className="mr-1 hidden items-center gap-1 md:mr-3 md:flex">
                         {links.map((link) => (
                             <Button
                                 key={link.label}
@@ -82,20 +88,50 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
                 </div>
             </header>
 
+            <nav
+                aria-label="Sections"
+                className="mx-auto -mt-1 flex w-full max-w-6xl gap-1 overflow-x-auto px-4 pb-2 md:hidden"
+            >
+                {links.map((link) => (
+                    <Link
+                        key={link.label}
+                        href={link.href}
+                        className={cn(
+                            'shrink-0 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
+                            link.active
+                                ? 'bg-brand-soft text-accent-foreground ring-1 ring-brand/20'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                    >
+                        {link.label}
+                    </Link>
+                ))}
+            </nav>
+
             <main className="mx-auto w-full max-w-6xl px-6 pb-20">
                 {children}
             </main>
 
-            <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 border-t border-border/60 px-6 py-6 text-xs text-muted-foreground">
+            <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-border/60 px-6 py-6 text-xs text-muted-foreground">
                 <span>
                     © {new Date().getFullYear()} {name}
                 </span>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
+                    <nav className="flex flex-wrap items-center gap-4">
+                        {links.map((link) => (
+                            <Link
+                                key={link.label}
+                                href={link.href}
+                                className="hover:text-foreground"
+                            >
+                                {link.label}
+                            </Link>
+                        ))}
+                    </nav>
                     <PoweredBy />
-                    <Link href={pricing()} className="hover:text-foreground">
-                        Pricing
-                    </Link>
-                    <span>SMS, voice and email delivery, accounted for.</span>
+                    <span className="hidden lg:inline">
+                        SMS, voice and email delivery, accounted for.
+                    </span>
                 </div>
             </footer>
         </div>

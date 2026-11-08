@@ -13,4 +13,6 @@ export type NavItem = {
     isActive?: boolean;
     /** Nested entries rendered as an expandable submenu. */
     children?: NavItem[];
+    /** Open in a new tab instead of visiting the URL as an Inertia page. */
+    external?: boolean;
 };

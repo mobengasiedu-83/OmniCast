@@ -18,7 +18,7 @@ import {
     SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
-import { cn } from '@/lib/utils';
+import { cn, toUrl } from '@/lib/utils';
 import type { NavItem } from '@/types';
 
 /** The active/inactive styling shared by every top-level sidebar link. */
@@ -116,10 +116,26 @@ export function NavMain({
                                 tooltip={{ children: item.title }}
                                 className={menuButtonClassName}
                             >
-                                <Link href={item.href} prefetch>
-                                    {item.icon && <item.icon />}
-                                    <span>{item.title}</span>
-                                </Link>
+                                {item.external ? (
+                                    /**
+                                     * A plain anchor, not `<Link>`: the target opens in
+                                     * its own tab, so there is no page to visit with the
+                                     * router. Documentation leaves the app on purpose.
+                                     */
+                                    <a
+                                        href={toUrl(item.href)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        {item.icon && <item.icon />}
+                                        <span>{item.title}</span>
+                                    </a>
+                                ) : (
+                                    <Link href={item.href} prefetch>
+                                        {item.icon && <item.icon />}
+                                        <span>{item.title}</span>
+                                    </Link>
+                                )}
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     ),

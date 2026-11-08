@@ -31,6 +31,10 @@ Route::inertia('/', 'welcome')->name('home');
 
 Route::get('pricing', PricingController::class)->name('pricing');
 
+Route::inertia('user-manual', 'user-manual')->name('user-manual');
+
+Route::inertia('api-docs', 'api-docs')->name('api-docs');
+
 Route::get('stop-messages/{contact}', [ContactDndController::class, 'show'])
     ->middleware('signed')
     ->name('contacts.dnd.request');

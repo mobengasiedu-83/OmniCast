@@ -16,6 +16,8 @@ void createInertiaApp({
         switch (true) {
             case name === 'welcome':
             case name === 'pricing':
+            case name === 'user-manual':
+            case name === 'api-docs':
                 return MarketingLayout;
             case name === 'contacts/dnd':
                 return null;

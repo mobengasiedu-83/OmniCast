@@ -3,8 +3,10 @@ import {
     Banknote,
     BarChart3,
     Blocks,
+    BookOpen,
     ChartLine,
     ClipboardCheck,
+    Code2,
     CreditCard,
     Download,
     FileText,
@@ -61,6 +63,26 @@ const platformNavItems: NavItem[] = [
         title: 'Dashboard',
         href: urls.dashboard,
         icon: LayoutDashboard,
+    },
+];
+
+/**
+ * The public documentation, opened in a new tab so a signed-in client keeps the
+ * screen they were working on. Every operator carries these links — the manual
+ * and the API reference are the same pages the marketing site serves.
+ */
+const documentationNavItems: NavItem[] = [
+    {
+        title: 'User manual',
+        href: urls.documentation.userManual,
+        icon: BookOpen,
+        external: true,
+    },
+    {
+        title: 'API docs',
+        href: urls.documentation.apiDocs,
+        icon: Code2,
+        external: true,
     },
 ];
 
@@ -538,6 +560,7 @@ export function AppSidebar() {
                     <NavMain items={platformReportsNavItems} label="Reports" />
                 )}
                 <NavMain items={accountNavItems} label="Account" />
+                <NavMain items={documentationNavItems} label="Documentation" />
             </SidebarContent>
 
             <SidebarFooter className="gap-2">

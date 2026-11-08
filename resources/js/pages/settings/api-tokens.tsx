@@ -1,5 +1,12 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Copy, KeyRound, Plus, Trash2 } from 'lucide-react';
+import {
+    ArrowUpRight,
+    Copy,
+    KeyRound,
+    Plus,
+    Terminal,
+    Trash2,
+} from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import Heading from '@/components/heading';
@@ -15,7 +22,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { urls } from '@/lib/urls';
+import { apiBaseUrl, urls } from '@/lib/urls';
 import type { ApiTokenRow } from '@/types';
 
 type PageProps = {
@@ -29,7 +36,7 @@ export default function AccountApiTokens({
     abilities,
     newToken,
 }: PageProps) {
-    const [copied, setCopied] = useState(false);
+    const [copied, setCopied] = useState<string | null>(null);
     const confirm = useConfirm();
 
     const form = useForm<{ name: string; abilities: string[] }>({
@@ -75,8 +82,8 @@ export default function AccountApiTokens({
 
     const copy = async (value: string): Promise<void> => {
         await navigator.clipboard.writeText(value);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2000);
+        setCopied(value);
+        window.setTimeout(() => setCopied(null), 2000);
     };
 
     return (
@@ -88,8 +95,62 @@ export default function AccountApiTokens({
             <Heading
                 variant="small"
                 title="API tokens"
-                description="Personal access tokens for the platform HTTP API. Treat them like passwords."
+                description="Personal access tokens for the OmniCast HTTP API. Treat them like passwords."
             />
+
+            <Card>
+                <CardHeader className="border-b border-border/60 py-3">
+                    <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                        <Terminal className="size-4" />
+                        Connecting to the API
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                        Every request goes to the base URL below and carries the
+                        token as an{' '}
+                        <code className="font-mono text-[11px]">
+                            Authorization: Bearer &lt;token&gt;
+                        </code>{' '}
+                        header.
+                    </CardDescription>
+                </CardHeader>
+
+                <CardContent className="flex flex-wrap items-center gap-2 pt-3">
+                    <Input
+                        readOnly
+                        value={apiBaseUrl}
+                        aria-label="API base URL"
+                        className="max-w-sm flex-1 font-mono text-xs"
+                        onFocus={(event) => event.currentTarget.select()}
+                    />
+                    <Button
+                        variant="secondary"
+                        onClick={() => void copy(apiBaseUrl)}
+                    >
+                        <Copy />
+                        {copied === apiBaseUrl ? 'Copied' : 'Copy'}
+                    </Button>
+                    <Button variant="outline" asChild>
+                        <a
+                            href={urls.documentation.apiDocs}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            API reference
+                            <ArrowUpRight />
+                        </a>
+                    </Button>
+                    <Button variant="ghost" asChild>
+                        <a
+                            href={urls.documentation.userManual}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            User manual
+                            <ArrowUpRight />
+                        </a>
+                    </Button>
+                </CardContent>
+            </Card>
 
             {newToken && (
                 <Card className="border-success/30 bg-success-soft">
@@ -108,7 +169,7 @@ export default function AccountApiTokens({
                             onClick={() => void copy(newToken)}
                         >
                             <Copy />
-                            {copied ? 'Copied' : 'Copy'}
+                            {copied === newToken ? 'Copied' : 'Copy'}
                         </Button>
                     </CardContent>
                 </Card>
