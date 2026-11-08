@@ -3,7 +3,11 @@ import { Megaphone } from 'lucide-react';
 import CampaignForm from '@/components/campaign-form';
 import PageHeader from '@/components/page-header';
 import { urls } from '@/lib/urls';
-import type { CampaignFormOptions, CampaignFormValues } from '@/types';
+import type {
+    CampaignFormOptions,
+    CampaignFormValues,
+    EmailAttachmentRow,
+} from '@/types';
 
 type EditableCampaign = {
     id: number;
@@ -19,6 +23,7 @@ type EditableCampaign = {
     email_subject: string | null;
     email_body: string | null;
     email_format: string | null;
+    email_attachments: EmailAttachmentRow[];
     voice_script: string | null;
     voice_recording_path: string | null;
     voice_max_duration_seconds: number | null;
@@ -94,6 +99,7 @@ export default function CampaignsEdit({ campaign, ...options }: PageProps) {
                     method="put"
                     options={options}
                     initial={initialValues(campaign)}
+                    emailAttachments={campaign.email_attachments}
                     submitLabel="Save changes"
                     cancelHref={urls.campaigns.show(campaign.id)}
                 />

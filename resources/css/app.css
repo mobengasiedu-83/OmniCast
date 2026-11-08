@@ -926,3 +926,87 @@
         }
     }
 }
+
+/*
+ * The email composer's contenteditable. Tiptap writes the author's own markup
+ * into the page, so the block-level styling the rest of the app gets from
+ * components has to be spelled out for the editor body.
+ */
+.email-editor .tiptap {
+    min-height: var(--email-editor-min-height, 12rem);
+    outline: none;
+}
+
+.email-editor .tiptap > * + * {
+    margin-top: 0.65em;
+}
+
+.email-editor .tiptap p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: var(--muted-foreground);
+}
+
+.email-editor .tiptap h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.email-editor .tiptap h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.email-editor .tiptap h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.email-editor .tiptap ul {
+    list-style: disc;
+    padding-left: 1.4rem;
+}
+
+.email-editor .tiptap ol {
+    list-style: decimal;
+    padding-left: 1.4rem;
+}
+
+.email-editor .tiptap a {
+    color: var(--brand);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.email-editor .tiptap img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+}
+
+.email-editor .tiptap img.ProseMirror-selectednode {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+}
+
+.email-editor .tiptap blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 0.85rem;
+    color: var(--muted-foreground);
+}
+
+.email-editor .tiptap code {
+    background-color: var(--muted);
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.3rem;
+    font-size: 0.9em;
+}
+
+.email-editor .tiptap hr {
+    border-color: var(--border);
+}

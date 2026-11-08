@@ -26,6 +26,7 @@ class LogEmailGateway implements EmailGateway
             'subject' => $email->subject,
             'format' => $email->format->value,
             'body_length' => mb_strlen($email->body),
+            'attachments' => count($email->attachments),
         ]);
 
         return EmailDispatchResult::accepted('log-'.$email->reference);

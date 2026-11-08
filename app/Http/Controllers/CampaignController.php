@@ -15,11 +15,13 @@ use App\Models\CampaignVersion;
 use App\Models\Client;
 use App\Models\ContactList;
 use App\Models\ContactSegment;
+use App\Models\EmailAttachment;
 use App\Models\MessageTemplate;
 use App\Models\SenderId;
 use App\Services\CampaignReadiness;
 use App\Services\CampaignService;
 use App\Services\ContactSegmentQuery;
+use App\Services\Email\EmailAttachmentStore;
 use App\Services\EmailMessageReport;
 use App\Services\ModuleAvailability;
 use App\Services\PlatformConfiguration;
@@ -47,6 +49,7 @@ class CampaignController extends Controller
         protected EmailMessageReport $emailReport,
         protected TemplateLibrary $library,
         protected ModuleAvailability $modules,
+        protected EmailAttachmentStore $attachments,
     ) {}
 
     /**
@@ -116,6 +119,7 @@ class CampaignController extends Controller
 
         if ($campaign->wasRecentlyCreated) {
             $this->library->recordCampaignUsage($campaign);
+            $this->attachments->sync($campaign, $request->attachmentFiles(), [], $request->user());
         }
 
         return to_route('campaigns.show', $campaign)->with('toast', [
@@ -142,6 +146,7 @@ class CampaignController extends Controller
             'approver:id,name',
             'audioReviewer:id,name',
             'messageTemplate:id,name,channel',
+            'emailAttachments',
         ]);
 
         $statusCounts = $campaign->campaignContacts()
@@ -190,6 +195,9 @@ class CampaignController extends Controller
                 'email_body' => $campaign->email_body,
                 'email_format' => $campaign->email_format->value,
                 'voice_script' => $campaign->voice_script,
+                'email_attachments' => $campaign->emailAttachments
+                    ->map(fn (EmailAttachment $attachment): array => $this->attachmentRow($attachment, $campaign))
+                    ->all(),
                 'template' => $campaign->messageTemplate === null ? null : [
                     'id' => $campaign->messageTemplate->id,
                     'name' => $campaign->messageTemplate->name,
@@ -275,6 +283,10 @@ class CampaignController extends Controller
                 'email_subject' => $campaign->email_subject,
                 'email_body' => $campaign->email_body,
                 'email_format' => $campaign->email_format->value,
+                'email_attachments' => $campaign->emailAttachments()
+                    ->get()
+                    ->map(fn (EmailAttachment $attachment): array => $this->attachmentRow($attachment, $campaign))
+                    ->all(),
                 'voice_script' => $campaign->voice_script,
                 'voice_recording_path' => $campaign->voice_recording_path,
                 'voice_max_duration_seconds' => $campaign->voice_max_duration_seconds,
@@ -303,6 +315,13 @@ class CampaignController extends Controller
         $previousTemplateId = $campaign->message_template_id;
 
         $this->campaigns->update($campaign, $request->campaignAttributes());
+
+        $this->attachments->sync(
+            $campaign,
+            $request->attachmentFiles(),
+            $request->removedAttachmentIds(),
+            $request->user(),
+        );
 
         if ($campaign->message_template_id !== $previousTemplateId) {
             $this->library->recordCampaignUsage($campaign);
@@ -518,9 +537,30 @@ class CampaignController extends Controller
             Channel::Email => [
                 'email_subject' => $template->subject ?? '',
                 'email_body' => $template->body,
+                'email_format' => $template->email_format->value,
             ],
             default => ['sms_message' => $template->body],
         };
+    }
+
+    /**
+     * One attachment as the campaign screens read it.
+     *
+     * @return array<string, mixed>
+     */
+    protected function attachmentRow(EmailAttachment $attachment, Campaign $campaign): array
+    {
+        return [
+            'id' => $attachment->id,
+            'name' => $attachment->original_name,
+            'size' => $attachment->humanSize(),
+            'mime_type' => $attachment->mime_type,
+            'is_image' => $attachment->isImage(),
+            'download_url' => route('campaigns.attachments.download', [
+                'campaign' => $campaign->id,
+                'attachment' => $attachment->id,
+            ]),
+        ];
     }
 
     /**

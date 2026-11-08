@@ -3,9 +3,11 @@
 namespace App\Http\Requests\Template;
 
 use App\Enums\Channel;
+use App\Enums\EmailFormat;
 use App\Enums\Permission;
 use App\Enums\TemplateStatus;
 use App\Models\MessageTemplate;
+use App\Services\Email\EmailBodySanitizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -23,15 +25,29 @@ class TemplateRequest extends FormRequest
     /**
      * Scope the template to the tenant of the signed-in user and settle the
      * defaults the editor leaves out.
+     *
+     * An email template is authored with a rich-text editor, so its markup is
+     * washed here: an SMS or voice body is plain copy and is left exactly as it
+     * was typed.
      */
     protected function prepareForValidation(): void
     {
+        $channel = $this->enum('channel', Channel::class) ?? Channel::Sms;
+        $format = $this->enum('email_format', EmailFormat::class) ?? EmailFormat::Html;
+
         $this->merge([
             'client_id' => $this->user()?->client_id ?? $this->input('client_id'),
             'language' => Str::lower(trim((string) ($this->input('language') ?: 'en'))),
             'subject' => $this->filled('subject') ? trim((string) $this->input('subject')) : null,
             'description' => $this->filled('description') ? trim((string) $this->input('description')) : null,
+            'email_format' => $format->value,
         ]);
+
+        if ($channel->requiresEmailContent() && $format->isHtml() && $this->filled('body')) {
+            $this->merge([
+                'body' => app(EmailBodySanitizer::class)->sanitize((string) $this->input('body')),
+            ]);
+        }
     }
 
     /**
@@ -69,6 +85,7 @@ class TemplateRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:255'],
             'subject' => [Rule::requiredIf($channel->requiresEmailContent()), 'nullable', 'string', 'max:255'],
             'body' => ['required', 'string', 'max:'.$this->bodyLimit($channel)],
+            'email_format' => ['nullable', Rule::enum(EmailFormat::class)],
             'status' => [
                 'nullable',
                 Rule::in([
@@ -89,7 +106,7 @@ class TemplateRequest extends FormRequest
     {
         return $this->safe()->only([
             'client_id', 'name', 'channel', 'language', 'template_category_id',
-            'description', 'subject', 'body', 'status',
+            'description', 'subject', 'body', 'email_format', 'status',
         ]);
     }
 

@@ -14,10 +14,13 @@ use App\Models\RateCard;
 use App\Models\SenderId;
 use App\Services\CampaignDispatcher;
 use App\Services\CampaignService;
+use App\Services\Email\EmailAttachmentStore;
 use App\Services\Email\EmailDispatchResult;
 use App\Services\Email\OutboundEmail;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
     Queue::fake();
@@ -121,6 +124,69 @@ it('leaves a contact without an email address out of the audience', function ():
     expect($campaign->refresh()->campaignContacts()->pluck('contact_id')->all())
         ->toBe([$reachable->id])
         ->and(EmailMessage::query()->where('campaign_id', $campaign->id)->count())->toBe(1);
+});
+
+it('hands the stored attachments to the transport with each message', function (): void {
+    Storage::fake('local');
+
+    $sent = new ArrayObject;
+
+    $this->app->bind(EmailGateway::class, fn (): EmailGateway => new class($sent) implements EmailGateway
+    {
+        /**
+         * @param  ArrayObject<int, OutboundEmail>  $sent
+         */
+        public function __construct(private ArrayObject $sent) {}
+
+        public function send(OutboundEmail $email): EmailDispatchResult
+        {
+            $this->sent->append($email);
+
+            return EmailDispatchResult::accepted('fake-'.$email->reference);
+        }
+
+        public function name(): string
+        {
+            return 'fake';
+        }
+    });
+
+    $list = ContactList::factory()->forClient($this->client)->create();
+    $list->contacts()->attach(
+        Contact::factory()->forClient($this->client)->create(['email' => 'statement@acme.test']),
+        ['added_at' => now()],
+    );
+
+    $campaign = $this->service->create([
+        'client_id' => $this->client->id,
+        'name' => 'Statement broadcast',
+        'channel' => Channel::Email,
+        'contact_list_id' => $list->id,
+        'sender_id' => SenderId::factory()->for($this->client)->email()->approved()->create()->id,
+        'email_subject' => 'Your October statement',
+        'email_body' => '<p>Your statement is ready to view.</p>',
+        'email_format' => EmailFormat::Html,
+    ], $this->user);
+
+    app(EmailAttachmentStore::class)->sync($campaign, [
+        UploadedFile::fake()->create('statement.pdf', 120, 'application/pdf'),
+    ], [], $this->user);
+
+    $this->service->submit($campaign, $this->user);
+    $this->service->launch($campaign->refresh());
+    app(CampaignDispatcher::class)->run($campaign->refresh());
+
+    expect(count($sent))->toBe(1);
+
+    $email = $sent[0];
+
+    expect($email->format)->toBe(EmailFormat::Html)
+        ->and($email->body)->toContain('<p>Your statement is ready to view.</p>')
+        ->and($email->attachments)->toHaveCount(1)
+        ->and($email->attachments[0]->name)->toBe('statement.pdf')
+        ->and($email->attachments[0]->mimeType)->toBe('application/pdf')
+        ->and($email->attachments[0]->exists())->toBeTrue()
+        ->and($email->deliverableAttachments())->toHaveCount(1);
 });
 
 it('records a refused submission and leaves the recipient queued for a retry', function (): void {

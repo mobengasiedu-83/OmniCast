@@ -4,6 +4,7 @@ import {
     Mail,
     Megaphone,
     MessageSquareText,
+    Paperclip,
     PhoneCall,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -422,6 +423,33 @@ export default function CampaignsShow({
                                             className="h-64 w-full max-w-md rounded-2xl ring-1 ring-border"
                                         />
                                     )}
+                                </div>
+                            )}
+                            {campaign.email_attachments.length > 0 && (
+                                <div className="space-y-1.5">
+                                    <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                                        Attachments
+                                    </p>
+                                    <ul className="flex flex-wrap gap-1.5">
+                                        {campaign.email_attachments.map(
+                                            (attachment) => (
+                                                <li key={attachment.id}>
+                                                    <a
+                                                        href={
+                                                            attachment.download_url
+                                                        }
+                                                        className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                                                    >
+                                                        <Paperclip className="size-3.5" />
+                                                        {attachment.name}
+                                                        <span className="text-[11px] tabular-nums">
+                                                            {attachment.size}
+                                                        </span>
+                                                    </a>
+                                                </li>
+                                            ),
+                                        )}
+                                    </ul>
                                 </div>
                             )}
                             {campaign.voice_script && (

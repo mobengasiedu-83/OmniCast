@@ -15,7 +15,9 @@ use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
+use App\Models\EmailAttachment;
 use App\Services\Delivery\DeliveryPacer;
+use App\Services\Email\OutboundAttachment;
 use App\Services\Email\OutboundEmail;
 use App\Services\Sms\OutboundSms;
 use App\Services\Voice\VoiceCall as VoiceCallData;
@@ -52,7 +54,7 @@ class CampaignDispatcher
      */
     public function run(Campaign $campaign): bool
     {
-        $campaign->loadMissing('client');
+        $campaign->loadMissing(['client', 'emailAttachments']);
         $disabledChannels = array_filter(
             $campaign->channel->deliveryChannels(),
             fn (Channel $channel): bool => ! $this->configuration->channelEnabled($channel->value, $campaign->client),
@@ -388,6 +390,9 @@ class CampaignDispatcher
             body: $body,
             format: $message->format,
             fromName: $message->from_name,
+            attachments: $campaign->emailAttachments
+                ->map(fn (EmailAttachment $attachment): OutboundAttachment => $attachment->toOutbound())
+                ->all(),
         ));
 
         $this->emailTracker->submitted($message, $result);

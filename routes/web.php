@@ -9,6 +9,8 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactDndController;
 use App\Http\Controllers\ContactListController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmailAttachmentController;
+use App\Http\Controllers\EmailImageController;
 use App\Http\Controllers\EmailWebhookController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MobileMoneyCheckoutController;
@@ -95,6 +97,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('campaigns/{campaign}/launch', [CampaignController::class, 'launch'])->name('campaigns.launch');
     Route::post('campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
     Route::post('campaigns/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('campaigns.duplicate');
+
+    Route::get('campaigns/{campaign}/attachments/{attachment}/download', [EmailAttachmentController::class, 'download'])
+        ->name('campaigns.attachments.download');
+
+    Route::post('email/images', [EmailImageController::class, 'store'])
+        ->middleware('throttle:60,1')
+        ->name('email.images.store');
 
     Route::get('contacts/lists', [ContactListController::class, 'index'])->name('contacts.lists.index');
     Route::post('contacts/lists', [ContactListController::class, 'store'])->name('contacts.lists.store');

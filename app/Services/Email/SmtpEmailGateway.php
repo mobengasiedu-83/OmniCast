@@ -31,6 +31,7 @@ class SmtpEmailGateway implements EmailGateway
                 htmlBody: $email->htmlBody(),
                 textBody: $email->textBody(),
                 reference: $email->reference,
+                files: $email->deliverableAttachments(),
             ))->from($email->from, $email->fromName);
 
             Mail::mailer($this->mailerName())->to($email->to)->send($mailable);

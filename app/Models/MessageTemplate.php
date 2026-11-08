@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Channel;
+use App\Enums\EmailFormat;
 use App\Enums\TemplateStatus;
 use Database\Factories\MessageTemplateFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $description
  * @property string|null $subject
  * @property string $body
+ * @property EmailFormat $email_format
  * @property list<string>|null $variables
  * @property TemplateStatus $status
  * @property int $usage_count
@@ -37,8 +39,8 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'client_id', 'template_category_id', 'origin_template_id', 'name', 'channel', 'language',
-    'description', 'subject', 'body', 'variables', 'status', 'usage_count', 'created_by',
-    'approved_by', 'approved_at', 'rejection_reason',
+    'description', 'subject', 'body', 'email_format', 'variables', 'status', 'usage_count',
+    'created_by', 'approved_by', 'approved_at', 'rejection_reason',
 ])]
 class MessageTemplate extends Model
 {
@@ -55,6 +57,7 @@ class MessageTemplate extends Model
         return [
             'channel' => Channel::class,
             'status' => TemplateStatus::class,
+            'email_format' => EmailFormat::class,
             'variables' => 'array',
             'approved_at' => 'datetime',
         ];

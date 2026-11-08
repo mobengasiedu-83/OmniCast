@@ -110,6 +110,7 @@ export type CampaignDetail = CampaignRow & {
     email_subject: string | null;
     email_body: string | null;
     email_format: string | null;
+    email_attachments: EmailAttachmentRow[];
     voice_script: string | null;
     voice_recording_path: string | null;
     voice_max_duration_seconds: number | null;
@@ -293,10 +294,25 @@ export type CampaignTemplateOption = {
     channel_label: string;
     subject: string | null;
     body: string;
+    email_format: string;
     category: string | null;
     variables: string[];
     is_system: boolean;
     usage_count: number;
+};
+
+/**
+ * A file already stored against a campaign, as the editor and the review
+ * screens list it. The bytes never travel with the page: `download_url` is a
+ * guarded route.
+ */
+export type EmailAttachmentRow = {
+    id: number;
+    name: string;
+    size: string;
+    mime_type: string;
+    is_image: boolean;
+    download_url: string;
 };
 
 export type CampaignFormValues = {
@@ -311,6 +327,8 @@ export type CampaignFormValues = {
     email_subject: string;
     email_body: string;
     email_format: string;
+    email_attachments: File[];
+    removed_attachment_ids: number[];
     voice_script: string;
     voice_max_duration_seconds: string;
     ivr_enabled: string;
@@ -1340,6 +1358,7 @@ export type TemplateRow = {
     description: string | null;
     subject: string | null;
     body: string;
+    email_format: string;
     language: string;
     variables: string[];
     category: { id: number; name: string; slug: string } | null;
@@ -1381,6 +1400,7 @@ export type TemplateFormValues = {
     language: string;
     description: string;
     subject: string;
+    email_format: string;
     body: string;
     status: string;
     client_id: string;

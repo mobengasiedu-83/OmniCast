@@ -53,6 +53,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Attachments
+    |--------------------------------------------------------------------------
+    |
+    | Files a campaign delivers with its body. They stay on a private disk: the
+    | transport reads them when the message is submitted, and the reviewer
+    | downloads them through the application, never by a public link.
+    |
+    */
+
+    'attachments' => [
+        'disk' => env('EMAIL_ATTACHMENT_DISK', 'local'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Inline images
+    |--------------------------------------------------------------------------
+    |
+    | An image placed in the body is referenced by URL, so it has to sit on a
+    | publicly readable disk that `storage:link` exposes. Point this at a bucket
+    | or CDN in a deployment that serves media that way.
+    |
+    */
+
+    'images' => [
+        'disk' => env('EMAIL_IMAGE_DISK', 'public'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Delivery feedback
     |--------------------------------------------------------------------------
     |

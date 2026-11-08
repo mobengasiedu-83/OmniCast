@@ -218,6 +218,16 @@ class Campaign extends Model
     }
 
     /**
+     * The files the email is delivered with, once it sends.
+     *
+     * @return HasMany<EmailAttachment, $this>
+     */
+    public function emailAttachments(): HasMany
+    {
+        return $this->hasMany(EmailAttachment::class);
+    }
+
+    /**
      * @return HasMany<CampaignChannel, $this>
      */
     public function channels(): HasMany

@@ -3,6 +3,7 @@ import { Eye, Save, Trash2 } from 'lucide-react';
 import { type FormEvent, useMemo } from 'react';
 import { useConfirm } from '@/components/confirm-dialog';
 import InputError from '@/components/input-error';
+import RichTextEditor from '@/components/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -21,6 +22,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { htmlToPlainText } from '@/lib/html';
+import { urls } from '@/lib/urls';
 import type {
     ClientOption,
     SelectOption,
@@ -46,6 +49,7 @@ const defaults: TemplateFormValues = {
     language: 'en',
     description: '',
     subject: '',
+    email_format: 'html',
     body: '',
     status: 'draft',
     client_id: '',
@@ -67,22 +71,28 @@ function variableTags(body: string): string[] {
 
 /**
  * How the copy reads once the tags are filled in: a segment count for SMS, a
- * word count for email, so the author can judge the length before saving.
+ * word count for email, so the author can judge the length before saving. HTML
+ * bodies are read as their text, never as markup.
  */
 function renderPreview(
     body: string,
     channel: string,
+    emailFormat: string,
 ): { text: string; note: string } {
-    const text = body.replace(
+    const tagged = body.replace(
         /{{\s*([a-zA-Z0-9_]+)\s*}}/g,
         (_match, tag: string) => `[${tag.replace(/_/g, ' ')}]`,
     );
 
     if (channel === 'email') {
+        const text =
+            emailFormat === 'html' ? htmlToPlainText(tagged) : tagged;
         const words = text.split(/\s+/).filter(Boolean).length;
 
         return { text, note: `${words} ${words === 1 ? 'word' : 'words'}` };
     }
+
+    const text = tagged;
 
     if (channel === 'voice') {
         return { text, note: `${text.length} characters of spoken script` };
@@ -135,8 +145,17 @@ export default function TemplateForm({
             renderPreview(
                 form.data.body || 'Your copy appears here.',
                 form.data.channel,
+                form.data.email_format,
             ),
-        [form.data.body, form.data.channel],
+        [form.data.body, form.data.channel, form.data.email_format],
+    );
+    const richEmail = needsSubject && form.data.email_format === 'html';
+    const bodyLength = useMemo(
+        () =>
+            richEmail
+                ? htmlToPlainText(form.data.body).length
+                : form.data.body.length,
+        [form.data.body, richEmail],
     );
 
     const send = (): void => {
@@ -197,6 +216,21 @@ export default function TemplateForm({
             ...data,
             channel: value,
             subject: value === 'email' ? data.subject : '',
+        }));
+    };
+
+    /**
+     * Switching away from HTML drops the markup, so plain-text templates never
+     * carry tags nobody can read.
+     */
+    const changeEmailFormat = (value: string): void => {
+        form.setData((data) => ({
+            ...data,
+            email_format: value,
+            body:
+                value === 'text' && data.email_format === 'html'
+                    ? htmlToPlainText(data.body)
+                    : data.body,
         }));
     };
 
@@ -360,7 +394,7 @@ export default function TemplateForm({
                         </div>
 
                         {needsSubject && (
-                            <div className="grid gap-1.5 sm:col-span-2">
+                            <div className="grid gap-1.5">
                                 <Label htmlFor="subject">Subject line</Label>
                                 <Input
                                     id="subject"
@@ -378,23 +412,70 @@ export default function TemplateForm({
                             </div>
                         )}
 
+                        {needsSubject && (
+                            <div className="grid gap-1.5">
+                                <Label htmlFor="email_format">Body format</Label>
+                                <Select
+                                    value={form.data.email_format}
+                                    onValueChange={changeEmailFormat}
+                                >
+                                    <SelectTrigger
+                                        id="email_format"
+                                        className="w-full"
+                                    >
+                                        <SelectValue placeholder="Formatted" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="html">
+                                            Formatted (HTML)
+                                        </SelectItem>
+                                        <SelectItem value="text">
+                                            Plain text
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError
+                                    message={form.errors.email_format}
+                                />
+                            </div>
+                        )}
+
                         <div className="grid gap-1.5 sm:col-span-2">
                             <div className="flex items-end justify-between gap-2">
                                 <Label htmlFor="body">Message copy</Label>
                                 <span className="text-xs text-muted-foreground tabular-nums">
-                                    {form.data.body.length}/{limit}
+                                    {bodyLength}/{limit}
                                 </span>
                             </div>
-                            <Textarea
-                                id="body"
-                                rows={7}
-                                value={form.data.body}
-                                maxLength={limit}
-                                onChange={(event) =>
-                                    form.setData('body', event.target.value)
-                                }
-                                placeholder="Hi {{first_name}}, your payment of GHS {{amount}} is due on {{due_date}}."
-                            />
+                            {richEmail ? (
+                                <RichTextEditor
+                                    inputId="body"
+                                    value={form.data.body}
+                                    onChange={(html) =>
+                                        form.setData('body', html)
+                                    }
+                                    uploadUrl={urls.emailImages}
+                                    placeholder={
+                                        'Hi {{first_name}}, your payment of GHS {{amount}} is due on {{due_date}}.'
+                                    }
+                                    minHeight="16rem"
+                                    invalid={form.errors.body !== undefined}
+                                />
+                            ) : (
+                                <Textarea
+                                    id="body"
+                                    rows={7}
+                                    value={form.data.body}
+                                    maxLength={limit}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'body',
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="Hi {{first_name}}, your payment of GHS {{amount}} is due on {{due_date}}."
+                                />
+                            )}
                             <p className="text-xs text-muted-foreground">
                                 Wrap merge tags in double braces, for example{' '}
                                 <code className="rounded bg-muted px-1">

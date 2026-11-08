@@ -61,6 +61,7 @@ export default function TemplatesEdit({
                         description: template.description ?? '',
                         subject: template.subject ?? '',
                         body: template.body,
+                        email_format: template.email_format,
                         status: editableStatuses.has(template.status)
                             ? template.status
                             : 'draft',

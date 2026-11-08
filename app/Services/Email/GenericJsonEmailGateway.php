@@ -53,6 +53,7 @@ class GenericJsonEmailGateway implements EmailGateway
                 'format' => $email->format->value,
                 'reference' => $email->reference,
                 'callback_url' => $email->deliveryUrl(),
+                ...$this->attachmentPayload($email),
             ]);
         } catch (ConnectionException $exception) {
             Log::channel('email')->error('Email provider connection failed.', [
@@ -89,5 +90,32 @@ class GenericJsonEmailGateway implements EmailGateway
     public function name(): string
     {
         return 'generic_json';
+    }
+
+    /**
+     * The files as the request body carries them.
+     *
+     * A generic gateway has no shared convention for files, so they travel
+     * base64-encoded in an `attachments` array that a provider adapter can read.
+     * A deployment whose provider does not accept them should use the SMTP
+     * driver instead, which attaches the files to the MIME message itself.
+     *
+     * @return array<string, mixed>
+     */
+    protected function attachmentPayload(OutboundEmail $email): array
+    {
+        $files = $email->deliverableAttachments();
+
+        if ($files === []) {
+            return [];
+        }
+
+        return [
+            'attachments' => array_map(fn (OutboundAttachment $file): array => [
+                'filename' => $file->name,
+                'mime' => $file->mimeType,
+                'content' => base64_encode((string) $file->contents()),
+            ], $files),
+        ];
     }
 }

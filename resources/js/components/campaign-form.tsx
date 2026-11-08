@@ -1,6 +1,8 @@
 import { Link, useForm } from '@inertiajs/react';
 import { type FormEvent, useState } from 'react';
+import EmailAttachmentsField from '@/components/email-attachments-field';
 import InputError from '@/components/input-error';
+import RichTextEditor from '@/components/rich-text-editor';
 import TemplatePicker from '@/components/template-picker';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,12 +22,14 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { htmlToPlainText } from '@/lib/html';
 import { analyzeSms } from '@/lib/sms';
 import { urls } from '@/lib/urls';
 import type {
     CampaignFormOptions,
     CampaignFormValues,
     CampaignTemplateOption,
+    EmailAttachmentRow,
 } from '@/types';
 
 const defaults: CampaignFormValues = {
@@ -40,6 +44,8 @@ const defaults: CampaignFormValues = {
     email_subject: '',
     email_body: '',
     email_format: 'html',
+    email_attachments: [],
+    removed_attachment_ids: [],
     voice_script: '',
     voice_max_duration_seconds: '30',
     ivr_enabled: '0',
@@ -114,6 +120,7 @@ function templateBody(
         return {
             email_subject: template.subject ?? '',
             email_body: template.body,
+            email_format: template.email_format,
         };
     }
 
@@ -144,6 +151,7 @@ export default function CampaignForm({
     method,
     options,
     initial,
+    emailAttachments = [],
     submitLabel,
     cancelHref,
 }: {
@@ -151,6 +159,8 @@ export default function CampaignForm({
     method: 'post' | 'put';
     options: CampaignFormOptions;
     initial?: Partial<CampaignFormValues>;
+    /** Files already stored against the campaign being edited. */
+    emailAttachments?: EmailAttachmentRow[];
     submitLabel: string;
     cancelHref: string;
 }) {
@@ -199,16 +209,49 @@ export default function CampaignForm({
         }));
     };
 
+    /**
+     * Switching away from HTML drops the markup, so a plain-text send never
+     * carries tags nobody can read.
+     */
+    const changeEmailFormat = (value: string): void => {
+        form.setData((data) => ({
+            ...data,
+            email_format: value,
+            email_body:
+                value === 'text' && data.email_format === 'html'
+                    ? htmlToPlainText(data.email_body)
+                    : data.email_body,
+        }));
+    };
+
+    /**
+     * Files are only unlinked on submit: toggling a stored attachment just
+     * collects its id, so cancelling the edit leaves the campaign untouched.
+     */
+    const toggleAttachmentRemoval = (attachment: number): void => {
+        form.setData(
+            'removed_attachment_ids',
+            form.data.removed_attachment_ids.includes(attachment)
+                ? form.data.removed_attachment_ids.filter(
+                      (id) => id !== attachment,
+                  )
+                : [...form.data.removed_attachment_ids, attachment],
+        );
+    };
+
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
 
+        // Attachments ride along as files, so the payload has to be multipart
+        // for the server to read `email_attachments` and
+        // `removed_attachment_ids` the same way on create and update.
         if (method === 'put') {
-            form.put(action);
+            form.put(action, { forceFormData: true });
 
             return;
         }
 
-        form.post(action);
+        form.post(action, { forceFormData: true });
     };
 
     return (
@@ -551,9 +594,7 @@ export default function CampaignForm({
                                 <Label htmlFor="email_format">Format</Label>
                                 <Select
                                     value={form.data.email_format}
-                                    onValueChange={(value) =>
-                                        form.setData('email_format', value)
-                                    }
+                                    onValueChange={changeEmailFormat}
                                 >
                                     <SelectTrigger id="email_format">
                                         <SelectValue placeholder="HTML" />
@@ -574,23 +615,37 @@ export default function CampaignForm({
 
                             <div className="grid gap-1.5">
                                 <Label htmlFor="email_body">Body</Label>
-                                <Textarea
-                                    id="email_body"
-                                    value={form.data.email_body}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'email_body',
-                                            event.target.value,
-                                        )
-                                    }
-                                    rows={10}
-                                    maxLength={100000}
-                                    placeholder={
-                                        form.data.email_format === 'html'
-                                            ? '<p>Hello, your October statement is ready…</p>'
-                                            : 'Hello, your October statement is ready…'
-                                    }
-                                />
+                                {form.data.email_format === 'html' ? (
+                                    <RichTextEditor
+                                        inputId="email_body"
+                                        value={form.data.email_body}
+                                        onChange={(html) =>
+                                            form.setData('email_body', html)
+                                        }
+                                        uploadUrl={urls.emailImages}
+                                        placeholder={
+                                            'Hello {{first_name}}, your October statement is ready…'
+                                        }
+                                        minHeight="18rem"
+                                        invalid={
+                                            form.errors.email_body !== undefined
+                                        }
+                                    />
+                                ) : (
+                                    <Textarea
+                                        id="email_body"
+                                        value={form.data.email_body}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'email_body',
+                                                event.target.value,
+                                            )
+                                        }
+                                        rows={10}
+                                        maxLength={100000}
+                                        placeholder="Hello, your October statement is ready…"
+                                    />
+                                )}
                                 <p className="text-xs text-muted-foreground">
                                     {form.data.email_format === 'html'
                                         ? 'Markup is rendered inside the branded broadcast shell, and a plain-text alternative is generated automatically.'
@@ -604,6 +659,19 @@ export default function CampaignForm({
                                 </p>
                                 <InputError message={form.errors.email_body} />
                             </div>
+
+                            <EmailAttachmentsField
+                                files={form.data.email_attachments}
+                                onChange={(files) =>
+                                    form.setData('email_attachments', files)
+                                }
+                                existing={emailAttachments}
+                                removedIds={form.data.removed_attachment_ids}
+                                onToggleExisting={toggleAttachmentRemoval}
+                                invalid={
+                                    form.errors.email_attachments !== undefined
+                                }
+                            />
                         </div>
                     )}
 

@@ -9,8 +9,11 @@ use App\Enums\SenderIdChannel;
 use App\Enums\SenderIdStatus;
 use App\Enums\TemplateStatus;
 use App\Models\Client;
+use App\Services\Email\EmailAttachmentStore;
+use App\Services\Email\EmailBodySanitizer;
 use App\Services\PlatformConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
 use Illuminate\Validation\Validator;
@@ -26,13 +29,20 @@ class CampaignRequest extends FormRequest
     }
 
     /**
-     * Scope the payload to the tenant of the signed-in user.
+     * Scope the payload to the tenant of the signed-in user and wash the email
+     * markup before anything validates its length.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
             'client_id' => $this->user()?->client_id ?? $this->input('client_id'),
         ]);
+
+        if ($this->input('email_format') === EmailFormat::Html->value && $this->filled('email_body')) {
+            $this->merge([
+                'email_body' => app(EmailBodySanitizer::class)->sanitize((string) $this->input('email_body')),
+            ]);
+        }
     }
 
     /**
@@ -79,6 +89,16 @@ class CampaignRequest extends FormRequest
             'email_subject' => [Rule::requiredIf($requiresEmail), 'nullable', 'string', 'max:255'],
             'email_body' => [Rule::requiredIf($requiresEmail), 'nullable', 'string', 'max:100000'],
             'email_format' => [$requiresEmail ? 'required' : 'nullable', Rule::enum(EmailFormat::class)],
+            ...($requiresEmail ? [
+                'email_attachments' => ['nullable', 'array', 'max:'.EmailAttachmentStore::MAX_FILES],
+                'email_attachments.*' => [
+                    'file',
+                    'max:'.EmailAttachmentStore::MAX_FILE_KILOBYTES,
+                    'mimes:pdf,doc,docx,xls,xlsx,csv,txt,rtf,png,jpg,jpeg,gif,webp',
+                ],
+                'removed_attachment_ids' => ['nullable', 'array'],
+                'removed_attachment_ids.*' => ['integer'],
+            ] : []),
             'voice_script' => [Rule::requiredIf($requiresVoice), 'nullable', 'string', 'max:4000'],
             'voice_recording_path' => ['nullable', 'string', 'max:2048'],
             'voice_max_duration_seconds' => ['nullable', 'integer', 'min:5', 'max:300'],
@@ -117,6 +137,8 @@ class CampaignRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $this->guardAttachmentSize($validator);
+
             if ($this->filled('contact_list_id') && $this->filled('contact_segment_id')) {
                 $validator->errors()->add('contact_segment_id', 'Choose either a contact list or a saved segment.');
             }
@@ -175,6 +197,56 @@ class CampaignRequest extends FormRequest
                 }
             })
             ->whereIn('status', [TemplateStatus::Draft->value, TemplateStatus::Active->value]);
+    }
+
+    /**
+     * The files uploaded with this submission, filtered to real uploads.
+     *
+     * @return list<UploadedFile>
+     */
+    public function attachmentFiles(): array
+    {
+        $files = $this->file('email_attachments');
+
+        if (! is_array($files)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $files,
+            fn (mixed $file): bool => $file instanceof UploadedFile,
+        ));
+    }
+
+    /**
+     * The attachments the author asked to take off the campaign.
+     *
+     * @return list<int>
+     */
+    public function removedAttachmentIds(): array
+    {
+        $ids = $this->input('removed_attachment_ids', []);
+
+        return is_array($ids) ? array_map('intval', $ids) : [];
+    }
+
+    /**
+     * Refuse a set of files that would build a message the mail server rejects.
+     */
+    protected function guardAttachmentSize(Validator $validator): void
+    {
+        $bytes = 0;
+
+        foreach ($this->attachmentFiles() as $file) {
+            $bytes += (int) $file->getSize();
+        }
+
+        if ($bytes > EmailAttachmentStore::MAX_TOTAL_KILOBYTES * 1024) {
+            $validator->errors()->add(
+                'email_attachments',
+                'The attachments add up to more than '.intdiv(EmailAttachmentStore::MAX_TOTAL_KILOBYTES, 1024).' MB. Remove a file or send a link in the body instead.',
+            );
+        }
     }
 
     /**

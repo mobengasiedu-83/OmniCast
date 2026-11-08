@@ -13,6 +13,7 @@ import { withBasePath as path } from '@/lib/base-path';
  */
 export const urls = {
     dashboard: path('/dashboard'),
+    emailImages: path('/email/images'),
     login: path('/login'),
     approvals: {
         index: path('/approvals'),
