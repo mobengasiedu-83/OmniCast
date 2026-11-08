@@ -191,6 +191,24 @@ export const urls = {
         queues: {
             index: path('/admin/queues'),
         },
+        webhooks: {
+            index: path('/admin/webhooks'),
+            store: path('/admin/webhooks'),
+            update: (endpoint: number) => path(`/admin/webhooks/${endpoint}`),
+            toggle: (endpoint: number) => path(`/admin/webhooks/${endpoint}/toggle`),
+            rotate: (endpoint: number) => path(`/admin/webhooks/${endpoint}/rotate`),
+            test: (endpoint: number) => path(`/admin/webhooks/${endpoint}/test`),
+            destroy: (endpoint: number) => path(`/admin/webhooks/${endpoint}`),
+            replay: (delivery: number) =>
+                path(`/admin/webhook-deliveries/${delivery}/replay`),
+        },
+        smpp: {
+            index: path('/admin/smpp'),
+            store: path('/admin/smpp'),
+            update: (account: number) => path(`/admin/smpp/${account}`),
+            toggle: (account: number) => path(`/admin/smpp/${account}/toggle`),
+            rotate: (account: number) => path(`/admin/smpp/${account}/rotate`),
+        },
         reports: {
             index: path('/admin/reports'),
             clients: path('/admin/reports/clients'),
@@ -233,6 +251,18 @@ export const urls = {
             resend: (invitation: number) =>
                 path(`/settings/team/${invitation}/resend`),
             destroy: (invitation: number) => path(`/settings/team/${invitation}`),
+        },
+        webhooks: {
+            index: path('/settings/webhooks'),
+            store: path('/settings/webhooks'),
+            update: (endpoint: number) => path(`/settings/webhooks/${endpoint}`),
+            toggle: (endpoint: number) =>
+                path(`/settings/webhooks/${endpoint}/toggle`),
+            rotate: (endpoint: number) =>
+                path(`/settings/webhooks/${endpoint}/rotate`),
+            test: (endpoint: number) =>
+                path(`/settings/webhooks/${endpoint}/test`),
+            destroy: (endpoint: number) => path(`/settings/webhooks/${endpoint}`),
         },
     },
     invitations: {

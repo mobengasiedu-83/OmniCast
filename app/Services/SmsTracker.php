@@ -6,6 +6,7 @@ use App\Enums\CampaignContactStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\SmsEncoding;
 use App\Enums\SmsMessageStatus;
+use App\Enums\WebhookEvent;
 use App\Jobs\DispatchCampaignJob;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
@@ -13,6 +14,7 @@ use App\Models\SmsMessage;
 use App\Services\Delivery\QueueTopology;
 use App\Services\Sms\SmsDeliveryReport;
 use App\Services\Sms\SmsDispatchResult;
+use App\Services\Webhooks\WebhookDispatcher;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -27,7 +29,10 @@ use Illuminate\Support\Str;
  */
 class SmsTracker
 {
-    public function __construct(protected QueueTopology $queues) {}
+    public function __construct(
+        protected QueueTopology $queues,
+        protected WebhookDispatcher $webhooks,
+    ) {}
 
     /**
      * Write the message row before the provider is asked to deliver it.
@@ -148,12 +153,14 @@ class SmsTracker
 
         if ($report->status->wasDelivered()) {
             $this->confirmRecipient($message);
+            $this->webhooks->sms(WebhookEvent::SmsDelivered, $message->refresh());
 
             return;
         }
 
         if ($report->status->isRetryable()) {
             $this->settle($message->refresh());
+            $this->webhooks->sms(WebhookEvent::SmsFailed, $message->refresh());
         }
     }
 

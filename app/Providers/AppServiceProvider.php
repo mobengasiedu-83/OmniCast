@@ -113,9 +113,16 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('api', function (Request $request): Limit {
             $user = $request->user();
+            $token = $user?->currentAccessToken();
+            $write = $token !== null && method_exists($token, 'can') && $token->can('write');
 
-            return Limit::perMinute(60)->by(
-                $user !== null ? 'user:'.$user->id : 'ip:'.$request->ip(),
+            return Limit::perMinute(max(1, (int) config(
+                $write ? 'api.rate_limits.write' : 'api.rate_limits.read',
+                $write ? 30 : 120,
+            )))->by(
+                $token !== null && isset($token->id)
+                    ? 'token:'.$token->id
+                    : ($user !== null ? 'user:'.$user->id : 'ip:'.$request->ip()),
             );
         });
     }

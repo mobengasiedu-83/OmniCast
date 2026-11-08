@@ -15,7 +15,9 @@ use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SessionController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\SmppController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -132,5 +134,31 @@ Route::middleware(['auth', 'verified', 'platform'])
                 ->name('clients.documents.review');
             Route::get('clients/{client}/documents/{document}/view', [ClientDocumentController::class, 'view'])
                 ->name('clients.documents.view');
+        });
+
+        Route::middleware('can:webhooks.view')->group(function (): void {
+            Route::get('webhooks', [WebhookController::class, 'index'])->name('webhooks.index');
+        });
+
+        Route::middleware('can:webhooks.manage')->group(function (): void {
+            Route::post('webhooks', [WebhookController::class, 'store'])->name('webhooks.store');
+            Route::put('webhooks/{endpoint}', [WebhookController::class, 'update'])->name('webhooks.update');
+            Route::patch('webhooks/{endpoint}/toggle', [WebhookController::class, 'toggle'])->name('webhooks.toggle');
+            Route::patch('webhooks/{endpoint}/rotate', [WebhookController::class, 'rotate'])->name('webhooks.rotate');
+            Route::post('webhooks/{endpoint}/test', [WebhookController::class, 'test'])->name('webhooks.test');
+            Route::post('webhook-deliveries/{delivery}/replay', [WebhookController::class, 'replay'])
+                ->name('webhook-deliveries.replay');
+            Route::delete('webhooks/{endpoint}', [WebhookController::class, 'destroy'])->name('webhooks.destroy');
+        });
+
+        Route::middleware('can:smpp.view')->group(function (): void {
+            Route::get('smpp', [SmppController::class, 'index'])->name('smpp.index');
+        });
+
+        Route::middleware('can:smpp.manage')->group(function (): void {
+            Route::post('smpp', [SmppController::class, 'store'])->name('smpp.store');
+            Route::put('smpp/{account}', [SmppController::class, 'update'])->name('smpp.update');
+            Route::patch('smpp/{account}/toggle', [SmppController::class, 'toggle'])->name('smpp.toggle');
+            Route::patch('smpp/{account}/rotate', [SmppController::class, 'rotate'])->name('smpp.rotate');
         });
     });

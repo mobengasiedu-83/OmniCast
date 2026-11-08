@@ -64,6 +64,9 @@ enum Role: string
                 Permission::ViewRates,
                 Permission::ViewReports,
                 Permission::ExportReports,
+                Permission::ViewWebhooks,
+                Permission::ManageWebhooks,
+                Permission::ViewSmpp,
             ],
             self::ClientOperator => [
                 Permission::ViewContacts,
@@ -74,6 +77,7 @@ enum Role: string
                 Permission::ViewSenderIds,
                 Permission::ViewWallet,
                 Permission::ViewReports,
+                Permission::ViewWebhooks,
             ],
             self::ComplianceOfficer => [
                 Permission::ManageClients,
@@ -84,6 +88,8 @@ enum Role: string
                 Permission::ViewSenderIds,
                 Permission::ApproveSenderIds,
                 Permission::ViewReports,
+                Permission::ViewWebhooks,
+                Permission::ViewSmpp,
             ],
             self::FinanceOfficer => [
                 Permission::ManageClients,

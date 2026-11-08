@@ -45,6 +45,11 @@ Schedule::command('queue:prune-batches --hours=48')
     ->description('Prune completed job batches')
     ->daily();
 
+Schedule::command('webhooks:prune-deliveries')
+    ->description('Delete finished webhook deliveries past their retention window')
+    ->daily()
+    ->withoutOverlapping();
+
 /*
 |--------------------------------------------------------------------------
 | Reporting schedule

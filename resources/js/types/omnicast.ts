@@ -897,6 +897,80 @@ export type ApiTokenRow = {
     created_at: string | null;
 };
 
+export type WebhookEndpointRow = {
+    id: number;
+    name: string;
+    url: string;
+    description: string | null;
+    events: string[];
+    api_version: string;
+    is_active: boolean;
+    masked_secret: string;
+    consecutive_failures: number;
+    disabled_at: string | null;
+    last_success_at: string | null;
+    last_failure_at: string | null;
+    client?: { id: number; name: string } | null;
+};
+
+export type WebhookDeliveryRow = {
+    id: number;
+    event: string;
+    status: string;
+    tone: string;
+    attempts: number;
+    response_status: number | null;
+    error_message: string | null;
+    endpoint: { id: number | null; name: string | null; url: string | null };
+    created_at: string | null;
+    delivered_at: string | null;
+};
+
+export type WebhookEventCatalogue = {
+    group: string;
+    events: { value: string; label: string }[];
+};
+
+export type SmppAccountRow = {
+    id: number;
+    name: string;
+    system_id: string;
+    bind_mode: string;
+    bind_mode_label: string;
+    allowed_sources: string[];
+    throughput_per_second: number;
+    is_active: boolean;
+    last_bound_at: string | null;
+    client: { id: number; name: string } | null;
+    messages_count: number;
+};
+
+export type SmppSessionRow = {
+    id: number;
+    system_id: string;
+    mode: string;
+    remote_address: string | null;
+    bound_at: string | null;
+    last_seen_at: string | null;
+    pdus_in: number;
+    pdus_out: number;
+    account: { id: number; name: string } | null;
+};
+
+export type SmppMessageRow = {
+    id: number;
+    reference: string;
+    message_id: string;
+    source_address: string;
+    destination_address: string;
+    status: string;
+    status_label: string;
+    segments: number;
+    provider: string | null;
+    account: string | null;
+    submitted_at: string | null;
+};
+
 export type TeamMemberRow = {
     id: number;
     name: string;
