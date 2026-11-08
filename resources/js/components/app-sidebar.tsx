@@ -25,6 +25,8 @@ import {
     PackagePlus,
     Layers3,
     PhoneCall,
+    PlayCircle,
+    Plug,
     Radio,
     ReceiptText,
     ScrollText,
@@ -39,6 +41,7 @@ import {
     UsersRound,
     Wallet,
     Webhook,
+    Workflow,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import PoweredBy from '@/components/powered-by';
@@ -169,6 +172,11 @@ const identityNavItems: NavItem[] = [
         icon: Blocks,
     },
     {
+        title: 'Integrations',
+        href: urls.admin.integrations.index,
+        icon: Plug,
+    },
+    {
         title: 'Client plans',
         href: urls.admin.settings.plans,
         icon: Layers3,
@@ -290,6 +298,7 @@ export function AppSidebar() {
     const canViewRates = isPlatformUser && permissions.includes('rates.view');
     const canViewQueues = isPlatformUser && permissions.includes('queues.view');
     const canViewReports = permissions.includes('reports.view');
+    const canViewAutomations = permissions.includes('automations.view');
     const canViewTemplates = permissions.includes('templates.view');
     const canManageTemplates =
         isPlatformUser && permissions.includes('templates.manage');
@@ -434,6 +443,24 @@ export function AppSidebar() {
             : []),
     ];
 
+    /**
+     * The tenant's workflow builder and the run history behind it.
+     */
+    const automationNavItems: NavItem[] = canViewAutomations
+        ? [
+              {
+                  title: 'Workflows',
+                  href: urls.automations.index,
+                  icon: Workflow,
+              },
+              {
+                  title: 'Automation runs',
+                  href: urls.automations.runs.index,
+                  icon: PlayCircle,
+              },
+          ]
+        : [];
+
     return (
         <Sidebar collapsible="icon" variant="inset" className="border-r-0">
             <SidebarHeader className="relative overflow-hidden">
@@ -555,6 +582,9 @@ export function AppSidebar() {
                 )}
                 {canViewReports && !isPlatformUser && (
                     <NavMain items={reportsNavItems} label="Reports" />
+                )}
+                {automationNavItems.length > 0 && (
+                    <NavMain items={automationNavItems} label="Automation" />
                 )}
                 {canViewReports && isPlatformUser && (
                     <NavMain items={platformReportsNavItems} label="Reports" />

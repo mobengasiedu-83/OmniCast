@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Contracts\EmailGateway;
 use App\Contracts\SmsGateway;
 use App\Contracts\VoiceGateway;
+use App\Enums\AutomationTrigger;
 use App\Enums\CampaignContactStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
@@ -17,6 +18,7 @@ use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Contact;
 use App\Models\EmailAttachment;
+use App\Services\Automation\AutomationEngine;
 use App\Services\Delivery\DeliveryPacer;
 use App\Services\Email\OutboundAttachment;
 use App\Services\Email\OutboundEmail;
@@ -48,6 +50,7 @@ class CampaignDispatcher
         protected EmailTracker $emailTracker,
         protected DeliveryPacer $pacer,
         protected WebhookDispatcher $webhooks,
+        protected AutomationEngine $automations,
     ) {}
 
     /**
@@ -486,5 +489,11 @@ class CampaignDispatcher
             });
 
         $this->webhooks->campaign(WebhookEvent::CampaignCompleted, $campaign->refresh());
+
+        $this->automations->emit(AutomationTrigger::CampaignCompleted, null, [
+            'client_id' => $campaign->client_id,
+            'campaign_id' => $campaign->id,
+            'campaign' => $campaign->name,
+        ]);
     }
 }

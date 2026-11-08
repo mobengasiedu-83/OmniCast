@@ -41,8 +41,18 @@
         <x-inertia::head>
             <title>{{ config('app.name', 'Laravel') }}</title>
         </x-inertia::head>
+
+        {{-- Vendor tracking tags pasted under Admin -> Integrations. --}}
+        @foreach ($integrationHeadScripts ?? [] as $integrationHeadScript)
+            {!! $integrationHeadScript !!}
+        @endforeach
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />
+
+        {{-- Body tags (for example the Google Tag Manager noscript frame). --}}
+        @foreach ($integrationBodyScripts ?? [] as $integrationBodyScript)
+            {!! $integrationBodyScript !!}
+        @endforeach
     </body>
 </html>

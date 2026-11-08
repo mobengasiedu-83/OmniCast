@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Enums\AutomationTrigger;
 use App\Models\Client;
 use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\Automation\AutomationEngine;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -39,6 +41,7 @@ class ContactImportService
     public function __construct(
         protected PhoneNumber $phones,
         protected ContactDndService $dnd,
+        protected AutomationEngine $automations,
     ) {}
 
     /**
@@ -174,6 +177,10 @@ class ContactImportService
             }
 
             $contact->wasRecentlyCreated ? $created++ : $updated++;
+
+            if ($contact->wasRecentlyCreated) {
+                $this->automations->emit(AutomationTrigger::ContactCreated, $contact);
+            }
 
             if ($list instanceof ContactList) {
                 $list->contacts()->syncWithoutDetaching([$contact->id => ['added_at' => now()]]);

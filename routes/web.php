@@ -18,6 +18,9 @@ use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SenderIdController;
+use App\Http\Controllers\Settings\AutomationRunController;
+use App\Http\Controllers\Settings\AutomationStepController;
+use App\Http\Controllers\Settings\AutomationWorkflowController;
 use App\Http\Controllers\Settings\ClientSettingsController;
 use App\Http\Controllers\SmsWebhookController;
 use App\Http\Controllers\TemplateCategoryController;
@@ -189,6 +192,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/{invoice}/download', [InvoiceController::class, 'download'])
         ->name('invoices.download');
+
+    Route::get('automations', [AutomationWorkflowController::class, 'index'])->name('automations.index');
+    Route::post('automations', [AutomationWorkflowController::class, 'store'])->name('automations.store');
+
+    Route::get('automations/runs', [AutomationRunController::class, 'index'])->name('automations.runs.index');
+    Route::get('automations/runs/{run}', [AutomationRunController::class, 'show'])->name('automations.runs.show');
+
+    Route::get('automations/{workflow}', [AutomationWorkflowController::class, 'show'])->name('automations.show');
+    Route::put('automations/{workflow}', [AutomationWorkflowController::class, 'update'])->name('automations.update');
+    Route::patch('automations/{workflow}/toggle', [AutomationWorkflowController::class, 'toggle'])->name('automations.toggle');
+    Route::delete('automations/{workflow}', [AutomationWorkflowController::class, 'destroy'])->name('automations.destroy');
+
+    Route::post('automations/{workflow}/steps', [AutomationStepController::class, 'store'])->name('automations.steps.store');
+    Route::put('automations/{workflow}/steps/{step}', [AutomationStepController::class, 'update'])->name('automations.steps.update');
+    Route::patch('automations/{workflow}/steps/{step}/move', [AutomationStepController::class, 'move'])->name('automations.steps.move');
+    Route::delete('automations/{workflow}/steps/{step}', [AutomationStepController::class, 'destroy'])->name('automations.steps.destroy');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('reports/campaigns', [ReportController::class, 'campaigns'])->name('reports.campaigns');

@@ -76,3 +76,25 @@ Schedule::command('reports:send-scheduled')
 Schedule::command('reports:prune-exports')
     ->description('Delete report files past their retention window')
     ->daily();
+
+/*
+|--------------------------------------------------------------------------
+| Automation schedule
+|--------------------------------------------------------------------------
+|
+| A scheduled workflow stores the hour it wants, so the trigger runs every hour
+| and starts only the workflows that are due. Finished runs are pruned daily so
+| the history screen stays quick.
+|
+*/
+
+Schedule::command('automations:run-scheduled')
+    ->description('Start the automation workflows whose scheduled hour has arrived')
+    ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('automations:prune-runs')
+    ->description('Delete finished automation runs past their retention window')
+    ->daily()
+    ->withoutOverlapping();

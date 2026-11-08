@@ -1479,3 +1479,115 @@ export type TemplateFormValues = {
     status: string;
     client_id: string;
 };
+
+/** A tag or contact list a step can point at. */
+export type AutomationNamedOption = {
+    id: number;
+    name: string;
+};
+
+/** One trigger a workflow can start on, as the builder lists it. */
+export type AutomationTriggerOption = {
+    value: string;
+    label: string;
+    description: string;
+    needs_contact: boolean;
+    scheduled: boolean;
+};
+
+/** One step action, with the inputs its form shows. */
+export type AutomationActionOption = {
+    value: string;
+    label: string;
+    description: string;
+    channel: string | null;
+    needs_contact: boolean;
+    pauses_run: boolean;
+    fields: string[];
+};
+
+/** One check a condition step can make. */
+export type AutomationConditionOption = {
+    value: string;
+    label: string;
+    needs_field: boolean;
+};
+
+/** A step as the builder renders it. */
+export type AutomationStepRow = {
+    id: number;
+    position: number;
+    action: string;
+    action_label: string;
+    label: string | null;
+    describe: string;
+    summary: string;
+    config: Record<string, unknown>;
+};
+
+/** A workflow with its ordered steps. */
+export type AutomationWorkflowRow = {
+    id: number;
+    name: string;
+    description: string | null;
+    trigger: string;
+    trigger_label: string;
+    trigger_summary: string;
+    trigger_config: Record<string, unknown> | null;
+    is_active: boolean;
+    runs_count: number;
+    open_runs_count: number;
+    last_run_at: string | null;
+    created_at: string | null;
+    steps: AutomationStepRow[];
+};
+
+/** One run of a workflow, as the list screens show it. */
+export type AutomationRunRow = {
+    id: number;
+    status: string;
+    status_label: string;
+    trigger: string;
+    trigger_label?: string;
+    workflow: { id: number | null; name: string | null };
+    contact?: { id: number; name: string; phone: string } | null;
+    contact_name?: string | null;
+    current_position: number;
+    detail: string | null;
+    step_logs_count?: number;
+    resume_at: string | null;
+    started_at: string | null;
+    finished_at: string | null;
+    created_at: string | null;
+};
+
+/** One entry on a run's timeline. */
+export type AutomationRunStepRow = {
+    id: number;
+    position: number;
+    action: string;
+    action_label: string;
+    status: string;
+    status_label: string;
+    detail: string | null;
+    ran_at: string | null;
+};
+
+/** A run with the timeline the engine logged. */
+export type AutomationRunDetail = AutomationRunRow & {
+    workflow: { id: number | null; name: string | null; is_active?: boolean };
+    contact: {
+        id: number;
+        name: string;
+        phone: string;
+        email: string | null;
+    } | null;
+    campaign?: { id: number; name: string } | null;
+    steps: AutomationRunStepRow[];
+};
+
+/** The engine limits the builder shows. */
+export type AutomationLimits = {
+    max_steps: number;
+    max_wait_minutes: number;
+};

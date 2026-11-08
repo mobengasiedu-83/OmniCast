@@ -36,6 +36,8 @@ enum Permission: string
     case ManageWebhooks = 'webhooks.manage';
     case ViewSmpp = 'smpp.view';
     case ManageSmpp = 'smpp.manage';
+    case ViewAutomations = 'automations.view';
+    case ManageAutomations = 'automations.manage';
 
     public function label(): string
     {
@@ -69,6 +71,8 @@ enum Permission: string
             self::ManageWebhooks => 'Manage Webhooks',
             self::ViewSmpp => 'View SMPP Sessions',
             self::ManageSmpp => 'Manage SMPP Accounts',
+            self::ViewAutomations => 'View Automations',
+            self::ManageAutomations => 'Manage Automations',
         };
     }
 

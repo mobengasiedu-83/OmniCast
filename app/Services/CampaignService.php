@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\AutomationTrigger;
 use App\Enums\CampaignAudioStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
@@ -12,6 +13,7 @@ use App\Jobs\DispatchCampaignJob;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\User;
+use App\Services\Automation\AutomationEngine;
 use App\Services\Delivery\QueueTopology;
 use App\Services\Webhooks\WebhookDispatcher;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +37,7 @@ class CampaignService
         protected QueueTopology $queues,
         protected RateResolver $rates,
         protected WebhookDispatcher $webhooks,
+        protected AutomationEngine $automations,
     ) {}
 
     /**
@@ -326,6 +329,12 @@ class CampaignService
         }
 
         $this->webhooks->campaign(WebhookEvent::CampaignLaunched, $campaign);
+
+        $this->automations->emit(AutomationTrigger::CampaignLaunched, null, [
+            'client_id' => $campaign->client_id,
+            'campaign_id' => $campaign->id,
+            'campaign' => $campaign->name,
+        ]);
 
         return $campaign;
     }

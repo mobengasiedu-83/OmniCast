@@ -95,6 +95,27 @@ export const urls = {
         liftSuppression: (suppression: number) =>
             path(`/contacts/audiences/suppressions/${suppression}`),
     },
+    automations: {
+        index: path('/automations'),
+        store: path('/automations'),
+        show: (workflow: number) => path(`/automations/${workflow}`),
+        update: (workflow: number) => path(`/automations/${workflow}`),
+        toggle: (workflow: number) => path(`/automations/${workflow}/toggle`),
+        destroy: (workflow: number) => path(`/automations/${workflow}`),
+        steps: {
+            store: (workflow: number) => path(`/automations/${workflow}/steps`),
+            update: (workflow: number, step: number) =>
+                path(`/automations/${workflow}/steps/${step}`),
+            move: (workflow: number, step: number) =>
+                path(`/automations/${workflow}/steps/${step}/move`),
+            destroy: (workflow: number, step: number) =>
+                path(`/automations/${workflow}/steps/${step}`),
+        },
+        runs: {
+            index: path('/automations/runs'),
+            show: (run: number) => path(`/automations/runs/${run}`),
+        },
+    },
     senderIds: {
         index: path('/sender-ids'),
         create: path('/sender-ids/create'),
@@ -159,6 +180,10 @@ export const urls = {
             plans: path('/admin/settings/plans'),
             assignPlan: (client: number) =>
                 path(`/admin/settings/plans/${client}`),
+        },
+        integrations: {
+            index: path('/admin/integrations'),
+            update: path('/admin/integrations'),
         },
         packages: {
             index: path('/admin/packages'),

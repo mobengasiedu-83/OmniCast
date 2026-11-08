@@ -8,6 +8,7 @@ use App\Contracts\VoiceGateway;
 use App\Models\User;
 use App\Policies\RolePolicy;
 use App\Services\Email\EmailGatewayManager;
+use App\Services\IntegrationScripts;
 use App\Services\PlatformConfiguration;
 use App\Services\Sms\SmsGatewayManager;
 use App\Services\Voice\AmiTransport;
@@ -15,6 +16,7 @@ use App\Services\Voice\StreamAmiTransport;
 use App\Services\Voice\VoiceGatewayManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Http\Request;
 use Illuminate\Mail\Events\MessageSent;
@@ -24,6 +26,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -57,8 +60,26 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureIdentity();
+        $this->configureIntegrations();
         $this->configureCommunicationLogging();
         $this->configureDevelopmentProcesses();
+    }
+
+    /**
+     * Hand the enabled tracking snippets to the root Blade view.
+     *
+     * The platform team pastes the vendor tags under Admin -> Integrations. A
+     * snippet is a complete vendor tag rather than user text, so the view
+     * prints it unescaped; only platform administrators can write one.
+     */
+    protected function configureIntegrations(): void
+    {
+        View::composer('app', static function (ViewContract $view): void {
+            $snippets = app(IntegrationScripts::class)->snippets();
+
+            $view->with('integrationHeadScripts', $snippets['head']);
+            $view->with('integrationBodyScripts', $snippets['body']);
+        });
     }
 
     /**

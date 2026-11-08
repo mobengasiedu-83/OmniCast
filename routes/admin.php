@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\ClientDocumentController;
 use App\Http\Controllers\Admin\ClientEntitlementController;
 use App\Http\Controllers\Admin\ClientRegistrationController;
+use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\InvitationController;
 use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\LoginAuditController;
@@ -72,6 +73,10 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::put('settings/modules', [SettingsController::class, 'updateModules'])->name('settings.modules.update');
             Route::get('settings/plans', [SettingsController::class, 'plans'])->name('settings.plans');
             Route::put('settings/plans/{client}', [SettingsController::class, 'assignPlan'])->name('settings.plans.assign');
+
+            Route::get('integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+            Route::put('integrations', [IntegrationController::class, 'update'])->name('integrations.update');
+
             Route::get('resource-requests', [SettingsController::class, 'requests'])->name('resource-requests.index');
             Route::put('resource-requests/{resourceRequest}', [SettingsController::class, 'reviewRequest'])->name('resource-requests.review');
         });

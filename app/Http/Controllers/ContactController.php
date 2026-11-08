@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AutomationTrigger;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Http\Requests\Contact\ContactRequest;
 use App\Http\Requests\Contact\ImportContactsRequest;
 use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\Tag;
+use App\Services\Automation\AutomationEngine;
 use App\Services\ContactDndService;
 use App\Services\ContactEligibility;
 use App\Services\ContactImportService;
@@ -201,7 +203,7 @@ class ContactController extends Controller
     /**
      * Store a new contact in the book.
      */
-    public function store(ContactRequest $request, ContactDndService $dnd): RedirectResponse
+    public function store(ContactRequest $request, ContactDndService $dnd, AutomationEngine $automations): RedirectResponse
     {
         $contact = Contact::query()->create([
             ...$request->contactAttributes(),
@@ -213,6 +215,12 @@ class ContactController extends Controller
 
         if ($contact->dnd) {
             $dnd->apply($contact, 'contact_form', $request->user());
+        }
+
+        $automations->emit(AutomationTrigger::ContactCreated, $contact);
+
+        if ($contact->tags()->exists()) {
+            $automations->emit(AutomationTrigger::ContactTagged, $contact);
         }
 
         return to_route('contacts.index')->with('toast', [
@@ -256,11 +264,12 @@ class ContactController extends Controller
     /**
      * Update a contact.
      */
-    public function update(ContactRequest $request, Contact $contact, ContactDndService $dnd): RedirectResponse
+    public function update(ContactRequest $request, Contact $contact, ContactDndService $dnd, AutomationEngine $automations): RedirectResponse
     {
         Gate::authorize('update', $contact);
 
         $wasDnd = (bool) $contact->dnd;
+        $previousTagIds = $contact->tags()->pluck('tags.id')->all();
 
         $contact->update($request->contactAttributes());
         $contact->contactLists()->sync($this->listPivot($request->input('contact_list_ids', [])));
@@ -268,6 +277,12 @@ class ContactController extends Controller
 
         if ($request->has('dnd') && $request->boolean('dnd') !== $wasDnd) {
             $dnd->sync($contact, $request->boolean('dnd'), 'contact_form', $request->user());
+        }
+
+        $addedTagIds = array_diff($contact->tags()->pluck('tags.id')->all(), $previousTagIds);
+
+        if ($addedTagIds !== []) {
+            $automations->emit(AutomationTrigger::ContactTagged, $contact);
         }
 
         return to_route('contacts.index')->with('toast', [
@@ -300,7 +315,7 @@ class ContactController extends Controller
     /**
      * Apply an action to a selection of contacts.
      */
-    public function bulk(Request $request, ContactDndService $dnd): RedirectResponse
+    public function bulk(Request $request, ContactDndService $dnd, AutomationEngine $automations): RedirectResponse
     {
         Gate::authorize('create', Contact::class);
 
@@ -329,15 +344,21 @@ class ContactController extends Controller
         $processed = 0;
 
         foreach ($contacts as $contact) {
+            $tagged = false;
+
             match ($data['action']) {
                 'add_to_list' => $contact->contactLists()->syncWithoutDetaching([(int) $listId => ['added_at' => now()]]),
                 'remove_from_list' => $contact->contactLists()->detach((int) $listId),
-                'add_tag' => $contact->tags()->syncWithoutDetaching([(int) $tagId]),
+                'add_tag' => $tagged = $contact->tags()->syncWithoutDetaching([(int) $tagId])['attached'] !== [],
                 'mark_dnd' => $dnd->apply($contact, 'bulk_action', $request->user()),
                 'clear_dnd' => $dnd->lift($contact),
                 'delete' => $contact->delete(),
                 default => throw new LogicException('Unsupported bulk action reached the handler.'),
             };
+
+            if ($tagged) {
+                $automations->emit(AutomationTrigger::ContactTagged, $contact);
+            }
 
             $processed++;
         }
