@@ -23,6 +23,7 @@ import {
     PackagePlus,
     Layers3,
     PhoneCall,
+    Radio,
     ReceiptText,
     ScrollText,
     ServerCog,
@@ -35,6 +36,7 @@ import {
     Users,
     UsersRound,
     Wallet,
+    Webhook,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import PoweredBy from '@/components/powered-by';
@@ -191,6 +193,16 @@ const operationsNavItems: NavItem[] = [
         title: 'Delivery queues',
         href: urls.admin.queues.index,
         icon: Gauge,
+    },
+    {
+        title: 'Webhooks',
+        href: urls.admin.webhooks.index,
+        icon: Webhook,
+    },
+    {
+        title: 'SMPP',
+        href: urls.admin.smpp.index,
+        icon: Radio,
     },
 ];
 
@@ -389,6 +401,15 @@ export function AppSidebar() {
             href: urls.account.tokens.index,
             icon: KeyRound,
         },
+        ...(isClientUser
+            ? [
+                  {
+                      title: 'Webhooks',
+                      href: urls.account.webhooks.index,
+                      icon: Webhook,
+                  },
+              ]
+            : []),
     ];
 
     return (

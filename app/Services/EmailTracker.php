@@ -7,6 +7,7 @@ use App\Enums\CampaignStatus;
 use App\Enums\ContactSuppressionReason;
 use App\Enums\EmailFormat;
 use App\Enums\EmailMessageStatus;
+use App\Enums\WebhookEvent;
 use App\Jobs\DispatchCampaignJob;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
@@ -15,6 +16,7 @@ use App\Models\EmailMessage;
 use App\Services\Delivery\QueueTopology;
 use App\Services\Email\EmailDeliveryReport;
 use App\Services\Email\EmailDispatchResult;
+use App\Services\Webhooks\WebhookDispatcher;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -30,7 +32,10 @@ use Illuminate\Support\Str;
  */
 class EmailTracker
 {
-    public function __construct(protected QueueTopology $queues) {}
+    public function __construct(
+        protected QueueTopology $queues,
+        protected WebhookDispatcher $webhooks,
+    ) {}
 
     /**
      * Write the message row before the transport is asked to deliver it.
@@ -160,12 +165,14 @@ class EmailTracker
 
         if ($report->status->wasDelivered()) {
             $this->confirmRecipient($message);
+            $this->webhooks->email(WebhookEvent::EmailDelivered, $message->refresh());
 
             return;
         }
 
         if ($report->status->isRetryable()) {
             $this->settle($message->refresh());
+            $this->webhooks->email(WebhookEvent::EmailBounced, $message->refresh());
         }
     }
 

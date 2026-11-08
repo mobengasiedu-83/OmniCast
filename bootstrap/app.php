@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureAccountIsVerified;
+use App\Http\Middleware\EnsureApiAbility;
 use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsurePlatformUser;
 use App\Http\Middleware\HandleAppearance;
@@ -38,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'platform' => EnsurePlatformUser::class,
             'module' => EnsureModuleEnabled::class,
             'verified' => EnsureAccountIsVerified::class,
+            'abilities' => EnsureApiAbility::class,
         ]);
 
         $middleware->web(append: [

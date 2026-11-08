@@ -6,12 +6,14 @@ use App\Enums\CampaignAudioStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
 use App\Enums\ReservationStatus;
+use App\Enums\WebhookEvent;
 use App\Exceptions\InsufficientWalletBalance;
 use App\Jobs\DispatchCampaignJob;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
 use App\Models\User;
 use App\Services\Delivery\QueueTopology;
+use App\Services\Webhooks\WebhookDispatcher;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -32,6 +34,7 @@ class CampaignService
         protected CampaignReadiness $readiness,
         protected QueueTopology $queues,
         protected RateResolver $rates,
+        protected WebhookDispatcher $webhooks,
     ) {}
 
     /**
@@ -60,7 +63,11 @@ class CampaignService
             return $campaign;
         }
 
-        return $this->refreshEstimate($campaign);
+        $campaign = $this->refreshEstimate($campaign);
+
+        $this->webhooks->campaign(WebhookEvent::CampaignCreated, $campaign);
+
+        return $campaign;
     }
 
     /**
@@ -140,7 +147,7 @@ class CampaignService
      */
     public function submit(Campaign $campaign, User $user): Campaign
     {
-        return DB::transaction(function () use ($campaign, $user): Campaign {
+        $campaign = DB::transaction(function () use ($campaign, $user): Campaign {
             $campaign = Campaign::query()->lockForUpdate()->findOrFail($campaign->id);
             $this->ensureChannelsEnabled($campaign);
             $this->readiness->assertReady($campaign, includeAudio: false);
@@ -168,6 +175,14 @@ class CampaignService
 
             return $campaign;
         });
+
+        $this->webhooks->campaign(WebhookEvent::CampaignSubmitted, $campaign);
+
+        if ($campaign->status === CampaignStatus::Approved) {
+            $this->webhooks->campaign(WebhookEvent::CampaignApproved, $campaign);
+        }
+
+        return $campaign;
     }
 
     /**
@@ -175,7 +190,7 @@ class CampaignService
      */
     public function approve(Campaign $campaign, User $user): Campaign
     {
-        return DB::transaction(function () use ($campaign, $user): Campaign {
+        $campaign = DB::transaction(function () use ($campaign, $user): Campaign {
             $campaign = Campaign::query()->lockForUpdate()->findOrFail($campaign->id);
 
             if (! $campaign->status->canBeApproved()) {
@@ -196,6 +211,10 @@ class CampaignService
 
             return $campaign;
         });
+
+        $this->webhooks->campaign(WebhookEvent::CampaignApproved, $campaign);
+
+        return $campaign;
     }
 
     /**
@@ -206,7 +225,7 @@ class CampaignService
      */
     public function approveAudio(Campaign $campaign, User $user): Campaign
     {
-        return DB::transaction(function () use ($campaign, $user): Campaign {
+        $campaign = DB::transaction(function () use ($campaign, $user): Campaign {
             $campaign = Campaign::query()->lockForUpdate()->findOrFail($campaign->id);
             $this->assertAudioReviewable($campaign);
 
@@ -223,6 +242,12 @@ class CampaignService
 
             return $campaign;
         });
+
+        if ($campaign->status === CampaignStatus::Approved) {
+            $this->webhooks->campaign(WebhookEvent::CampaignApproved, $campaign);
+        }
+
+        return $campaign;
     }
 
     /**
@@ -255,6 +280,8 @@ class CampaignService
         ])->save();
 
         $this->releaseReservation($campaign, 'Funds released after campaign rejection');
+
+        $this->webhooks->campaign(WebhookEvent::CampaignRejected, $campaign);
 
         return $campaign;
     }
@@ -298,6 +325,8 @@ class CampaignService
             $job->delay($campaign->scheduled_at ?? now());
         }
 
+        $this->webhooks->campaign(WebhookEvent::CampaignLaunched, $campaign);
+
         return $campaign;
     }
 
@@ -311,6 +340,8 @@ class CampaignService
         ])->save();
 
         $this->releaseReservation($campaign, 'Funds released after campaign cancellation');
+
+        $this->webhooks->campaign(WebhookEvent::CampaignCancelled, $campaign);
 
         return $campaign;
     }

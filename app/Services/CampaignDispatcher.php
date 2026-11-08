@@ -10,6 +10,7 @@ use App\Enums\CampaignStatus;
 use App\Enums\Channel;
 use App\Enums\EmailFormat;
 use App\Enums\ReservationStatus;
+use App\Enums\WebhookEvent;
 use App\Exceptions\InsufficientWalletBalance;
 use App\Models\BillingReservation;
 use App\Models\Campaign;
@@ -21,6 +22,7 @@ use App\Services\Email\OutboundAttachment;
 use App\Services\Email\OutboundEmail;
 use App\Services\Sms\OutboundSms;
 use App\Services\Voice\VoiceCall as VoiceCallData;
+use App\Services\Webhooks\WebhookDispatcher;
 use Illuminate\Support\Collection;
 
 /**
@@ -45,6 +47,7 @@ class CampaignDispatcher
         protected SmsTracker $smsTracker,
         protected EmailTracker $emailTracker,
         protected DeliveryPacer $pacer,
+        protected WebhookDispatcher $webhooks,
     ) {}
 
     /**
@@ -481,5 +484,7 @@ class CampaignDispatcher
             ->each(function (BillingReservation $reservation) use ($campaign): void {
                 $this->wallet->release($reservation, 'Unused funds released for '.$campaign->name);
             });
+
+        $this->webhooks->campaign(WebhookEvent::CampaignCompleted, $campaign->refresh());
     }
 }

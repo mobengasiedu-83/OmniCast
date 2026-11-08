@@ -6,6 +6,7 @@ use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Controllers\Settings\SessionController;
 use App\Http\Controllers\Settings\TeamController;
 use App\Http\Controllers\Settings\ThemeController;
+use App\Http\Controllers\Settings\WebhookEndpointController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('team.store');
     Route::post('settings/team/{invitation}/resend', [TeamController::class, 'resend'])->name('team.resend');
     Route::delete('settings/team/{invitation}', [TeamController::class, 'destroy'])->name('team.destroy');
+
+    Route::get('settings/webhooks', [WebhookEndpointController::class, 'index'])->name('webhooks.index');
+    Route::post('settings/webhooks', [WebhookEndpointController::class, 'store'])->name('webhooks.store');
+    Route::put('settings/webhooks/{endpoint}', [WebhookEndpointController::class, 'update'])->name('webhooks.update');
+    Route::patch('settings/webhooks/{endpoint}/toggle', [WebhookEndpointController::class, 'toggle'])->name('webhooks.toggle');
+    Route::patch('settings/webhooks/{endpoint}/rotate', [WebhookEndpointController::class, 'rotate'])->name('webhooks.rotate');
+    Route::post('settings/webhooks/{endpoint}/test', [WebhookEndpointController::class, 'test'])->name('webhooks.test');
+    Route::delete('settings/webhooks/{endpoint}', [WebhookEndpointController::class, 'destroy'])->name('webhooks.destroy');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {
