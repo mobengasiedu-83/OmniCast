@@ -1,8 +1,11 @@
 <?php
 
 use App\Enums\Channel;
+use App\Enums\LegalDocumentType;
 use App\Enums\Role as RoleEnum;
 use App\Models\Client;
+use App\Models\LegalDocument;
+use App\Models\LegalDocumentVersion;
 use App\Models\Rate;
 use App\Models\RateCard;
 use App\Models\User;
@@ -79,6 +82,34 @@ function clientWithWallet(
     $user->syncRoles([$role->value]);
 
     return [$client, $wallet, $user];
+}
+
+/**
+ * Publish one of the platform's policy documents with a live version.
+ */
+function legalDocument(
+    LegalDocumentType $type,
+    string $version = '1.0',
+    array $overrides = [],
+): LegalDocument {
+    $document = LegalDocument::factory()->type($type)->create($overrides);
+
+    LegalDocumentVersion::factory()->for($document, 'document')->published()->create([
+        'version' => $version,
+        'body' => "# {$type->label()}\n\n## 1. A clause\n\nThis policy is binding.\n\n- One bullet\n- Another bullet",
+    ]);
+
+    return $document->fresh();
+}
+
+/**
+ * Publish all five documents the platform ships with.
+ */
+function publishLegalDocuments(): void
+{
+    foreach (LegalDocumentType::cases() as $type) {
+        legalDocument($type);
+    }
 }
 
 /**

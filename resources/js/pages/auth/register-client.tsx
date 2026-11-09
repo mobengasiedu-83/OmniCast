@@ -24,7 +24,35 @@ type Props = {
     defaultCountry: string;
     defaultTimezone: string;
     passwordRules: string;
+    legalDocuments: {
+        slug: string;
+        title: string;
+        summary: string;
+        url: string;
+        version: string;
+        version_id: number;
+    }[];
 };
+
+/**
+ * How each policy is phrased on the application form.
+ *
+ * Signing up is the only place a customer is asked to accept documents that are
+ * not tied to what they are about to do, so the wording names the obligation
+ * rather than saying "I agree" three times.
+ */
+function policyWording(document: { slug: string; title: string }): string {
+    switch (document.slug) {
+        case 'terms':
+            return `I have read and agree to the ${document.title}.`;
+        case 'privacy':
+            return `I acknowledge the ${document.title}.`;
+        case 'acceptable-use':
+            return `I agree to comply with the ${document.title}.`;
+        default:
+            return `I have read and accept the ${document.title}.`;
+    }
+}
 
 export default function RegisterClient({
     step,
@@ -36,6 +64,7 @@ export default function RegisterClient({
     defaultCountry,
     defaultTimezone,
     passwordRules,
+    legalDocuments,
 }: Props) {
     const [accountType, setAccountType] = useState<'business' | 'private'>(
         'business',
@@ -308,6 +337,56 @@ export default function RegisterClient({
                                 </label>
                                 {errors.otp_channel && (
                                     <InputError message={errors.otp_channel} />
+                                )}
+                            </fieldset>
+                            <fieldset className="grid gap-3 rounded-lg border border-border/70 bg-muted/30 p-4">
+                                <legend className="px-1 text-sm font-medium">
+                                    Policies
+                                </legend>
+                                <p className="text-xs text-muted-foreground">
+                                    Review each policy before you continue. The
+                                    version you accept is recorded with your
+                                    application.
+                                </p>
+                                {legalDocuments.map((document) => (
+                                    <label
+                                        key={document.slug}
+                                        className="flex items-start gap-2 text-sm"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            name={`accept_${document.slug}`}
+                                            value="1"
+                                            required
+                                            className="mt-0.5"
+                                        />
+                                        <span>
+                                            {policyWording(document)}{' '}
+                                            <a
+                                                href={document.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="underline underline-offset-2"
+                                            >
+                                                Read
+                                                {document.version
+                                                    ? ` v${document.version}`
+                                                    : ''}
+                                            </a>
+                                        </span>
+                                    </label>
+                                ))}
+                                {legalDocuments.map((document) =>
+                                    errors[`accept_${document.slug}`] ? (
+                                        <InputError
+                                            key={`${document.slug}-error`}
+                                            message={
+                                                errors[
+                                                    `accept_${document.slug}`
+                                                ]
+                                            }
+                                        />
+                                    ) : null,
                                 )}
                             </fieldset>
                             <Button disabled={processing}>

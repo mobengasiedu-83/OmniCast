@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LegalAcceptanceContext;
+use App\Enums\LegalDocumentType;
 use App\Enums\MobileMoneyProvider;
 use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentGatewayException;
@@ -9,11 +11,13 @@ use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Http\Requests\Billing\MobileMoneyCheckoutRequest;
 use App\Http\Requests\Billing\MobileMoneyOtpRequest;
 use App\Models\Payment;
+use App\Models\User;
 use App\Models\Wallet;
 use App\Services\Billing\CheckoutService;
 use App\Services\Billing\CreditEstimator;
 use App\Services\Billing\PackageCatalogue;
 use App\Services\Billing\PaymentGatewayManager;
+use App\Services\Legal\LegalLibrary;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +43,7 @@ class MobileMoneyCheckoutController extends Controller
         protected PackageCatalogue $packages,
         protected PaymentGatewayManager $gateways,
         protected CreditEstimator $estimator,
+        protected LegalLibrary $legal,
     ) {}
 
     /**
@@ -86,6 +91,8 @@ class MobileMoneyCheckoutController extends Controller
 
         Gate::authorize('topUp', $this->wallets->walletFor($client));
 
+        $this->recordRefundPolicy($request);
+
         try {
             $payment = $this->checkout->startMobileMoney(
                 client: $client,
@@ -114,6 +121,36 @@ class MobileMoneyCheckoutController extends Controller
         }
 
         return $this->awaiting($payment);
+    }
+
+    /**
+     * Record that the payer acknowledged the refund and wallet policy.
+     *
+     * The mobile money form sits under the same notice the hosted checkout does,
+     * so submitting it is the acknowledgement and the evidence is written before
+     * the wallet is prompted.
+     */
+    protected function recordRefundPolicy(MobileMoneyCheckoutRequest $request): void
+    {
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $document = $this->legal->documentOfType(LegalDocumentType::RefundWallet);
+
+        if ($document === null) {
+            return;
+        }
+
+        $this->legal->recordAcceptance(
+            $user,
+            $document,
+            LegalAcceptanceContext::WalletTopUp,
+            $request->ip(),
+            $request->userAgent(),
+        );
     }
 
     /**

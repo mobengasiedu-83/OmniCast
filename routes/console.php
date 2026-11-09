@@ -98,3 +98,19 @@ Schedule::command('automations:prune-runs')
     ->description('Delete finished automation runs past their retention window')
     ->daily()
     ->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| Notification centre schedule
+|--------------------------------------------------------------------------
+|
+| Read inbox rows and delivered announcements age out daily so the centre and
+| its admin history stay quick. An unread row is left alone: dismissing it is
+| the account's own decision.
+|
+*/
+
+Schedule::command('notifications:prune')
+    ->description('Delete read notifications and sent announcements past their retention window')
+    ->daily()
+    ->onOneServer();

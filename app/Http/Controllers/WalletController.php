@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LegalDocumentType;
 use App\Enums\Permission;
 use App\Enums\ReservationStatus;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
@@ -15,6 +16,7 @@ use App\Models\WalletTransaction;
 use App\Services\Billing\CreditEstimator;
 use App\Services\Billing\PackageCatalogue;
 use App\Services\Billing\PaymentGatewayManager;
+use App\Services\Legal\LegalLibrary;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +33,7 @@ class WalletController extends Controller
         protected PackageCatalogue $packages,
         protected PaymentGatewayManager $gateways,
         protected CreditEstimator $estimator,
+        protected LegalLibrary $legal,
     ) {}
 
     /**
@@ -105,6 +108,7 @@ class WalletController extends Controller
             ],
             'payments' => $client === null ? [] : $this->recentPayments($client),
             'invoices' => $client === null ? [] : $this->recentInvoices($client),
+            'refund_policy' => $this->legal->notice(LegalDocumentType::RefundWallet),
         ]);
     }
 

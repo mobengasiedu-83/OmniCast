@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LegalAcceptanceContext;
+use App\Enums\LegalDocumentType;
 use App\Exceptions\PaymentGatewayException;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
 use App\Http\Requests\Billing\WalletCheckoutRequest;
 use App\Models\Payment;
+use App\Models\User;
 use App\Services\Billing\CheckoutService;
+use App\Services\Legal\LegalLibrary;
 use App\Services\WalletService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,6 +32,7 @@ class WalletCheckoutController extends Controller
     public function __construct(
         protected CheckoutService $checkout,
         protected WalletService $wallets,
+        protected LegalLibrary $legal,
     ) {}
 
     /**
@@ -40,6 +45,8 @@ class WalletCheckoutController extends Controller
         abort_if($client === null, 403, 'Select a client account before funding its wallet.');
 
         Gate::authorize('topUp', $this->wallets->walletFor($client));
+
+        $this->recordRefundPolicy($request);
 
         try {
             $payment = $this->checkout->start(
@@ -64,6 +71,37 @@ class WalletCheckoutController extends Controller
         }
 
         return Inertia::location($payment->authorization_url);
+    }
+
+    /**
+     * Record that the customer acknowledged the refund and wallet policy.
+     *
+     * The top-up button sits directly under the notice that links to this policy,
+     * so pressing it is the acknowledgement. Recording it here — before the
+     * gateway is called — means an abandoned checkout still leaves the evidence
+     * that the terms were shown before any money moved.
+     */
+    protected function recordRefundPolicy(WalletCheckoutRequest $request): void
+    {
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $document = $this->legal->documentOfType(LegalDocumentType::RefundWallet);
+
+        if ($document === null) {
+            return;
+        }
+
+        $this->legal->recordAcceptance(
+            $user,
+            $document,
+            LegalAcceptanceContext::WalletTopUp,
+            $request->ip(),
+            $request->userAgent(),
+        );
     }
 
     /**

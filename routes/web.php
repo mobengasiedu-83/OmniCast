@@ -8,12 +8,16 @@ use App\Http\Controllers\ContactComplianceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactDndController;
 use App\Http\Controllers\ContactListController;
+use App\Http\Controllers\ContactUsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailAttachmentController;
 use App\Http\Controllers\EmailImageController;
 use App\Http\Controllers\EmailWebhookController;
+use App\Http\Controllers\HelpCentreController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\Legal\LegalPageController;
 use App\Http\Controllers\MobileMoneyCheckoutController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaystackWebhookController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\ReportController;
@@ -23,6 +27,10 @@ use App\Http\Controllers\Settings\AutomationStepController;
 use App\Http\Controllers\Settings\AutomationWorkflowController;
 use App\Http\Controllers\Settings\ClientSettingsController;
 use App\Http\Controllers\SmsWebhookController;
+use App\Http\Controllers\Support\ContactSupportController;
+use App\Http\Controllers\Support\KnowledgeBaseController;
+use App\Http\Controllers\Support\SupportCentreController;
+use App\Http\Controllers\Support\SupportTicketController;
 use App\Http\Controllers\TemplateCategoryController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\VoiceWebhookController;
@@ -37,6 +45,45 @@ Route::get('pricing', PricingController::class)->name('pricing');
 Route::inertia('user-manual', 'user-manual')->name('user-manual');
 
 Route::inertia('api-docs', 'api-docs')->name('api-docs');
+
+/*
+|--------------------------------------------------------------------------
+| Contact and help
+|--------------------------------------------------------------------------
+|
+| A visitor can reach a person and read the answers without an account: the
+| contact form writes straight into the support register, and the help centre
+| serves the published articles. Both are challenged with Turnstile and rate
+| limited per address.
+|
+*/
+
+Route::get('contact', [ContactUsController::class, 'show'])->name('contact.show');
+
+Route::post('contact', [ContactUsController::class, 'store'])
+    ->middleware(['turnstile', 'throttle:support-enquiries'])
+    ->name('contact.store');
+
+Route::get('help', [HelpCentreController::class, 'index'])->name('help.index');
+
+Route::get('help/{article:slug}', [HelpCentreController::class, 'show'])->name('help.show');
+
+/*
+|--------------------------------------------------------------------------
+| Policies
+|--------------------------------------------------------------------------
+|
+| The five legal documents are readable without an account: a prospective
+| customer reviews them before applying, and a regulator never has to be given
+| a login. Only documents with a published version render; anything else 404s.
+|
+*/
+
+Route::get('legal', [LegalPageController::class, 'index'])->name('legal.index');
+
+Route::get('legal/{slug}', [LegalPageController::class, 'show'])->name('legal.show');
+
+Route::get('legal/{slug}/print', [LegalPageController::class, 'print'])->name('legal.print');
 
 Route::get('stop-messages/{contact}', [ContactDndController::class, 'show'])
     ->middleware('signed')
@@ -220,6 +267,47 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('reports/exports', [ReportController::class, 'storeExport'])->name('reports.exports.store');
     Route::get('reports/exports/{export}/download', [ReportController::class, 'downloadExport'])
         ->name('reports.exports.download');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::delete('notifications/read', [NotificationController::class, 'clearRead'])->name('notifications.clear-read');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('notifications/{notification}/unread', [NotificationController::class, 'markUnread'])->name('notifications.unread');
+    Route::delete('notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Support
+    |--------------------------------------------------------------------------
+    |
+    | A client's own conversations. Every route is scoped to the requester's
+    | organisation by the ticket policy. Opening a ticket is challenged with
+    | Turnstile because it writes a conversation the platform team has to answer.
+    |
+    */
+
+    Route::prefix('support')->name('support.')->group(function (): void {
+        Route::get('/', [SupportCentreController::class, 'index'])->name('index');
+
+        Route::get('tickets', [SupportTicketController::class, 'index'])->name('tickets.index');
+        Route::get('tickets/create', [SupportTicketController::class, 'create'])->name('tickets.create');
+        Route::post('tickets', [SupportTicketController::class, 'store'])
+            ->middleware(['turnstile', 'throttle:support-replies'])
+            ->name('tickets.store');
+
+        Route::get('tickets/{ticket:reference}', [SupportTicketController::class, 'show'])->name('tickets.show');
+        Route::post('tickets/{ticket:reference}/reply', [SupportTicketController::class, 'reply'])
+            ->middleware('throttle:support-replies')
+            ->name('tickets.reply');
+        Route::post('tickets/{ticket:reference}/close', [SupportTicketController::class, 'close'])->name('tickets.close');
+        Route::get('tickets/{ticket:reference}/attachments/{attachment}', [SupportTicketController::class, 'downloadAttachment'])
+            ->name('tickets.attachments.download');
+
+        Route::get('knowledge-base', [KnowledgeBaseController::class, 'index'])->name('knowledge-base.index');
+        Route::get('knowledge-base/{article:slug}', [KnowledgeBaseController::class, 'show'])->name('knowledge-base.show');
+
+        Route::get('contact', ContactSupportController::class)->name('contact');
+    });
 });
 
 require __DIR__.'/admin.php';

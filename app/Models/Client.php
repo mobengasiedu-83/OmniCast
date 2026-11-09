@@ -179,6 +179,16 @@ class Client extends Model
     }
 
     /**
+     * The organisation's data processing agreement, once one exists.
+     *
+     * @return HasOne<OrganisationDpa, $this>
+     */
+    public function organisationDpa(): HasOne
+    {
+        return $this->hasOne(OrganisationDpa::class);
+    }
+
+    /**
      * Whether the tenant may broadcast.
      */
     public function isActive(): bool

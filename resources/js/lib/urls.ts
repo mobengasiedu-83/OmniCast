@@ -159,6 +159,17 @@ export const urls = {
         index: path('/invoices'),
         download: (invoice: number) => path(`/invoices/${invoice}/download`),
     },
+    notifications: {
+        index: path('/notifications'),
+        read: (notification: string) =>
+            path(`/notifications/${notification}/read`),
+        unread: (notification: string) =>
+            path(`/notifications/${notification}/unread`),
+        destroy: (notification: string) =>
+            path(`/notifications/${notification}`),
+        readAll: path('/notifications/read-all'),
+        clearRead: path('/notifications/read'),
+    },
     reports: {
         index: path('/reports'),
         campaigns: path('/reports/campaigns'),
@@ -316,6 +327,82 @@ export const urls = {
             toggle: (account: number) => path(`/admin/smpp/${account}/toggle`),
             rotate: (account: number) => path(`/admin/smpp/${account}/rotate`),
         },
+        announcements: {
+            index: path('/admin/announcements'),
+            store: path('/admin/announcements'),
+            send: (announcement: number) =>
+                path(`/admin/announcements/${announcement}/send`),
+            destroy: (announcement: number) =>
+                path(`/admin/announcements/${announcement}`),
+        },
+        legal: {
+            documents: {
+                index: path('/admin/legal-documents'),
+                store: path('/admin/legal-documents'),
+                update: (document: number) =>
+                    path(`/admin/legal-documents/${document}`),
+                destroy: (document: number) =>
+                    path(`/admin/legal-documents/${document}`),
+                toggle: (document: number) =>
+                    path(`/admin/legal-documents/${document}/toggle`),
+                requirements: (document: number) =>
+                    path(`/admin/legal-documents/${document}/requirements`),
+                storeVersion: (document: number) =>
+                    path(`/admin/legal-documents/${document}/versions`),
+            },
+            versions: {
+                index: path('/admin/legal-document-versions'),
+                update: (version: number) =>
+                    path(`/admin/legal-document-versions/${version}`),
+                destroy: (version: number) =>
+                    path(`/admin/legal-document-versions/${version}`),
+                publish: (version: number) =>
+                    path(`/admin/legal-document-versions/${version}/publish`),
+                archive: (version: number) =>
+                    path(`/admin/legal-document-versions/${version}/archive`),
+                notify: (version: number) =>
+                    path(`/admin/legal-document-versions/${version}/notify`),
+            },
+            acceptances: {
+                index: path('/admin/legal-acceptances'),
+                export: path('/admin/legal-acceptances/export'),
+            },
+            dpas: {
+                index: path('/admin/legal-dpas'),
+                update: (client: number) => path(`/admin/legal-dpas/${client}`),
+            },
+            complianceSettings: path('/admin/legal-compliance-settings'),
+            notifications: path('/admin/legal-notifications'),
+            reports: path('/admin/legal-compliance-reports'),
+        },
+        support: {
+            enquiries: {
+                index: path('/admin/support/enquiries'),
+                show: (reference: string) =>
+                    path(`/admin/support/enquiries/${reference}`),
+            },
+            tickets: {
+                index: path('/admin/support/tickets'),
+                show: (reference: string) =>
+                    path(`/admin/support/tickets/${reference}`),
+            },
+            categories: {
+                index: path('/admin/support/categories'),
+            },
+            teams: {
+                index: path('/admin/support/teams'),
+            },
+            notifications: {
+                index: path('/admin/support/notifications'),
+                update: path('/admin/support/notifications'),
+            },
+            knowledgeBase: {
+                index: path('/admin/support/knowledge-base'),
+            },
+            reports: {
+                index: path('/admin/support/reports'),
+            },
+        },
         reports: {
             index: path('/admin/reports'),
             clients: path('/admin/reports/clients'),
@@ -333,6 +420,10 @@ export const urls = {
         },
     },
     account: {
+        notifications: {
+            index: path('/settings/notifications'),
+            update: path('/settings/notifications'),
+        },
         organisation: {
             index: path('/settings/organisation'),
             update: path('/settings/organisation'),
@@ -377,5 +468,38 @@ export const urls = {
     },
     invitations: {
         accept: (token: string) => path(`/invitations/${token}`),
+    },
+    contact: path('/contact'),
+    help: {
+        index: path('/help'),
+        show: (slug: string) => path(`/help/${slug}`),
+    },
+    support: {
+        index: path('/support'),
+        contact: path('/support/contact'),
+        tickets: {
+            index: path('/support/tickets'),
+            create: path('/support/tickets/create'),
+            store: path('/support/tickets'),
+            show: (reference: string) => path(`/support/tickets/${reference}`),
+            reply: (reference: string) =>
+                path(`/support/tickets/${reference}/reply`),
+            close: (reference: string) =>
+                path(`/support/tickets/${reference}/close`),
+        },
+        knowledgeBase: {
+            index: path('/support/knowledge-base'),
+            show: (slug: string) => path(`/support/knowledge-base/${slug}`),
+        },
+    },
+    legal: {
+        index: path('/legal'),
+        show: (slug: string) => path(`/legal/${slug}`),
+        print: (slug: string) => path(`/legal/${slug}/print`),
+        settings: {
+            index: path('/settings/legal'),
+            accept: path('/settings/legal/accept'),
+            dpa: path('/settings/legal/dpa'),
+        },
     },
 } as const;

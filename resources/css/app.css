@@ -1010,3 +1010,216 @@
 .email-editor .tiptap hr {
     border-color: var(--border);
 }
+
+/*
+|--------------------------------------------------------------------------
+| Published policies
+|--------------------------------------------------------------------------
+|
+| A policy body arrives as markdown rendered to HTML, so its typography is set
+| here instead of through a prose plugin the project does not install. The print
+| rules make the same page the PDF: the reader hides the site chrome and the
+| document prints on its own.
+|
+*/
+
+.legal-document {
+    color: var(--foreground);
+    font-size: 0.925rem;
+    line-height: 1.75;
+}
+
+.legal-document h1 {
+    margin-top: 2rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.legal-document h2 {
+    margin-top: 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.legal-document h3 {
+    margin-top: 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.legal-document h1:first-child,
+.legal-document h2:first-child {
+    margin-top: 0;
+}
+
+.legal-document p,
+.legal-document ul,
+.legal-document ol {
+    margin-top: 0.85rem;
+}
+
+.legal-document ul {
+    list-style: disc;
+    padding-left: 1.35rem;
+}
+
+.legal-document ol {
+    list-style: decimal;
+    padding-left: 1.35rem;
+}
+
+.legal-document li {
+    margin-top: 0.35rem;
+}
+
+.legal-document strong {
+    font-weight: 600;
+}
+
+.legal-document em {
+    color: var(--muted-foreground);
+}
+
+.legal-document a {
+    color: var(--brand);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.legal-document blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 0.85rem;
+    color: var(--muted-foreground);
+}
+
+.legal-document hr {
+    margin-top: 2rem;
+    border-color: var(--border);
+}
+
+/* Schedules such as the commercial summary are written as tables. The wrapper
+   scrolls rather than letting a wide rule column push the page sideways. */
+.legal-document table {
+    display: block;
+    margin-top: 1rem;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.legal-document thead {
+    background: var(--muted);
+}
+
+.legal-document th,
+.legal-document td {
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+.legal-document th {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+@media print {
+    header,
+    footer,
+    nav {
+        display: none !important;
+    }
+
+    .legal-document {
+        font-size: 11pt;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Help centre article
+|--------------------------------------------------------------------------
+|
+| A help article is markdown rendered to HTML by the server, so it gets the same
+| body typography as a policy document without borrowing that class name. The
+| rules are grouped with :where() so one weight change applies to every heading.
+|
+*/
+
+.article-body {
+    color: var(--foreground);
+    font-size: 0.925rem;
+    line-height: 1.75;
+}
+
+.article-body :where(h1) {
+    margin-top: 2rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.article-body :where(h2, h3) {
+    margin-top: 1.75rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.article-body :where(h1, h2):first-child {
+    margin-top: 0;
+}
+
+.article-body :where(p, ul, ol, table, blockquote) {
+    margin-top: 0.85rem;
+}
+
+.article-body :where(ul, ol) {
+    padding-left: 1.35rem;
+}
+
+.article-body :where(ul) {
+    list-style: disc;
+}
+
+.article-body :where(ol) {
+    list-style: decimal;
+}
+
+.article-body :where(li) {
+    margin-top: 0.35rem;
+}
+
+.article-body :where(a) {
+    color: var(--brand);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.article-body :where(em) {
+    color: var(--muted-foreground);
+}
+
+.article-body :where(blockquote) {
+    border-left: 3px solid var(--border);
+    padding-left: 0.85rem;
+    color: var(--muted-foreground);
+}
+
+.article-body :where(table) {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.article-body :where(th, td) {
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+.article-body :where(th) {
+    font-weight: 600;
+}

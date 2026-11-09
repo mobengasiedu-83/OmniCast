@@ -1591,3 +1591,93 @@ export type AutomationLimits = {
     max_steps: number;
     max_wait_minutes: number;
 };
+
+/** One row of the signed-in account's notification centre. */
+export type NotificationRow = {
+    id: string;
+    category: string;
+    category_label: string;
+    tone: string;
+    severity: string;
+    title: string;
+    body: string;
+    action_url: string | null;
+    action_label: string | null;
+    read_at: string | null;
+    created_at: string | null;
+};
+
+/** The bell in the header: the unread count and the newest unread rows. */
+export type NotificationCentre = {
+    unread_count: number;
+    items: Array<{
+        id: string;
+        title: string;
+        body: string;
+        category: string;
+        severity: string;
+        action_url: string | null;
+        created_at: string | null;
+    }>;
+    index_url: string;
+    read_all_url: string;
+};
+
+/** A category a notification can be filed under, with the copy the screens show. */
+export type NotificationCategoryOption = {
+    value: string;
+    label: string;
+    description: string;
+    tone: string;
+};
+
+/** The channel matrix on `settings/notifications`, keyed by category. */
+export type NotificationPreferenceMap = Record<
+    string,
+    { in_app: boolean; email: boolean }
+>;
+
+/** A channel column on the preferences screen. */
+export type NotificationChannelOption = {
+    value: string;
+    label: string;
+    description: string;
+};
+
+/** One announcement in the platform messaging centre. */
+export type AnnouncementRow = {
+    id: number;
+    title: string;
+    body: string;
+    category: string;
+    category_label: string;
+    audience: string;
+    audience_label: string;
+    severity: string;
+    severity_label: string;
+    severity_tone: string;
+    send_email: boolean;
+    status: string;
+    status_label: string;
+    status_tone: string;
+    recipient_count: number;
+    read_count: number;
+    client: { id: number; name: string } | null;
+    author: string | null;
+    created_at: string | null;
+    sent_at: string | null;
+};
+
+/** The audiences and roles the composer offers. */
+export type AnnouncementAudienceOption = {
+    value: string;
+    label: string;
+    description: string;
+};
+
+/** The severity the composer offers. */
+export type AnnouncementSeverityOption = {
+    value: string;
+    label: string;
+    tone: string;
+};

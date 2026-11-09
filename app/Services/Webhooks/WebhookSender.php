@@ -5,6 +5,7 @@ namespace App\Services\Webhooks;
 use App\Enums\WebhookDeliveryStatus;
 use App\Models\WebhookDelivery;
 use App\Models\WebhookEndpoint;
+use App\Services\Notifications\SystemNotifier;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +20,8 @@ use Throwable;
  */
 class WebhookSender
 {
+    public function __construct(protected SystemNotifier $notifications) {}
+
     /**
      * Attempt the delivery, returning whether the subscriber accepted it.
      */
@@ -115,6 +118,10 @@ class WebhookSender
             'attempts' => $delivery->attempts,
             'disabled' => $failures >= $threshold,
         ]);
+
+        if ($failures >= $threshold) {
+            $this->notifications->webhookDisabled($endpoint->refresh());
+        }
     }
 
     /**

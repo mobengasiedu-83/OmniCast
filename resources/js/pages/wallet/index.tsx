@@ -70,6 +70,14 @@ type PageProps = {
     payments: WalletPaymentRow[];
     invoices: WalletInvoiceRow[];
     can: { checkout: boolean; manual_credit: boolean };
+    refund_policy: {
+        slug: string;
+        title: string;
+        summary: string;
+        url: string;
+        version: string;
+        version_id: number;
+    } | null;
 };
 
 function money(value: number, currency: string): string {
@@ -105,6 +113,7 @@ export default function WalletIndex({
     payments,
     invoices,
     can,
+    refund_policy,
 }: PageProps) {
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
@@ -296,6 +305,25 @@ export default function WalletIndex({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
+                            {refund_policy && can.checkout && (
+                                <p className="text-xs text-muted-foreground">
+                                    By completing a top-up you acknowledge the{' '}
+                                    <a
+                                        href={refund_policy.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="underline underline-offset-2"
+                                    >
+                                        {refund_policy.title}
+                                    </a>
+                                    {refund_policy.version
+                                        ? ` (v${refund_policy.version})`
+                                        : ''}
+                                    . Funds are credited to your unified
+                                    OmniCast wallet once the payment is
+                                    confirmed.
+                                </p>
+                            )}
                             {packages.length === 0 ? (
                                 <EmptyState
                                     icon={CreditCard}

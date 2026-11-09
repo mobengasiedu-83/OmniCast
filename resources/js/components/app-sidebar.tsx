@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
     BarChart3,
+    Bell,
     Blocks,
     BookOpen,
     ChartLine,
@@ -12,10 +13,12 @@ import {
     FileText,
     Fingerprint,
     Gauge,
+    Inbox,
     KeyRound,
     LayoutDashboard,
     LayoutTemplate,
     LibraryBig,
+    LifeBuoy,
     Mail,
     MailPlus,
     Megaphone,
@@ -299,6 +302,11 @@ export function AppSidebar() {
     const canViewQueues = isPlatformUser && permissions.includes('queues.view');
     const canViewReports = permissions.includes('reports.view');
     const canViewAutomations = permissions.includes('automations.view');
+    const canViewAnnouncements =
+        isPlatformUser && permissions.includes('announcements.view');
+    const canViewLegal = isPlatformUser && permissions.includes('legal.view');
+    const canViewSupport =
+        isPlatformUser && permissions.includes('support.view');
     const canViewTemplates = permissions.includes('templates.view');
     const canManageTemplates =
         isPlatformUser && permissions.includes('templates.manage');
@@ -399,6 +407,11 @@ export function AppSidebar() {
     ];
 
     const accountNavItems: NavItem[] = [
+        {
+            title: 'Notifications',
+            href: urls.notifications.index,
+            icon: Bell,
+        },
         ...(isClientUser
             ? [
                   {
@@ -444,6 +457,20 @@ export function AppSidebar() {
     ];
 
     /**
+     * The platform's own messaging centre: compose an announcement once and
+     * deliver it to an audience of accounts.
+     */
+    const announcementNavItems: NavItem[] = canViewAnnouncements
+        ? [
+              {
+                  title: 'Announcements',
+                  href: urls.admin.announcements.index,
+                  icon: Megaphone,
+              },
+          ]
+        : [];
+
+    /**
      * The tenant's workflow builder and the run history behind it.
      */
     const automationNavItems: NavItem[] = canViewAutomations
@@ -457,6 +484,41 @@ export function AppSidebar() {
                   title: 'Automation runs',
                   href: urls.automations.runs.index,
                   icon: PlayCircle,
+              },
+          ]
+        : [];
+
+    /**
+     * A client's own support menu: one place to open a ticket, follow it, read the
+     * library and find a person. It carries no permission check because the
+     * policy scopes every screen to the requester's own organisation.
+     */
+    const supportNavItems: NavItem[] = isClientUser
+        ? [
+              {
+                  title: 'Support overview',
+                  href: urls.support.index,
+                  icon: LifeBuoy,
+              },
+              {
+                  title: 'Create ticket',
+                  href: urls.support.tickets.create,
+                  icon: MessageSquareText,
+              },
+              {
+                  title: 'My tickets',
+                  href: urls.support.tickets.index,
+                  icon: Inbox,
+              },
+              {
+                  title: 'Knowledge base',
+                  href: urls.support.knowledgeBase.index,
+                  icon: BookOpen,
+              },
+              {
+                  title: 'Contact support',
+                  href: urls.support.contact,
+                  icon: PhoneCall,
               },
           ]
         : [];
@@ -579,6 +641,99 @@ export function AppSidebar() {
                 )}
                 {canViewQueues && (
                     <NavMain items={operationsNavItems} label="Operations" />
+                )}
+                {announcementNavItems.length > 0 && (
+                    <NavMain
+                        items={announcementNavItems}
+                        label="Messaging centre"
+                    />
+                )}
+                {canViewLegal && (
+                    <NavMain
+                        items={[
+                            {
+                                title: 'Legal documents',
+                                href: urls.admin.legal.documents.index,
+                                icon: FileText,
+                            },
+                            {
+                                title: 'Document versions',
+                                href: urls.admin.legal.versions.index,
+                                icon: Layers3,
+                            },
+                            {
+                                title: 'Acceptance records',
+                                href: urls.admin.legal.acceptances.index,
+                                icon: ScrollText,
+                            },
+                            {
+                                title: 'DPA management',
+                                href: urls.admin.legal.dpas.index,
+                                icon: ShieldCheck,
+                            },
+                            {
+                                title: 'Compliance settings',
+                                href: urls.admin.legal.complianceSettings,
+                                icon: Settings,
+                            },
+                            {
+                                title: 'Policy notifications',
+                                href: urls.admin.legal.notifications,
+                                icon: Bell,
+                            },
+                            {
+                                title: 'Compliance reports',
+                                href: urls.admin.legal.reports,
+                                icon: BarChart3,
+                            },
+                        ]}
+                        label="Legal & compliance"
+                    />
+                )}
+                {canViewSupport && (
+                    <NavMain
+                        items={[
+                            {
+                                title: 'Contact enquiries',
+                                href: urls.admin.support.enquiries.index,
+                                icon: Inbox,
+                            },
+                            {
+                                title: 'Support tickets',
+                                href: urls.admin.support.tickets.index,
+                                icon: LifeBuoy,
+                            },
+                            {
+                                title: 'Ticket categories',
+                                href: urls.admin.support.categories.index,
+                                icon: Tags,
+                            },
+                            {
+                                title: 'Support teams',
+                                href: urls.admin.support.teams.index,
+                                icon: UsersRound,
+                            },
+                            {
+                                title: 'Email notifications',
+                                href: urls.admin.support.notifications.index,
+                                icon: Bell,
+                            },
+                            {
+                                title: 'Knowledge base',
+                                href: urls.admin.support.knowledgeBase.index,
+                                icon: LibraryBig,
+                            },
+                            {
+                                title: 'Support reports',
+                                href: urls.admin.support.reports.index,
+                                icon: BarChart3,
+                            },
+                        ]}
+                        label="Support & enquiries"
+                    />
+                )}
+                {supportNavItems.length > 0 && (
+                    <NavMain items={supportNavItems} label="Support" />
                 )}
                 {canViewReports && !isPlatformUser && (
                     <NavMain items={reportsNavItems} label="Reports" />

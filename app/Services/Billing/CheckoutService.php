@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\Notifications\SystemNotifier;
 use App\Services\WalletService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -40,6 +41,7 @@ class CheckoutService
         protected PaymentGatewayManager $gateways,
         protected PackageCatalogue $packages,
         protected CreditEstimator $estimator,
+        protected SystemNotifier $notifications,
     ) {}
 
     /**
@@ -295,6 +297,8 @@ class CheckoutService
                 'amount' => (float) $payment->amount,
                 'channel' => $payment->channel,
             ]);
+
+            $this->notifications->paymentReceived($payment->refresh());
 
             return $payment->refresh();
         });

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Settings\ApiTokenController;
+use App\Http\Controllers\Settings\LegalDocumentController;
+use App\Http\Controllers\Settings\NotificationPreferenceController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Controllers\Settings\SessionController;
@@ -38,6 +40,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/api-tokens', [ApiTokenController::class, 'index'])->name('account.tokens.index');
     Route::post('settings/api-tokens', [ApiTokenController::class, 'store'])->name('account.tokens.store');
     Route::delete('settings/api-tokens/{token}', [ApiTokenController::class, 'destroy'])->name('account.tokens.destroy');
+
+    Route::get('settings/notifications', [NotificationPreferenceController::class, 'edit'])
+        ->name('notifications.preferences.edit');
+    Route::put('settings/notifications', [NotificationPreferenceController::class, 'update'])
+        ->name('notifications.preferences.update');
+
+    Route::get('settings/legal', [LegalDocumentController::class, 'index'])
+        ->name('legal.settings.index');
+    Route::post('settings/legal/accept', [LegalDocumentController::class, 'accept'])
+        ->name('legal.settings.accept');
+    Route::post('settings/legal/dpa', [LegalDocumentController::class, 'requestDpa'])
+        ->name('legal.settings.dpa');
 
     Route::get('settings/team', [TeamController::class, 'index'])->name('team.index');
     Route::post('settings/team', [TeamController::class, 'store'])

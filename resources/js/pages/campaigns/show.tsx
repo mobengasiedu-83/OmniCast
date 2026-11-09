@@ -71,6 +71,14 @@ type PageProps = {
     smsReport: SmsMessageReport | null;
     emailReport: EmailMessageReport | null;
     abilities: Abilities;
+    acceptableUse: {
+        slug: string;
+        title: string;
+        summary: string;
+        url: string;
+        version: string;
+        version_id: number;
+    } | null;
 };
 
 function money(value: number): string {
@@ -99,6 +107,7 @@ export default function CampaignsShow({
     smsReport,
     emailReport,
     abilities,
+    acceptableUse,
 }: PageProps) {
     const [rejecting, setRejecting] = useState(false);
     const [rejectKind, setRejectKind] = useState<'campaign' | 'audio'>(
@@ -225,6 +234,26 @@ export default function CampaignsShow({
                                         Edit
                                     </Link>
                                 </Button>
+                            )}
+                            {abilities.submit && acceptableUse && (
+                                <p className="basis-full text-xs text-muted-foreground">
+                                    By submitting this campaign you confirm that
+                                    you have the required permission to contact
+                                    the selected recipients and that it complies
+                                    with the{' '}
+                                    <a
+                                        href={acceptableUse.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="underline underline-offset-2"
+                                    >
+                                        {acceptableUse.title}
+                                    </a>
+                                    {acceptableUse.version
+                                        ? ` (v${acceptableUse.version})`
+                                        : ''}
+                                    .
+                                </p>
                             )}
                             {abilities.submit && (
                                 <Button

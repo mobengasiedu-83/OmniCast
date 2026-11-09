@@ -5,7 +5,9 @@ namespace App\Http\Middleware;
 use App\Models\User;
 use App\Services\ModuleAvailability;
 use App\Services\PlatformConfiguration;
+use App\Services\TurnstileVerifier;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\App;
 use Inertia\Middleware;
 
@@ -63,6 +65,35 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'modules' => fn (): array => app(ModuleAvailability::class)->forClient($account?->client),
+            'turnstile' => function (): array {
+                $turnstile = app(TurnstileVerifier::class);
+
+                return [
+                    'enabled' => $turnstile->enabled(),
+                    'site_key' => $turnstile->siteKey(),
+                ];
+            },
+            'notificationCentre' => fn (): ?array => $account === null ? null : [
+                'unread_count' => $account->notifications()->whereNull('read_at')->count(),
+                'items' => $account->notifications()
+                    ->whereNull('read_at')
+                    ->orderByDesc('created_at')
+                    ->limit(max((int) config('notifications.inbox.bell_items', 6), 1))
+                    ->get()
+                    ->map(fn (DatabaseNotification $notification): array => [
+                        'id' => $notification->id,
+                        'title' => (string) data_get($notification->data, 'title', 'Notification'),
+                        'body' => (string) data_get($notification->data, 'body', ''),
+                        'category' => (string) data_get($notification->data, 'category', 'system'),
+                        'severity' => (string) data_get($notification->data, 'severity', 'info'),
+                        'action_url' => data_get($notification->data, 'action_url'),
+                        'created_at' => $notification->created_at?->toIso8601String(),
+                    ])
+                    ->values()
+                    ->all(),
+                'index_url' => route('notifications.index'),
+                'read_all_url' => route('notifications.read-all'),
+            ],
             'flash' => [
                 'toast' => fn (): mixed => $request->session()->get('toast'),
                 'import' => fn (): mixed => $request->session()->get('import'),

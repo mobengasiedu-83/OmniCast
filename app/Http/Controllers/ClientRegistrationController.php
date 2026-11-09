@@ -9,6 +9,7 @@ use App\Enums\ClientDocumentType;
 use App\Enums\ClientRegistrationStatus;
 use App\Enums\ClientService;
 use App\Enums\ClientStatus;
+use App\Enums\LegalAcceptanceContext;
 use App\Enums\Role;
 use App\Http\Requests\Clients\RegisterClientRequest;
 use App\Mail\ClientSignupOtpMail;
@@ -16,8 +17,11 @@ use App\Models\Client;
 use App\Models\ClientEntitlement;
 use App\Models\ClientRegistration;
 use App\Models\ClientSignup;
+use App\Models\LegalDocument;
 use App\Models\User;
 use App\Services\CountryCatalog;
+use App\Services\Legal\LegalLibrary;
+use App\Services\Notifications\SystemNotifier;
 use App\Services\OtpSmsSender;
 use App\Services\PlatformConfiguration;
 use Illuminate\Http\RedirectResponse;
@@ -38,6 +42,11 @@ use Throwable;
 class ClientRegistrationController extends Controller
 {
     use PasswordValidationRules;
+
+    public function __construct(
+        protected SystemNotifier $notifications,
+        protected LegalLibrary $legal,
+    ) {}
 
     public function create(Request $request, CountryCatalog $countries, PlatformConfiguration $configuration): Response
     {
@@ -76,6 +85,7 @@ class ClientRegistrationController extends Controller
             'countries' => $countries->all(),
             'defaultCountry' => $defaultCountry,
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'legalDocuments' => $this->legal->registrationDocuments(),
         ]);
     }
 
@@ -85,6 +95,7 @@ class ClientRegistrationController extends Controller
             fn (ClientSignup $signup) => $this->deleteSignup($signup),
         );
         $attributes = $request->registrationAttributes();
+        $attributes['legal_acceptances'] = $request->acceptedLegalSlugs();
         $previousSignup = $this->currentSignup($request);
         if ($previousSignup !== null) {
             $this->deleteSignup($previousSignup);
@@ -185,10 +196,10 @@ class ClientRegistrationController extends Controller
         $attributes = $signup->registration_data;
         $verificationChannel = $signup->otp_channel;
 
-        $user = DB::transaction(function () use ($attributes, $validated, $verificationChannel): User {
+        $registration = DB::transaction(function () use ($attributes, $validated, $verificationChannel, $request): ClientRegistration {
             $companyName = $attributes['company_name'] ?? $attributes['contact_name'];
             $registrationAttributes = $attributes;
-            unset($registrationAttributes['identification_document']);
+            unset($registrationAttributes['identification_document'], $registrationAttributes['legal_acceptances']);
             $client = Client::query()->create([
                 'name' => $companyName,
                 'account_type' => $attributes['account_type'],
@@ -221,6 +232,23 @@ class ClientRegistrationController extends Controller
                 : ['email_verified_at' => now()])->save();
             $user->assignRole(Role::ClientAdmin->value);
 
+            /*
+            | The policies the applicant ticked before the one-time code was sent
+            | are written now that the account exists. Each row names the version
+            | that was live at that moment, so a later revision never rewrites
+            | what this customer agreed to.
+            */
+            $this->legal->recordAcceptances(
+                $user,
+                array_values(array_filter(array_map(
+                    fn (string $slug): ?LegalDocument => $this->legal->document($slug),
+                    $attributes['legal_acceptances'] ?? [],
+                ))),
+                LegalAcceptanceContext::Registration,
+                $request->ip(),
+                $request->userAgent(),
+            );
+
             $identification = $attributes['identification_document'];
             $client->documents()->create([
                 'type' => ClientDocumentType::from($identification['type']),
@@ -246,8 +274,10 @@ class ClientRegistrationController extends Controller
                 ->withProperties(['account_type' => $client->accountType()->value, 'company_name' => $attributes['company_name'], 'email' => $user->email])
                 ->log('submitted verified client registration');
 
-            return $user;
+            return $registration;
         });
+
+        $this->notifications->registrationSubmitted($registration);
 
         $request->session()->forget('client_signup_id');
         $signup->delete();

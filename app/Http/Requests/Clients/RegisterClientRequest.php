@@ -5,10 +5,14 @@ namespace App\Http\Requests\Clients;
 use App\Enums\ClientAccountType;
 use App\Enums\ClientRegistrationStatus;
 use App\Enums\ClientService;
+use App\Enums\LegalDocumentStatus;
+use App\Models\LegalDocument;
 use App\Services\CountryCatalog;
 use App\Services\PhoneNumber;
 use App\Services\PlatformConfiguration;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 
 /**
@@ -100,7 +104,45 @@ class RegisterClientRequest extends FormRequest
             'services.*' => ['required', 'string', Rule::enum(ClientService::class)],
             'expected_monthly_volume' => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'message' => ['nullable', 'string', 'max:2000'],
+            'marketing_opt_in' => ['nullable', 'boolean'],
+            ...$this->policyRules(),
         ];
+    }
+
+    /**
+     * One `accepted` rule per policy the platform collects consent for.
+     *
+     * The list comes from the published documents themselves, so adding a policy
+     * to the registration screen is an admin change rather than a code change —
+     * and a document that is unpublished or withdrawn stops being required
+     * without anyone editing this request.
+     *
+     * @return array<string, mixed>
+     */
+    protected function policyRules(): array
+    {
+        $rules = [];
+
+        foreach ($this->policies() as $document) {
+            $rules['accept_'.$document->slug] = ['accepted'];
+        }
+
+        return $rules;
+    }
+
+    /**
+     * The documents the applicant must acknowledge.
+     *
+     * @return Collection<int, LegalDocument>
+     */
+    protected function policies(): Collection
+    {
+        return LegalDocument::query()
+            ->active()
+            ->where('requires_acceptance_at_registration', true)
+            ->whereHas('versions', fn (Builder $query) => $query->where('status', LegalDocumentStatus::Published->value))
+            ->ordered()
+            ->get();
     }
 
     /**
@@ -110,10 +152,34 @@ class RegisterClientRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
+        $messages = [
             'email.unique' => 'An application with this email address is already awaiting review.',
             'services.required' => 'Choose at least one service you would like to use.',
         ];
+
+        foreach ($this->policies() as $document) {
+            $messages['accept_'.$document->slug.'.accepted'] = "Please accept the {$document->title} to continue.";
+        }
+
+        return $messages;
+    }
+
+    /**
+     * The policy slugs the applicant ticked.
+     *
+     * The answers travel with the signup so the acceptance can be written the
+     * moment the account exists — the consent belongs to the moment it was given,
+     * not to the moment the password was chosen.
+     *
+     * @return list<string>
+     */
+    public function acceptedLegalSlugs(): array
+    {
+        return $this->policies()
+            ->filter(fn (LegalDocument $document): bool => $this->boolean('accept_'.$document->slug))
+            ->map(fn (LegalDocument $document): string => $document->slug)
+            ->values()
+            ->all();
     }
 
     /**

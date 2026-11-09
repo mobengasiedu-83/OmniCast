@@ -104,6 +104,12 @@ enum Role: string
                 Permission::ViewWebhooks,
                 Permission::ViewAutomations,
                 Permission::ViewSmpp,
+                Permission::ViewAnnouncements,
+                Permission::ManageAnnouncements,
+                Permission::ViewLegal,
+                Permission::ManageLegal,
+                Permission::ViewSupport,
+                Permission::ManageSupport,
             ],
             self::FinanceOfficer => [
                 Permission::ManageClients,
@@ -116,6 +122,8 @@ enum Role: string
                 Permission::ManageRates,
                 Permission::ViewReports,
                 Permission::ExportReports,
+                Permission::ViewAnnouncements,
+                Permission::ViewSupport,
             ],
         };
     }

@@ -1,8 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Bell,
     KeyRound,
     MonitorSmartphone,
     Palette,
+    Scale,
     Settings,
     ShieldCheck,
     UserRound,
@@ -16,6 +18,7 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { urls } from '@/lib/urls';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { index as legalSettings } from '@/routes/legal/settings';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import type { Auth, NavItem } from '@/types';
@@ -53,6 +56,20 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             href: urls.account.sessions.index,
             icon: MonitorSmartphone,
         },
+        {
+            title: 'Notifications',
+            href: urls.account.notifications.index,
+            icon: Bell,
+        },
+        ...(isClientUser
+            ? [
+                  {
+                      title: 'Legal & policies',
+                      href: legalSettings(),
+                      icon: Scale,
+                  },
+              ]
+            : []),
         {
             title: 'API tokens',
             href: urls.account.tokens.index,

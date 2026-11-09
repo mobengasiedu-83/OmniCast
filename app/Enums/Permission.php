@@ -38,6 +38,12 @@ enum Permission: string
     case ManageSmpp = 'smpp.manage';
     case ViewAutomations = 'automations.view';
     case ManageAutomations = 'automations.manage';
+    case ViewAnnouncements = 'announcements.view';
+    case ManageAnnouncements = 'announcements.manage';
+    case ViewLegal = 'legal.view';
+    case ManageLegal = 'legal.manage';
+    case ViewSupport = 'support.view';
+    case ManageSupport = 'support.manage';
 
     public function label(): string
     {
@@ -73,6 +79,12 @@ enum Permission: string
             self::ManageSmpp => 'Manage SMPP Accounts',
             self::ViewAutomations => 'View Automations',
             self::ManageAutomations => 'Manage Automations',
+            self::ViewAnnouncements => 'View Announcements',
+            self::ManageAnnouncements => 'Send Announcements',
+            self::ViewLegal => 'View Legal & Compliance',
+            self::ManageLegal => 'Manage Legal & Compliance',
+            self::ViewSupport => 'View Support Desk',
+            self::ManageSupport => 'Manage Support Desk',
         };
     }
 

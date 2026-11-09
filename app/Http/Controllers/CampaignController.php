@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
+use App\Enums\LegalAcceptanceContext;
+use App\Enums\LegalDocumentType;
 use App\Enums\TemplateStatus;
 use App\Http\Controllers\Concerns\PresentsTemplates;
 use App\Http\Controllers\Concerns\ResolvesTenantClient;
@@ -18,11 +20,13 @@ use App\Models\ContactSegment;
 use App\Models\EmailAttachment;
 use App\Models\MessageTemplate;
 use App\Models\SenderId;
+use App\Models\User;
 use App\Services\CampaignReadiness;
 use App\Services\CampaignService;
 use App\Services\ContactSegmentQuery;
 use App\Services\Email\EmailAttachmentStore;
 use App\Services\EmailMessageReport;
+use App\Services\Legal\LegalLibrary;
 use App\Services\ModuleAvailability;
 use App\Services\PlatformConfiguration;
 use App\Services\SmsMessageReport;
@@ -50,6 +54,7 @@ class CampaignController extends Controller
         protected TemplateLibrary $library,
         protected ModuleAvailability $modules,
         protected EmailAttachmentStore $attachments,
+        protected LegalLibrary $legal,
     ) {}
 
     /**
@@ -247,6 +252,7 @@ class CampaignController extends Controller
             'emailReport' => $campaign->channel->requiresEmailContent()
                 ? $this->emailReport->forCampaign($campaign, 8)
                 : null,
+            'acceptableUse' => $this->legal->notice(LegalDocumentType::AcceptableUse),
             'abilities' => [
                 'update' => Gate::allows('update', $campaign),
                 'submit' => Gate::allows('submit', $campaign),
@@ -356,6 +362,8 @@ class CampaignController extends Controller
     {
         Gate::authorize('submit', $campaign);
 
+        $this->recordAcceptableUse($request);
+
         $campaign = $this->campaigns->submit($campaign, $request->user());
 
         return back()->with('toast', [
@@ -364,6 +372,38 @@ class CampaignController extends Controller
                 ? 'Campaign approved automatically. Estimated cost is now reserved and it is ready to launch.'
                 : 'Campaign submitted for review. Estimated cost is now reserved.',
         ]);
+    }
+
+    /**
+     * Record the submitter's acknowledgement of the Acceptable Use Policy.
+     *
+     * The submit button is the confirmation: the campaign show page prints the
+     * notice that links to the policy directly above it, so pressing it is the
+     * statement that the audience may lawfully be contacted. The evidence names
+     * the live version of the policy, so a later revision does not silently
+     * change what this submission agreed to.
+     */
+    protected function recordAcceptableUse(Request $request): void
+    {
+        $user = $request->user();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $document = $this->legal->documentOfType(LegalDocumentType::AcceptableUse);
+
+        if ($document === null) {
+            return;
+        }
+
+        $this->legal->recordAcceptance(
+            $user,
+            $document,
+            LegalAcceptanceContext::CampaignSubmission,
+            $request->ip(),
+            $request->userAgent(),
+        );
     }
 
     /**
@@ -573,6 +613,7 @@ class CampaignController extends Controller
         $client = $this->tenantClient($request);
 
         return [
+            'acceptableUse' => $this->legal->notice(LegalDocumentType::AcceptableUse),
             'clients' => $this->selectableClients($request),
             'tenantClientId' => $client?->id,
             'templates' => MessageTemplate::query()

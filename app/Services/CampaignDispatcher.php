@@ -22,6 +22,7 @@ use App\Services\Automation\AutomationEngine;
 use App\Services\Delivery\DeliveryPacer;
 use App\Services\Email\OutboundAttachment;
 use App\Services\Email\OutboundEmail;
+use App\Services\Notifications\SystemNotifier;
 use App\Services\Sms\OutboundSms;
 use App\Services\Voice\VoiceCall as VoiceCallData;
 use App\Services\Webhooks\WebhookDispatcher;
@@ -51,6 +52,7 @@ class CampaignDispatcher
         protected DeliveryPacer $pacer,
         protected WebhookDispatcher $webhooks,
         protected AutomationEngine $automations,
+        protected SystemNotifier $notifications,
     ) {}
 
     /**
@@ -495,5 +497,7 @@ class CampaignDispatcher
             'campaign_id' => $campaign->id,
             'campaign' => $campaign->name,
         ]);
+
+        $this->notifications->campaignCompleted($campaign->refresh());
     }
 }

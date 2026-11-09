@@ -132,6 +132,27 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(max(1, (int) $perMinute))->by('ip:'.$request->ip());
         });
 
+        /*
+        | The public contact form is the only screen an anonymous visitor can
+        | write through, so it is limited per address as well as challenged with
+        | Turnstile. Signed-in replies are limited per account.
+        */
+
+        RateLimiter::for('support-enquiries', function (Request $request): Limit {
+            $perMinute = (int) config('support.rate_limits.public_enquiries_per_minute', 5);
+
+            return Limit::perMinute(max(1, $perMinute))->by('ip:'.$request->ip());
+        });
+
+        RateLimiter::for('support-replies', function (Request $request): Limit {
+            $perMinute = (int) config('support.rate_limits.ticket_replies_per_minute', 20);
+            $user = $request->user();
+
+            return Limit::perMinute(max(1, $perMinute))->by(
+                $user !== null ? 'user:'.$user->id : 'ip:'.$request->ip(),
+            );
+        });
+
         RateLimiter::for('api', function (Request $request): Limit {
             $user = $request->user();
             $token = $user?->currentAccessToken();

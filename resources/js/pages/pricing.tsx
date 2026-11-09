@@ -16,6 +16,7 @@ import { urls } from '@/lib/urls';
 import { cn } from '@/lib/utils';
 import { dashboard, home } from '@/routes';
 import { create as clientSignup } from '@/routes/client-registration';
+import { show as legalDocument } from '@/routes/legal';
 import type { BillingRate, BillingSlider, WalletPackage } from '@/types';
 
 type PageProps = {
@@ -308,6 +309,17 @@ export default function Pricing({
                         {money(limits.max, currency)} once you are inside. The
                         credit lands as soon as the gateway confirms the
                         payment.
+                    </p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                        Credit is not transferable and unused balances are
+                        handled as set out in the{' '}
+                        <Link
+                            href={legalDocument.url('refund-wallet')}
+                            className="underline underline-offset-2 hover:text-foreground"
+                        >
+                            Refund, Cancellation &amp; Wallet Policy
+                        </Link>
+                        .
                     </p>
                 </div>
                 <Button variant="outline" asChild>

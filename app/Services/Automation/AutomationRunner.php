@@ -11,6 +11,7 @@ use App\Models\Contact;
 use App\Models\ContactList;
 use App\Models\Tag;
 use App\Services\ContactDndService;
+use App\Services\Notifications\SystemNotifier;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -31,6 +32,7 @@ class AutomationRunner
         private readonly AutomationWebhookCaller $webhooks,
         private readonly ContactDndService $dnd,
         private readonly AutomationEngine $engine,
+        private readonly SystemNotifier $notifications,
     ) {}
 
     /**
@@ -436,6 +438,10 @@ class AutomationRunner
             'resume_at' => null,
             'finished_at' => now(),
         ])->save();
+
+        if ($status === AutomationRunStatus::Failed) {
+            $this->notifications->automationFailed($run, $detail);
+        }
 
         return $run;
     }
