@@ -20,6 +20,10 @@ daemons, two are one-off maintenance commands that are already on the scheduler.
 
 Nothing needs to be started on the server: the panel is documentation, not a control surface.
 
+For the production release procedure, including environment checks, migrations,
+asset builds, and post-deploy verification, see
+[Deploying to production](./DEPLOYING-TO-PRODUCTION.md).
+
 ## Production topology
 
 ### Horizon (queue workers)
