@@ -16,12 +16,12 @@ type PageProps = {
     channels: NotificationChannelOption[];
 };
 
-type Channel = 'in_app' | 'email';
+type Channel = 'in_app' | 'email' | 'sms';
 
 /**
  * The channel matrix for the signed-in account.
  *
- * A category muted on both channels stops the inbox row and the email copy. The
+ * A category muted on every channel stops the inbox row and external copies. The
  * platform still records the event it would have told you about — this screen
  * only decides what reaches you.
  */
@@ -34,7 +34,11 @@ export default function NotificationPreferences({
         preferences,
     });
 
-    const toggle = (category: string, channel: Channel, value: boolean): void => {
+    const toggle = (
+        category: string,
+        channel: Channel,
+        value: boolean,
+    ): void => {
         form.setData('preferences', {
             ...form.data.preferences,
             [category]: {
@@ -51,7 +55,7 @@ export default function NotificationPreferences({
             <Heading
                 variant="small"
                 title="Notifications"
-                description="Choose which categories reach you, and whether the email copy follows the inbox row."
+                description="Choose which notification categories reach you and which channels deliver them."
                 icon={Bell}
             />
 
@@ -128,10 +132,9 @@ export default function NotificationPreferences({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                    Billing and compliance notices are emailed by default; the
-                    other categories stay in the app until you switch their
-                    email copy on. Platform announcements always reach your
-                    inbox.
+                    Billing and compliance notices are emailed by default; other
+                    categories stay in the app until you enable another channel.
+                    Platform announcements always reach your inbox.
                 </p>
 
                 <Button type="submit" disabled={form.processing}>

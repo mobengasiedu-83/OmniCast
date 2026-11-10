@@ -73,19 +73,23 @@ class OmniCastNotification extends Notification
 
     /**
      * The email copy.
+     *
+     * The copy is a branded view rather than a stack of `line()` calls, so an
+     * announcement looks like the product it came from and the receipt mails the
+     * billing category sends share the same chrome.
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $mail = (new MailMessage)
+        return (new MailMessage)
             ->subject($this->title)
-            ->line($this->body);
-
-        if ($this->actionUrl !== null) {
-            $mail->action($this->actionLabel ?? 'Open OmniCast', $this->actionUrl);
-        }
-
-        return $mail
-            ->line('You are receiving this email because this notification category is set to email on your account.')
-            ->action('Manage notification preferences', route('notifications.preferences.edit'));
+            ->view('mail.notification', [
+                'title' => $this->title,
+                'body' => $this->body,
+                'actionUrl' => $this->actionUrl,
+                'actionLabel' => $this->actionLabel,
+                'categoryLabel' => $this->category->label(),
+                'severity' => $this->severity,
+                'preferencesUrl' => route('notifications.preferences.edit'),
+            ]);
     }
 }

@@ -19,11 +19,12 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property string|null $notification_id
  * @property Carbon|null $emailed_at
+ * @property Carbon|null $texted_at
  * @property Carbon|null $read_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['announcement_id', 'user_id', 'notification_id', 'emailed_at', 'read_at'])]
+#[Fillable(['announcement_id', 'user_id', 'notification_id', 'emailed_at', 'texted_at', 'read_at'])]
 class AnnouncementRecipient extends Model
 {
     use HasFactory;
@@ -37,6 +38,7 @@ class AnnouncementRecipient extends Model
     {
         return [
             'emailed_at' => 'datetime',
+            'texted_at' => 'datetime',
             'read_at' => 'datetime',
         ];
     }

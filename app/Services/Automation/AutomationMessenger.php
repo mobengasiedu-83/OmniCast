@@ -12,7 +12,7 @@ use App\Services\Email\OutboundEmail;
 use App\Services\MessagePersonalizer;
 use App\Services\Sms\OutboundSms;
 use App\Services\Sms\SmsGatewayManager;
-use App\Services\SmsSegmenter;
+use App\Services\Sms\SmsSegmenter;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 

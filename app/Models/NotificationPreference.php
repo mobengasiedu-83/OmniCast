@@ -19,8 +19,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property NotificationCategory $category
  * @property bool $in_app
  * @property bool $email
+ * @property bool $sms
  */
-#[Fillable(['user_id', 'category', 'in_app', 'email'])]
+#[Fillable(['user_id', 'category', 'in_app', 'email', 'sms'])]
 class NotificationPreference extends Model
 {
     /**
@@ -34,6 +35,7 @@ class NotificationPreference extends Model
             'category' => NotificationCategory::class,
             'in_app' => 'boolean',
             'email' => 'boolean',
+            'sms' => 'boolean',
         ];
     }
 
@@ -53,6 +55,7 @@ class NotificationPreference extends Model
         return match ($channel) {
             'in_app' => $this->in_app,
             'email' => $this->email,
+            'sms' => $this->sms,
             default => false,
         };
     }

@@ -332,6 +332,8 @@ export const urls = {
             store: path('/admin/announcements'),
             send: (announcement: number) =>
                 path(`/admin/announcements/${announcement}/send`),
+            cancelSchedule: (announcement: number) =>
+                path(`/admin/announcements/${announcement}/cancel-schedule`),
             destroy: (announcement: number) =>
                 path(`/admin/announcements/${announcement}`),
         },

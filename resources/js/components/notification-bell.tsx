@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage, usePoll } from '@inertiajs/react';
 import { Bell, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,19 +14,25 @@ import type { NotificationCentre } from '@/types';
 /**
  * The unread badge in the header.
  *
- * The count and the newest rows arrive as a shared prop, so the bell costs a
- * count and a short list per page and never polls. Opening the dropdown links to
- * the centre; the row itself is marked read there, and "mark all read" posts
- * from here.
+ * The unread count and newest rows arrive as a shared prop. The bell refreshes
+ * that prop every 15 seconds so new notices appear without a page navigation.
  */
 export function NotificationBell() {
     const { notificationCentre } = usePage<{
         notificationCentre: NotificationCentre | null;
     }>().props;
 
-    if (!notificationCentre) {
-        return null;
-    }
+    return notificationCentre === null ? null : (
+        <NotificationBellContent notificationCentre={notificationCentre} />
+    );
+}
+
+function NotificationBellContent({
+    notificationCentre,
+}: {
+    notificationCentre: NotificationCentre;
+}) {
+    usePoll(15_000, { only: ['notificationCentre'] });
 
     const { unread_count: unreadCount, items } = notificationCentre;
 

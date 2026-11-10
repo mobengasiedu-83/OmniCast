@@ -30,15 +30,34 @@ return [
     |
     */
 
-    'channels' => ['in_app', 'email'],
+    'channels' => ['in_app', 'email', 'sms'],
 
     'preferences' => [
-        'campaigns' => ['in_app' => true, 'email' => false],
-        'automations' => ['in_app' => true, 'email' => false],
-        'billing' => ['in_app' => true, 'email' => true],
-        'compliance' => ['in_app' => true, 'email' => true],
-        'system' => ['in_app' => true, 'email' => false],
-        'platform' => ['in_app' => true, 'email' => false],
+        'campaigns' => ['in_app' => true, 'email' => false, 'sms' => false],
+        'automations' => ['in_app' => true, 'email' => false, 'sms' => false],
+        'billing' => ['in_app' => true, 'email' => true, 'sms' => false],
+        'compliance' => ['in_app' => true, 'email' => true, 'sms' => false],
+        'system' => ['in_app' => true, 'email' => false, 'sms' => false],
+        'platform' => ['in_app' => true, 'email' => false, 'sms' => false],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | The SMS copy
+    |--------------------------------------------------------------------------
+    |
+    | SMS is opt-in twice: the account has to tick the category's SMS channel
+    | and the platform has to switch `enabled` on, because every part is billed.
+    | `sender` is the alphanumeric sender the short copy is submitted with, and
+    | `max_length` caps the composed body (title, body and action link) before it
+    | is truncated, so one loud announcement cannot become a five-part message.
+    |
+    */
+
+    'sms' => [
+        'enabled' => filter_var(env('NOTIFICATIONS_SMS_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'sender' => env('NOTIFICATIONS_SMS_SENDER', 'OMNICAST'),
+        'max_length' => (int) env('NOTIFICATIONS_SMS_MAX_LENGTH', 320),
     ],
 
     /*

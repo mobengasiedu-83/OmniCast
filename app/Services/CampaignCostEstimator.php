@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\Channel;
 use App\Enums\SmsEncoding;
 use App\Models\Client;
+use App\Services\Sms\SmsSegmenter;
 
 /**
  * Estimates the recipient count, SMS parts and billable cost of a campaign.

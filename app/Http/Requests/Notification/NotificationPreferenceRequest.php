@@ -33,17 +33,21 @@ class NotificationPreferenceRequest extends FormRequest
             'preferences.*' => ['array'],
             'preferences.*.in_app' => ['boolean'],
             'preferences.*.email' => ['boolean'],
+            'preferences.*.sms' => ['boolean'],
         ];
     }
 
     /**
      * The submitted matrix, keyed by category.
      *
-     * @return array<string, array{in_app?: mixed, email?: mixed}>
+     * A channel the client did not send is absent rather than false: the service
+     * treats a missing key as "leave it as it was".
+     *
+     * @return array<string, array{in_app?: mixed, email?: mixed, sms?: mixed}>
      */
     public function preferences(): array
     {
-        /** @var array<string, array{in_app?: mixed, email?: mixed}> $preferences */
+        /** @var array<string, array{in_app?: mixed, email?: mixed, sms?: mixed}> $preferences */
         $preferences = $this->input('preferences', []);
 
         return $preferences;

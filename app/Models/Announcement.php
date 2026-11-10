@@ -7,6 +7,7 @@ use App\Enums\AnnouncementSeverity;
 use App\Enums\AnnouncementStatus;
 use App\Enums\NotificationCategory;
 use App\Enums\Role;
+use Carbon\CarbonInterface;
 use Database\Factories\AnnouncementFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -33,7 +34,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $role
  * @property AnnouncementSeverity $severity
  * @property bool $send_email
+ * @property bool $send_sms
  * @property AnnouncementStatus $status
+ * @property Carbon|null $scheduled_at
  * @property Carbon|null $sent_at
  * @property int $recipient_count
  * @property int $read_count
@@ -43,7 +46,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'title', 'body', 'category', 'audience', 'client_id', 'role', 'severity',
-    'send_email', 'status', 'sent_at', 'recipient_count', 'read_count', 'created_by',
+    'send_email', 'send_sms', 'status', 'scheduled_at', 'sent_at', 'recipient_count', 'read_count', 'created_by',
 ])]
 class Announcement extends Model
 {
@@ -63,6 +66,8 @@ class Announcement extends Model
             'severity' => AnnouncementSeverity::class,
             'status' => AnnouncementStatus::class,
             'send_email' => 'boolean',
+            'send_sms' => 'boolean',
+            'scheduled_at' => 'datetime',
             'sent_at' => 'datetime',
             'recipient_count' => 'integer',
             'read_count' => 'integer',
@@ -99,7 +104,22 @@ class Announcement extends Model
     #[Scope]
     protected function pending(Builder $query): void
     {
-        $query->whereIn('status', [AnnouncementStatus::Draft->value, AnnouncementStatus::Queued->value]);
+        $query->whereIn('status', [
+            AnnouncementStatus::Draft->value,
+            AnnouncementStatus::Scheduled->value,
+            AnnouncementStatus::Queued->value,
+        ]);
+    }
+
+    /**
+     * Limit the query to scheduled announcements whose time has arrived.
+     */
+    #[Scope]
+    protected function due(Builder $query): void
+    {
+        $query->where('status', AnnouncementStatus::Scheduled->value)
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<=', now());
     }
 
     /**
@@ -120,11 +140,45 @@ class Announcement extends Model
     }
 
     /**
+     * Whether the announcement is waiting for the time it names.
+     */
+    public function isScheduled(): bool
+    {
+        return $this->status->isScheduled();
+    }
+
+    /**
      * Whether the announcement is still waiting for its fan-out.
      */
     public function isPending(): bool
     {
         return ! $this->isSent();
+    }
+
+    /**
+     * Hold the announcement until the given moment.
+     */
+    public function scheduleFor(CarbonInterface $moment): void
+    {
+        $this->forceFill([
+            'status' => AnnouncementStatus::Scheduled,
+            'scheduled_at' => $moment,
+        ])->save();
+    }
+
+    /**
+     * Put a scheduled announcement back to a draft and forget its send time.
+     */
+    public function cancelSchedule(): void
+    {
+        if (! $this->isScheduled()) {
+            return;
+        }
+
+        $this->forceFill([
+            'status' => AnnouncementStatus::Draft,
+            'scheduled_at' => null,
+        ])->save();
     }
 
     /**

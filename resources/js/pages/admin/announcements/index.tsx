@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Megaphone, Send, Trash2 } from 'lucide-react';
+import { CalendarClock, Megaphone, Send, Trash2 } from 'lucide-react';
 import { useConfirm } from '@/components/confirm-dialog';
 import EmptyState from '@/components/empty-state';
 import PageHeader from '@/components/page-header';
@@ -23,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import AnnouncementController from '@/actions/App/Http/Controllers/Admin/AnnouncementController';
 import { Textarea } from '@/components/ui/textarea';
 import { urls } from '@/lib/urls';
 import type {
@@ -40,6 +41,7 @@ type PageProps = {
     filters: { status: string | null };
     stats: {
         drafts: number;
+        scheduled: number;
         sent: number;
         recipients: number;
         read: number;
@@ -49,6 +51,7 @@ type PageProps = {
     severities: AnnouncementSeverityOption[];
     roles: SelectOption[];
     clients: ClientOption[];
+    smsEnabled: boolean;
 };
 
 const formatDateTime = (value: string | null): string =>
@@ -70,6 +73,7 @@ export default function AnnouncementsIndex({
     severities,
     roles,
     clients,
+    smsEnabled,
 }: PageProps) {
     const confirm = useConfirm();
 
@@ -105,8 +109,9 @@ export default function AnnouncementsIndex({
                 }
             />
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <Stat label="Drafts waiting" value={stats.drafts} />
+                <Stat label="Scheduled" value={stats.scheduled} />
                 <Stat label="Sent" value={stats.sent} />
                 <Stat label="Recipients reached" value={stats.recipients} />
                 <Stat label="Opened" value={stats.read} />
@@ -117,6 +122,7 @@ export default function AnnouncementsIndex({
                     [
                         ['', 'All announcements'],
                         ['draft', 'Drafts'],
+                        ['scheduled', 'Scheduled'],
                         ['sent', 'Sent'],
                     ] as const
                 ).map(([value, label]) => (
@@ -150,6 +156,7 @@ export default function AnnouncementsIndex({
                     severities={severities}
                     roles={roles}
                     clients={clients}
+                    smsEnabled={smsEnabled}
                 />
 
                 <Card>
@@ -175,7 +182,9 @@ export default function AnnouncementsIndex({
                                     <AnnouncementHistoryRow
                                         key={announcement.id}
                                         announcement={announcement}
-                                        onDelete={() => void remove(announcement)}
+                                        onDelete={() =>
+                                            void remove(announcement)
+                                        }
                                     />
                                 ))}
                             </div>
@@ -215,7 +224,9 @@ type ComposerData = {
     role: string;
     severity: string;
     send_email: boolean;
+    send_sms: boolean;
     send_now: boolean;
+    scheduled_at: string;
 };
 
 const emptyComposer: ComposerData = {
@@ -227,12 +238,14 @@ const emptyComposer: ComposerData = {
     role: '',
     severity: 'info',
     send_email: false,
+    send_sms: false,
     send_now: true,
+    scheduled_at: '',
 };
 
 /**
- * The composer: one announcement, the audience it addresses and whether the
- * email copy follows the inbox row.
+ * The composer: one announcement, the audience it addresses, when it goes out
+ * and which channel copies should follow the inbox row.
  */
 function AnnouncementComposer({
     audiences,
@@ -240,10 +253,11 @@ function AnnouncementComposer({
     severities,
     roles,
     clients,
+    smsEnabled,
 }: Pick<
     PageProps,
     'audiences' | 'categories' | 'severities' | 'roles' | 'clients'
->) {
+> & { smsEnabled: boolean }) {
     const form = useForm<ComposerData>({ ...emptyComposer });
 
     const audience = audiences.find(
@@ -470,6 +484,25 @@ function AnnouncementComposer({
                             </span>
                         </label>
 
+                        {smsEnabled && (
+                            <label className="flex items-start gap-2 text-sm">
+                                <Checkbox
+                                    checked={form.data.send_sms}
+                                    onCheckedChange={(value) =>
+                                        form.setData('send_sms', value === true)
+                                    }
+                                />
+                                <span>
+                                    Also text recipients
+                                    <span className="block text-xs text-muted-foreground">
+                                        Only accounts with the SMS channel on
+                                        for this category and a phone number
+                                        receive the text copy.
+                                    </span>
+                                </span>
+                            </label>
+                        )}
+
                         <label className="flex items-start gap-2 text-sm">
                             <Checkbox
                                 checked={form.data.send_now}
@@ -481,10 +514,43 @@ function AnnouncementComposer({
                                 Deliver immediately
                                 <span className="block text-xs text-muted-foreground">
                                     Leave this off to keep the message as a
-                                    draft you can review before sending.
+                                    draft, or to hold it until the send time
+                                    below.
                                 </span>
                             </span>
                         </label>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label htmlFor="announcement-scheduled-at">
+                            Send at (optional)
+                        </Label>
+                        <Input
+                            id="announcement-scheduled-at"
+                            type="datetime-local"
+                            value={form.data.scheduled_at}
+                            disabled={form.data.send_now}
+                            onChange={(event) => {
+                                form.setData(
+                                    'scheduled_at',
+                                    event.target.value,
+                                );
+
+                                if (event.target.value !== '') {
+                                    form.setData('send_now', false);
+                                }
+                            }}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            {form.data.send_now
+                                ? 'Clear "deliver immediately" to pick a send time.'
+                                : 'The announcement is queued when this time arrives. Leave it empty to keep a draft.'}
+                        </p>
+                        {form.errors.scheduled_at && (
+                            <p className="text-xs text-destructive">
+                                {form.errors.scheduled_at}
+                            </p>
+                        )}
                     </div>
 
                     <Button type="submit" disabled={form.processing}>
@@ -493,7 +559,9 @@ function AnnouncementComposer({
                             ? 'Working…'
                             : form.data.send_now
                               ? 'Send announcement'
-                              : 'Save draft'}
+                              : form.data.scheduled_at !== ''
+                                ? 'Schedule announcement'
+                                : 'Save draft'}
                     </Button>
                 </form>
             </CardContent>
@@ -504,7 +572,15 @@ function AnnouncementComposer({
 /** The badge tone names the backend sends are exactly the Badge variants. */
 const toneVariant = (
     tone: string,
-): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info' | 'muted' =>
+):
+    | 'default'
+    | 'secondary'
+    | 'destructive'
+    | 'outline'
+    | 'success'
+    | 'warning'
+    | 'info'
+    | 'muted' =>
     tone as
         | 'default'
         | 'secondary'
@@ -527,7 +603,8 @@ function AnnouncementHistoryRow({
         announcement.recipient_count === 0
             ? 0
             : Math.round(
-                  (announcement.read_count / announcement.recipient_count) * 100,
+                  (announcement.read_count / announcement.recipient_count) *
+                      100,
               );
 
     return (
@@ -556,11 +633,45 @@ function AnnouncementHistoryRow({
                 <p className="text-xs text-muted-foreground">
                     {announcement.status === 'sent'
                         ? `${announcement.recipient_count} recipient(s) · ${announcement.read_count} opened (${openedShare}%) · sent ${formatDateTime(announcement.sent_at)}`
-                        : `Draft by ${announcement.author ?? 'the platform team'} · created ${formatDateTime(announcement.created_at)}`}
+                        : announcement.status === 'scheduled'
+                          ? `Scheduled for ${formatDateTime(announcement.scheduled_at)} by ${announcement.author ?? 'the platform team'}`
+                          : `Draft by ${announcement.author ?? 'the platform team'} · created ${formatDateTime(announcement.created_at)}`}
                     {announcement.send_email && ' · email copy requested'}
+                    {announcement.send_sms && ' · SMS copy requested'}
                 </p>
 
                 <div className="flex items-center gap-1">
+                    {announcement.status === 'sent' && (
+                        <Button asChild size="sm" variant="outline">
+                            <Link
+                                href={AnnouncementController.recipients.url({
+                                    announcement: announcement.id,
+                                })}
+                            >
+                                View recipients
+                            </Link>
+                        </Button>
+                    )}
+
+                    {announcement.status === 'scheduled' && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                                router.post(
+                                    urls.admin.announcements.cancelSchedule(
+                                        announcement.id,
+                                    ),
+                                    {},
+                                    { preserveScroll: true },
+                                )
+                            }
+                        >
+                            <CalendarClock />
+                            Cancel schedule
+                        </Button>
+                    )}
+
                     {announcement.status !== 'sent' && (
                         <Button
                             size="sm"

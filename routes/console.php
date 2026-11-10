@@ -106,9 +106,16 @@ Schedule::command('automations:prune-runs')
 |
 | Read inbox rows and delivered announcements age out daily so the centre and
 | its admin history stay quick. An unread row is left alone: dismissing it is
-| the account's own decision.
+| the account's own decision. The announcement scan runs every minute so a
+| composer-chosen send time lands close to the minute it names.
 |
 */
+
+Schedule::command('announcements:send-scheduled')
+    ->description('Queue the announcements whose scheduled send time has arrived')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
 
 Schedule::command('notifications:prune')
     ->description('Delete read notifications and sent announcements past their retention window')

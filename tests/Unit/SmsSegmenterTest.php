@@ -1,7 +1,7 @@
 <?php
 
 use App\Enums\SmsEncoding;
-use App\Services\SmsSegmenter;
+use App\Services\Sms\SmsSegmenter;
 
 beforeEach(function (): void {
     $this->segmenter = new SmsSegmenter;

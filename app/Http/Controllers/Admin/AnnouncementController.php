@@ -10,6 +10,7 @@ use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Notification\AnnouncementRequest;
 use App\Models\Announcement;
+use App\Models\AnnouncementRecipient;
 use App\Models\Client;
 use App\Services\Notifications\AnnouncementDispatcher;
 use Illuminate\Http\RedirectResponse;
@@ -46,6 +47,7 @@ class AnnouncementController extends Controller
             'filters' => ['status' => $status?->value],
             'stats' => [
                 'drafts' => Announcement::query()->where('status', AnnouncementStatus::Draft->value)->count(),
+                'scheduled' => Announcement::query()->where('status', AnnouncementStatus::Scheduled->value)->count(),
                 'sent' => Announcement::query()->where('status', AnnouncementStatus::Sent->value)->count(),
                 'recipients' => (int) Announcement::query()->sum('recipient_count'),
                 'read' => (int) Announcement::query()->sum('read_count'),
@@ -57,6 +59,7 @@ class AnnouncementController extends Controller
                 'label' => $severity->label(),
                 'tone' => $severity->tone(),
             ], AnnouncementSeverity::cases()),
+            'smsEnabled' => (bool) config('notifications.sms.enabled', false),
             'roles' => array_map(fn (Role $role): array => [
                 'value' => $role->value,
                 'label' => $role->label(),
@@ -71,7 +74,7 @@ class AnnouncementController extends Controller
     }
 
     /**
-     * Save a draft, or queue it at once when the composer asks to send now.
+     * Save a draft, schedule it for later, or queue it at once.
      */
     public function store(AnnouncementRequest $request, AnnouncementDispatcher $dispatcher): RedirectResponse
     {
@@ -86,6 +89,7 @@ class AnnouncementController extends Controller
             'role' => $audience === AnnouncementAudience::Role ? (string) $request->string('role') : null,
             'severity' => (string) $request->string('severity'),
             'send_email' => $request->boolean('send_email'),
+            'send_sms' => $request->boolean('send_sms'),
             'status' => AnnouncementStatus::Draft,
             'created_by' => $request->user()?->id,
         ]);
@@ -96,6 +100,16 @@ class AnnouncementController extends Controller
             return back()->with('toast', [
                 'type' => 'success',
                 'message' => 'The announcement is queued and is being delivered now.',
+            ]);
+        }
+
+        if ($request->scheduledAt() !== null) {
+            $announcement->scheduleFor($request->scheduledAt());
+
+            return back()->with('toast', [
+                'type' => 'success',
+                'message' => 'The announcement will go out '
+                    .$request->scheduledAt()->toDayDateTimeString().'.',
             ]);
         }
 
@@ -125,6 +139,56 @@ class AnnouncementController extends Controller
         return back()->with('toast', [
             'type' => 'success',
             'message' => 'The announcement is queued and is being delivered now.',
+        ]);
+    }
+
+    /**
+     * Pull a scheduled announcement back to a draft.
+     */
+    public function cancelSchedule(Announcement $announcement): RedirectResponse
+    {
+        if (! $announcement->isScheduled()) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'That announcement is not waiting for a send time.',
+            ]);
+        }
+
+        $announcement->cancelSchedule();
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'The send time was cleared and the announcement is a draft again.',
+        ]);
+    }
+
+    /**
+     * Show who received an announcement and which accounts have read it.
+     */
+    public function recipients(Announcement $announcement): Response
+    {
+        $recipients = $announcement->recipients()
+            ->with('user:id,name,email')
+            ->orderBy('id')
+            ->paginate(25)
+            ->withQueryString()
+            ->through(fn (AnnouncementRecipient $recipient): array => [
+                'id' => $recipient->id,
+                'name' => $recipient->user->name,
+                'email' => $recipient->user->email,
+                'read_at' => $recipient->read_at?->toIso8601String(),
+                'emailed_at' => $recipient->emailed_at?->toIso8601String(),
+                'texted_at' => $recipient->texted_at?->toIso8601String(),
+            ]);
+
+        return Inertia::render('admin/announcements/recipients', [
+            'announcement' => [
+                'id' => $announcement->id,
+                'title' => $announcement->title,
+                'recipient_count' => $announcement->recipient_count,
+                'read_count' => $announcement->read_count,
+            ],
+            'recipients' => $recipients,
         ]);
     }
 
@@ -161,6 +225,7 @@ class AnnouncementController extends Controller
             'severity_label' => $announcement->severity->label(),
             'severity_tone' => $announcement->severity->tone(),
             'send_email' => $announcement->send_email,
+            'send_sms' => $announcement->send_sms,
             'status' => $announcement->status->value,
             'status_label' => $announcement->status->label(),
             'status_tone' => $announcement->status->tone(),
@@ -172,6 +237,7 @@ class AnnouncementController extends Controller
             ],
             'author' => $announcement->author?->name,
             'created_at' => $announcement->created_at?->toIso8601String(),
+            'scheduled_at' => $announcement->scheduled_at?->toIso8601String(),
             'sent_at' => $announcement->sent_at?->toIso8601String(),
         ];
     }

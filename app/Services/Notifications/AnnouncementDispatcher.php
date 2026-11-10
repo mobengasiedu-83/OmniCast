@@ -95,6 +95,7 @@ class AnnouncementDispatcher
                 'severity' => $announcement->severity,
                 'force_in_app' => true,
                 'allow_email' => $announcement->send_email,
+                'allow_sms' => $announcement->send_sms,
             ],
         );
 
@@ -105,6 +106,7 @@ class AnnouncementDispatcher
         $recipient->forceFill([
             'notification_id' => $delivery->id(),
             'emailed_at' => $delivery->emailed ? now() : null,
+            'texted_at' => $delivery->texted ? now() : null,
         ])->save();
 
         return $recipient;

@@ -16,6 +16,7 @@ final class NotificationDelivery
     public function __construct(
         public readonly ?DatabaseNotification $notification,
         public readonly bool $emailed,
+        public readonly bool $texted = false,
     ) {}
 
     /**
@@ -23,7 +24,7 @@ final class NotificationDelivery
      */
     public function sent(): bool
     {
-        return $this->notification !== null || $this->emailed;
+        return $this->notification !== null || $this->emailed || $this->texted;
     }
 
     /**

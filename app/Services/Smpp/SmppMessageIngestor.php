@@ -7,7 +7,7 @@ use App\Jobs\DeliverSmppMessage;
 use App\Models\SmppAccount;
 use App\Models\SmppMessage;
 use App\Models\SmppSession;
-use App\Services\SmsSegmenter;
+use App\Services\Sms\SmsSegmenter;
 use Illuminate\Support\Str;
 
 /**

@@ -7,6 +7,7 @@ use App\Enums\AnnouncementSeverity;
 use App\Enums\NotificationCategory;
 use App\Enums\Permission;
 use App\Enums\Role;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -53,7 +54,27 @@ class AnnouncementRequest extends FormRequest
             ],
             'severity' => ['required', 'string', Rule::in(AnnouncementSeverity::values())],
             'send_email' => ['boolean'],
+            'send_sms' => ['boolean'],
             'send_now' => ['boolean'],
+            'scheduled_at' => [
+                'nullable',
+                'date',
+                'after:now',
+                Rule::prohibitedIf(fn (): bool => $this->sendNow()),
+            ],
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'scheduled_at.prohibited' => 'Choose either a send time or deliver immediately, not both.',
+            'scheduled_at.after' => 'The send time has to be in the future.',
         ];
     }
 
@@ -71,5 +92,19 @@ class AnnouncementRequest extends FormRequest
     public function sendNow(): bool
     {
         return $this->boolean('send_now');
+    }
+
+    /**
+     * The moment the composer wants the announcement delivered, if any.
+     */
+    public function scheduledAt(): ?CarbonImmutable
+    {
+        $value = $this->input('scheduled_at');
+
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return CarbonImmutable::parse($value);
     }
 }

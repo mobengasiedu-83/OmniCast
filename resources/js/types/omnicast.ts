@@ -1634,7 +1634,7 @@ export type NotificationCategoryOption = {
 /** The channel matrix on `settings/notifications`, keyed by category. */
 export type NotificationPreferenceMap = Record<
     string,
-    { in_app: boolean; email: boolean }
+    { in_app: boolean; email: boolean; sms: boolean }
 >;
 
 /** A channel column on the preferences screen. */
@@ -1657,6 +1657,7 @@ export type AnnouncementRow = {
     severity_label: string;
     severity_tone: string;
     send_email: boolean;
+    send_sms: boolean;
     status: string;
     status_label: string;
     status_tone: string;
@@ -1665,7 +1666,18 @@ export type AnnouncementRow = {
     client: { id: number; name: string } | null;
     author: string | null;
     created_at: string | null;
+    scheduled_at: string | null;
     sent_at: string | null;
+};
+
+/** One recipient and the channels/read state recorded for an announcement. */
+export type AnnouncementRecipientRow = {
+    id: number;
+    name: string;
+    email: string | null;
+    read_at: string | null;
+    emailed_at: string | null;
+    texted_at: string | null;
 };
 
 /** The audiences and roles the composer offers. */

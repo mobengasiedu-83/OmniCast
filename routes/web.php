@@ -26,6 +26,7 @@ use App\Http\Controllers\Settings\AutomationRunController;
 use App\Http\Controllers\Settings\AutomationStepController;
 use App\Http\Controllers\Settings\AutomationWorkflowController;
 use App\Http\Controllers\Settings\ClientSettingsController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SmsWebhookController;
 use App\Http\Controllers\Support\ContactSupportController;
 use App\Http\Controllers\Support\KnowledgeBaseController;
@@ -39,6 +40,8 @@ use App\Http\Controllers\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
+
+Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::get('pricing', PricingController::class)->name('pricing');
 

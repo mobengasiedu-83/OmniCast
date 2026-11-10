@@ -24,6 +24,7 @@ use App\Services\Email\OutboundAttachment;
 use App\Services\Email\OutboundEmail;
 use App\Services\Notifications\SystemNotifier;
 use App\Services\Sms\OutboundSms;
+use App\Services\Sms\SmsSegmenter;
 use App\Services\Voice\VoiceCall as VoiceCallData;
 use App\Services\Webhooks\WebhookDispatcher;
 use Illuminate\Support\Collection;

@@ -212,11 +212,14 @@ Route::middleware(['auth', 'verified', 'platform'])
 
         Route::middleware('can:announcements.view')->group(function (): void {
             Route::get('announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+            Route::get('announcements/{announcement}/recipients', [AnnouncementController::class, 'recipients'])
+                ->name('announcements.recipients');
         });
 
         Route::middleware('can:announcements.manage')->group(function (): void {
             Route::post('announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
             Route::post('announcements/{announcement}/send', [AnnouncementController::class, 'send'])->name('announcements.send');
+            Route::post('announcements/{announcement}/cancel-schedule', [AnnouncementController::class, 'cancelSchedule'])->name('announcements.cancel-schedule');
             Route::delete('announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
         });
 
