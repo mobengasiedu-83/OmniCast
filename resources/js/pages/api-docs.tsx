@@ -31,7 +31,7 @@ const SECTIONS = [
     { id: 'rate-limits', label: 'Rate limits' },
     { id: 'pagination', label: 'Pagination and filtering' },
     { id: 'endpoints', label: 'Endpoint index' },
-    { id: 'health', label: 'GET /health' },
+    { id: 'health', label: 'Liveness and readiness' },
     { id: 'me', label: 'GET /me' },
     { id: 'campaigns-list', label: 'GET /campaigns' },
     { id: 'campaigns-show', label: 'GET /campaigns/{id}' },
@@ -52,11 +52,12 @@ export default function ApiDocs() {
             eyebrow="API documentation · v1"
             intro={
                 <p>
-                    A versioned JSON API for reading campaigns, signed webhooks
-                    for reacting to delivery, and an SMPP listener for
-                    integrations that speak SMS natively. This reference
-                    documents the contract exactly as the application implements
-                    it.
+                    A versioned, client-scoped JSON API for reading campaigns,
+                    public liveness and readiness probes, signed webhooks and
+                    an SMPP listener. This reference documents the contract
+                    exactly as the application implements it; platform
+                    administration is handled in the web console, not through
+                    an Admin API.
                 </p>
             }
             sections={SECTIONS}
@@ -64,7 +65,7 @@ export default function ApiDocs() {
             <Section
                 id="overview"
                 title="Overview"
-                lead="One base URL, one credential type and a version that is part of the path."
+                lead="One versioned base URL for client integrations, plus public health probes."
             >
                 <FieldTable
                     columns={['Property', 'Value']}
@@ -116,9 +117,17 @@ export default function ApiDocs() {
                 </Para>
 
                 <Callout tone="note" title="Scope follows the token's owner">
-                    A token only ever sees the campaigns of the organisation its
-                    owner belongs to. There is no unauthenticated endpoint
-                    except the health probe.
+                    A token only ever sees the campaigns of the organisation
+                    its owner belongs to. The liveness and readiness probes
+                    are public; every other v1 endpoint requires authentication.
+                </Callout>
+
+                <Callout tone="note" title="Admin API scope">
+                    There is no separate platform-admin HTTP API in the current
+                    application. Platform staff use the authenticated admin
+                    console, where each screen is protected by platform
+                    membership and its required permission. Client API tokens
+                    do not grant admin access.
                 </Callout>
             </Section>
 
@@ -130,7 +139,7 @@ export default function ApiDocs() {
                 <Endpoint
                     method="AUTH"
                     path="Authorization: Bearer <token>"
-                    summary="Every /api/v1 request except GET /api/v1/health must carry a token."
+                    summary="Every /api/v1 request except GET /api/v1/health and GET /api/v1/health/ready must carry a token."
                 />
 
                 <FieldTable
@@ -167,7 +176,7 @@ export default function ApiDocs() {
             <Section
                 id="quickstart"
                 title="Quickstart"
-                lead="Six commands from nothing to a campaign list."
+                lead="Seven steps from a deployment check to a campaign record."
             >
                 <CodeBlock
                     title="Shell"
@@ -175,29 +184,32 @@ export default function ApiDocs() {
                     code={`# 1. Is the deployment up? (no token needed)
 curl -s ${productionOrigin}/api/v1/health
 
-# 2. Who does this token belong to?
+# 2. Are its critical dependencies ready? (no token needed)
+curl -s ${productionOrigin}/api/v1/health/ready
+
+# 3. Who does this token belong to?
 curl -s ${productionOrigin}/api/v1/me \\
   -H "Authorization: Bearer $OMNICAST_TOKEN"
 
-# 3. The first page of campaigns
+# 4. The first page of campaigns
 curl -s "${productionOrigin}/api/v1/campaigns?per_page=10" \\
   -H "Authorization: Bearer $OMNICAST_TOKEN"
 
-# 4. Only the ones that are running
+# 5. Only the ones that are running
 curl -s "${productionOrigin}/api/v1/campaigns?status=running" \\
   -H "Authorization: Bearer $OMNICAST_TOKEN"
 
-# 5. Search by name or reference
+# 6. Search by name or reference
 curl -s "${productionOrigin}/api/v1/campaigns?search=October" \\
   -H "Authorization: Bearer $OMNICAST_TOKEN"
 
-# 6. One campaign, by id
+# 7. One campaign, by id
 curl -s ${productionOrigin}/api/v1/campaigns/42 \\
   -H "Authorization: Bearer $OMNICAST_TOKEN"`}
                 />
 
                 <Para>
-                    The response to step 3 is a standard Laravel resource
+                    The response to step 4 is a standard Laravel resource
                     collection: a <Mono>data</Mono> array plus{' '}
                     <Mono>links</Mono> and <Mono>meta</Mono> for pagination.
                 </Para>
@@ -281,8 +293,13 @@ curl -s ${productionOrigin}/api/v1/campaigns/42 \\
                         ],
                         [
                             '429',
-                            'The per-token minute limit was exhausted.',
+                            'The configured token or IP rate limit was exhausted.',
                             'message: "Too Many Requests." plus a Retry-After header.',
+                        ],
+                        [
+                            '503',
+                            'A readiness check found a required dependency unavailable.',
+                            'status: "unavailable" with check names and statuses only.',
                         ],
                         [
                             '500',
@@ -330,8 +347,8 @@ curl -s ${productionOrigin}/api/v1/campaigns/42 \\
                         ['read + write', '30 requests per minute', 'token id'],
                         [
                             'unauthenticated',
-                            'IP based, and only the health probe is reachable',
-                            'ip address',
+                            'Only the public health probes are reachable. GET /health/ready uses the IP-based api limiter; GET /health has no explicit route throttle.',
+                            'IP address for readiness',
                         ],
                     ]}
                     caption="Both ceilings are configuration (API_RATE_LIMIT_READ and API_RATE_LIMIT_WRITE), so a deployment can raise them without a code change."
@@ -420,13 +437,19 @@ curl -s ${productionOrigin}/api/v1/campaigns/42 \\
             <Section
                 id="endpoints"
                 title="Endpoint index"
-                lead="Four routes in v1: one probe, one identity, and the read side of campaigns."
+                lead="Five routes in v1: two public health probes, one identity endpoint and two campaign reporting endpoints."
             >
                 <Endpoint
                     method="GET"
                     path="/api/v1/health"
                     summary="Liveness and the API version actually being served. No token required."
                     scope="public"
+                />
+                <Endpoint
+                    method="GET"
+                    path="/api/v1/health/ready"
+                    summary="Dependency readiness with safe check names and statuses. Returns 503 when a required dependency is unavailable; no token required."
+                    scope="public · throttled"
                 />
                 <Endpoint
                     method="GET"
@@ -457,8 +480,8 @@ curl -s ${productionOrigin}/api/v1/campaigns/42 \\
 
             <Section
                 id="health"
-                title="GET /api/v1/health"
-                lead="Point a monitoring probe here. No credential, no side effects."
+                title="Liveness and readiness checks"
+                lead="Use liveness to confirm the API process responds, and readiness to check its critical dependencies."
             >
                 <Endpoint
                     method="GET"
@@ -482,6 +505,58 @@ curl -s ${productionOrigin}/api/v1/campaigns/42 \\
                     running, not what a client was configured with — which is
                     the point of a probe that also reports a contract.
                 </Para>
+
+                <SubSection title="GET /api/v1/health/ready">
+                    <Endpoint
+                        method="GET"
+                        path="/api/v1/health/ready"
+                        summary="Checks database, cache, private storage, queue backend and Horizon applicability/status."
+                        scope="public · throttled"
+                    />
+
+                    <CodeBlock
+                        title="200 OK"
+                        language="json"
+                        code={`{
+  "status": "ok",
+  "checked_at": "2026-11-10T18:45:00+00:00",
+  "checks": [
+    { "name": "database", "status": "ok" },
+    { "name": "cache", "status": "ok" },
+    { "name": "storage", "status": "ok" },
+    { "name": "queue", "status": "ok" },
+    { "name": "horizon", "status": "not_applicable" }
+  ]
+}`}
+                    />
+
+                    <CodeBlock
+                        title="503 Service Unavailable"
+                        language="json"
+                        code={`{
+  "status": "unavailable",
+  "checked_at": "2026-11-10T18:45:00+00:00",
+  "checks": [
+    { "name": "database", "status": "failed" },
+    { "name": "cache", "status": "ok" },
+    { "name": "storage", "status": "ok" },
+    { "name": "queue", "status": "ok" },
+    { "name": "horizon", "status": "not_applicable" }
+  ]
+}`}
+                    />
+
+                    <Para>
+                        The list contains the same five check names. Horizon
+                        is <Mono>not_applicable</Mono> when the configured
+                        queue driver is not Redis; with Redis it must report a
+                        running Horizon master. The response intentionally
+                        omits exception text, configuration, credentials and
+                        runtime details. This endpoint runs dependency probes
+                        and is protected by the configured <Mono>api</Mono>{' '}
+                        rate limiter.
+                    </Para>
+                </SubSection>
             </Section>
 
             <Section
@@ -1364,11 +1439,15 @@ return response()->noContent();`}
                         rows={[
                             [
                                 '2026-11',
-                                'v1 published: GET /health, GET /me, GET /campaigns, GET /campaigns/{campaign}; eleven webhook events; SMPP listener documented.',
+                                'v1 published: GET /health, GET /health/ready, GET /me, GET /campaigns, GET /campaigns/{campaign}; eleven webhook events; SMPP listener documented.',
                             ],
                             [
                                 '2026-11',
                                 'Webhook payloads gained campaign.completed and the SMPP submission body.',
+                            ],
+                            [
+                                '2026-11',
+                                'Added the public, throttled GET /health/ready probe for dependency readiness; responses expose check names and statuses only.',
                             ],
                         ]}
                     />

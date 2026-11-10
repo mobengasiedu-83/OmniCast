@@ -15,7 +15,7 @@ import { apiBaseUrl } from '@/lib/urls';
 import { apiDocs } from '@/routes';
 
 /**
- * Everything a signed-in client user does inside OmniCast, screen by screen.
+ * Client workflows and the platform staff console, screen by screen.
  *
  * The chapter list drives the "On this page" rail, so a section and its entry
  * are added in the same edit: `id` is the anchor the rail links to.
@@ -34,10 +34,13 @@ const SECTIONS = [
     { id: 'delivery', label: 'Delivery and monitoring' },
     { id: 'wallet', label: 'Wallet, top-ups and invoices' },
     { id: 'reports', label: 'Reports and exports' },
+    { id: 'automations', label: 'Automation workflows' },
+    { id: 'support', label: 'Support and tickets' },
     { id: 'webhooks', label: 'Webhook subscriptions' },
     { id: 'api-tokens', label: 'API tokens' },
     { id: 'smpp', label: 'SMPP submissions' },
     { id: 'account', label: 'Your account and security' },
+    { id: 'platform-admin', label: 'Platform staff console' },
     { id: 'troubleshooting', label: 'Troubleshooting' },
     { id: 'glossary', label: 'Glossary' },
 ];
@@ -50,10 +53,11 @@ export default function UserManual() {
             eyebrow="User manual · every screen explained"
             intro={
                 <p>
-                    One workspace for SMS, voice and email broadcasting: import
-                    an audience, draft a campaign, reserve the credit, get it
-                    approved and watch delivery land recipient by recipient.
-                    This manual follows the product in the order you meet it.
+                    One workspace for SMS, voice and email broadcasting, plus
+                    the platform tools that operate it. This manual covers
+                    client workflows and the staff console; the menus and
+                    actions available to each person depend on their role and
+                    permissions.
                 </p>
             }
             sections={SECTIONS}
@@ -1402,6 +1406,123 @@ export default function UserManual() {
             </Section>
 
             <Section
+                id="automations"
+                title="Automation workflows"
+                lead="Run repeatable contact journeys from an event or schedule, then inspect each run."
+            >
+                <Steps
+                    items={[
+                        {
+                            title: 'Create a workflow',
+                            body: (
+                                <>
+                                    Open <Mono>Automation → Workflows</Mono>,
+                                    name the workflow and choose its trigger:
+                                    contact created, contact tagged, campaign
+                                    launched, campaign completed or a scheduled
+                                    time.
+                                </>
+                            ),
+                        },
+                        {
+                            title: 'Add and order steps',
+                            body: (
+                                <>
+                                    Add SMS or email sends, contact tag/list
+                                    changes, do-not-disturb changes, a
+                                    condition, a wait, a signed webhook call or
+                                    a stop. Use the move controls to put steps
+                                    in the order they should run.
+                                </>
+                            ),
+                        },
+                        {
+                            title: 'Enable and monitor',
+                            body: (
+                                <>
+                                    Save and enable the workflow. Open{' '}
+                                    <Mono>Automation runs</Mono> to filter
+                                    recent runs by workflow or status, then
+                                    open a run to see its step-by-step outcome.
+                                </>
+                            ),
+                        },
+                    ]}
+                />
+
+                <FieldTable
+                    columns={['Run status', 'Meaning']}
+                    rows={[
+                        ['Queued', 'The run is waiting for a worker.'],
+                        ['Running', 'A step is currently being processed.'],
+                        ['Waiting', 'A wait step will resume at its due time.'],
+                        ['Completed', 'The workflow reached its end or stop step.'],
+                        ['Failed', 'A step failed; inspect the run timeline for details.'],
+                        ['Cancelled', 'The workflow was disabled or automation was switched off.'],
+                    ]}
+                />
+
+                <Callout tone="warning" title="Review before enabling">
+                    Sends and contact-list changes happen in the background for
+                    matching contacts. Check the trigger, audience-related
+                    conditions, message content and ordering first. SMS and
+                    email still respect the account's approved sender and
+                    suppression rules.
+                </Callout>
+            </Section>
+
+            <Section
+                id="support"
+                title="Support and tickets"
+                lead="Use the support area to get help, follow a conversation or find an answer in the knowledge base."
+            >
+                <Steps
+                    items={[
+                        {
+                            title: 'Check the support overview',
+                            body: (
+                                <>
+                                    The overview summarizes open, resolved and
+                                    awaiting-your-reply tickets, shows recent
+                                    conversations and links to support contact
+                                    details and help articles.
+                                </>
+                            ),
+                        },
+                        {
+                            title: 'Create a ticket',
+                            body: (
+                                <>
+                                    Choose a category, describe what happened
+                                    and select a priority. You can optionally
+                                    link a campaign or wallet transaction and
+                                    attach supporting files.
+                                </>
+                            ),
+                        },
+                        {
+                            title: 'Follow up in one thread',
+                            body: (
+                                <>
+                                    Open <Mono>My tickets</Mono> to read agent
+                                    replies, download attachments, reply or
+                                    close a ticket. Replying to a settled ticket
+                                    reopens its conversation.
+                                </>
+                            ),
+                        },
+                    ]}
+                />
+
+                <Callout tone="tip" title="Help the support team investigate">
+                    Include the campaign reference or payment/transaction
+                    details, the time the issue occurred and the result you
+                    expected. Do not include passwords, API tokens or other
+                    secrets in a ticket.
+                </Callout>
+            </Section>
+
+            <Section
                 id="webhooks"
                 title="Webhook subscriptions"
                 lead="Push campaign and delivery events into your own systems instead of polling reports."
@@ -1746,6 +1867,10 @@ if (!fresh || !matches) {
                             'Your name, email address and the details shown to colleagues.',
                         ],
                         [
+                            'Notifications',
+                            'Filter the inbox by unread state or category, mark notices read or unread, and clear notifications that have already been read.',
+                        ],
+                        [
                             'Security',
                             'Password, two-factor authentication with recovery codes, and passkeys.',
                         ],
@@ -1784,6 +1909,112 @@ if (!fresh || !matches) {
                         'Two-factor authentication and passkeys are optional but recommended for anyone who can move money or launch campaigns.',
                     ]}
                 />
+            </Section>
+
+            <Section
+                id="platform-admin"
+                title="Platform staff console"
+                lead="For verified platform staff with the relevant permission. Client organisation administrators use the client settings and team screens instead."
+            >
+                <Callout tone="note" title="Menus are permission-gated">
+                    Admin access is limited to platform accounts and individual
+                    permissions. A missing menu usually means your account
+                    lacks the permission; ask a platform administrator to
+                    review access. Client roles cannot open platform admin
+                    screens.
+                </Callout>
+
+                <FieldTable
+                    columns={['Area', 'What staff can do']}
+                    rows={[
+                        [
+                            'Clients and registrations',
+                            'Review client registrations and compliance documents; activate, suspend, reactivate or archive organisations; manage service entitlements, client plans and resource requests.',
+                        ],
+                        [
+                            'Users and access',
+                            'Manage platform users and invitations, roles and permissions, sessions and login audit records.',
+                        ],
+                        [
+                            'Approvals',
+                            'Review campaigns, sender IDs, templates and compliance material. Follow the relevant approval screen for the decision and its recorded reason.',
+                        ],
+                        [
+                            'Settings and integrations',
+                            'Manage global settings, module availability, integrations, provider configuration, rate cards and rates. Check the scope before saving a platform-wide or client-specific override.',
+                        ],
+                        [
+                            'Billing',
+                            'Review and verify payments, manage wallet packages and dynamic pricing, and inspect invoices and rates.',
+                        ],
+                        [
+                            'Reports',
+                            'Review executive, client, channel, revenue and provider performance reports; create and retrieve permissioned exports.',
+                        ],
+                        [
+                            'Legal and announcements',
+                            'Publish legal document versions, review acceptances and compliance, and prepare or send platform announcements.',
+                        ],
+                        [
+                            'Support',
+                            'Work client tickets and public enquiries; manage categories, support teams, notification settings and knowledge-base content; review support reports.',
+                        ],
+                        [
+                            'Operations',
+                            'Check dependency health, queue depths and failed jobs; open the staff-only operations runbook; inspect webhook deliveries and SMPP accounts.',
+                        ],
+                    ]}
+                />
+
+                <SubSection title="Operational checks">
+                    <Steps
+                        items={[
+                            {
+                                title: 'Start at System health',
+                                body: (
+                                    <>
+                                        Check database, cache, private storage,
+                                        queue backend and Horizon status. The
+                                        readiness endpoint is a public probe;
+                                        it does not expose diagnostic messages
+                                        or runtime details.
+                                    </>
+                                ),
+                            },
+                            {
+                                title: 'Check Delivery queues',
+                                body: (
+                                    <>
+                                        Review queue depth and failed-job
+                                        counts. An unavailable count is
+                                        displayed as unknown, not as zero.
+                                        Follow the system page's runbook link
+                                        before retrying jobs or changing
+                                        production settings.
+                                    </>
+                                ),
+                            },
+                            {
+                                title: 'Escalate with references',
+                                body: (
+                                    <>
+                                        Use campaign, payment, webhook-delivery
+                                        or ticket references in an escalation.
+                                        Avoid copying credentials or message
+                                        contents into reports or tickets.
+                                    </>
+                                ),
+                            },
+                        ]}
+                    />
+                </SubSection>
+
+                <Callout tone="warning" title="No separate Admin API">
+                    The documented HTTP API is for client-scoped reporting and
+                    integration use. Platform administration is performed in
+                    the authenticated web console; API tokens do not grant
+                    access to admin screens.
+                </Callout>
             </Section>
 
             <Section

@@ -109,7 +109,7 @@ export default function DocShell({
                     <p className="text-sm leading-relaxed text-muted-foreground">
                         {isManual
                             ? 'The HTTP API, webhooks and the SMPP listener are documented endpoint by endpoint, with request and response samples.'
-                            : 'The manual walks through every screen: contacts, audiences, campaigns, approvals, the wallet and reports.'}
+                            : 'The manual covers client workflows and the platform staff console, including contacts, campaigns, approvals, billing, support and operations.'}
                     </p>
                 </div>
                 <Button variant="outline" asChild>

@@ -131,6 +131,18 @@ it('shows the queue topology to platform administrators', function (): void {
             ->has('totals.failed'));
 });
 
+it('reports queue depth as unavailable when the backend cannot be read', function (): void {
+    Queue::shouldReceive('size')->andThrow(new RuntimeException('queue backend unavailable'));
+
+    $this->actingAs(platformUser())
+        ->withoutVite()
+        ->get(route('admin.queues.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('queues.0.queued', null)
+            ->where('totals.queued', null));
+});
+
 it('forbids client users from the queue topology', function (): void {
     [, , $clientUser] = clientWithWallet();
 

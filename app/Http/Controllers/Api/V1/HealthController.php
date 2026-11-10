@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\Operations\OperationalHealth;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -24,5 +25,25 @@ class HealthController extends Controller
             'version' => (string) config('api.version', 'v1'),
             'time' => now()->toIso8601String(),
         ]);
+    }
+
+    /**
+     * Report whether critical application dependencies are ready.
+     */
+    public function ready(OperationalHealth $health): JsonResponse
+    {
+        $report = $health->report();
+
+        return response()->json([
+            'status' => $report['status'],
+            'checked_at' => $report['checked_at'],
+            'checks' => array_map(
+                fn (array $check): array => [
+                    'name' => $check['key'],
+                    'status' => $check['status'],
+                ],
+                $report['checks'],
+            ),
+        ], $report['status'] === 'ok' ? 200 : 503);
     }
 }

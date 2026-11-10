@@ -35,7 +35,7 @@ type PageProps = {
     };
     queues: DeliveryQueueRow[];
     channels: DeliveryChannelRow[];
-    totals: { queued: number; failed: number };
+    totals: { queued: number | null; failed: number | null };
 };
 
 /**
@@ -59,7 +59,13 @@ export default function AdminQueues({
                     description="Every queue the dispatcher releases work onto, with the worker pool, throughput ceiling and retry policy that owns it."
                     badge={
                         <StatusBadge
-                            status={totals.failed > 0 ? 'failed' : 'running'}
+                            status={
+                                totals.failed === null || totals.queued === null
+                                    ? 'queued'
+                                    : totals.failed > 0
+                                      ? 'failed'
+                                      : 'running'
+                            }
                             label={`${connection.driver} · ${connection.name}`}
                         />
                     }
@@ -81,17 +87,31 @@ export default function AdminQueues({
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         title="Waiting jobs"
-                        value={totals.queued}
-                        description="Queued across every delivery queue"
+                        value={totals.queued ?? 'Unavailable'}
+                        description={
+                            totals.queued === null
+                                ? 'Queue backend could not be read'
+                                : 'Queued across every delivery queue'
+                        }
                         icon={Layers}
                         tone="brand"
                     />
                     <StatCard
                         title="Failed jobs"
-                        value={totals.failed}
-                        description={`Pruned after ${connection.scheduler.failed_prune_after_hours}h`}
+                        value={totals.failed ?? 'Unavailable'}
+                        description={
+                            totals.failed === null
+                                ? 'Failed-job store could not be read'
+                                : `Pruned after ${connection.scheduler.failed_prune_after_hours}h`
+                        }
                         icon={TriangleAlert}
-                        tone={totals.failed > 0 ? 'danger' : 'success'}
+                        tone={
+                            totals.failed === null
+                                ? 'neutral'
+                                : totals.failed > 0
+                                  ? 'danger'
+                                  : 'success'
+                        }
                     />
                     <StatCard
                         title="Active channels"
@@ -165,10 +185,18 @@ export default function AdminQueues({
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">
-                                            {queue.queued}
+                                            {queue.queued ?? (
+                                                <span className="text-muted-foreground">
+                                                    Unavailable
+                                                </span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right tabular-nums">
-                                            {queue.failed > 0 ? (
+                                            {queue.failed === null ? (
+                                                <span className="text-muted-foreground">
+                                                    Unavailable
+                                                </span>
+                                            ) : queue.failed > 0 ? (
                                                 <span className="font-medium text-destructive">
                                                     {queue.failed}
                                                 </span>

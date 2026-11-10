@@ -54,10 +54,26 @@ class QueueController extends Controller
             'queues' => $queues,
             'channels' => $this->channels(),
             'totals' => [
-                'queued' => array_sum(array_map(fn (array $queue): int => $queue['queued'], $queues)),
-                'failed' => array_sum(array_map(fn (array $queue): int => $queue['failed'], $queues)),
+                'queued' => $this->total($queues, 'queued'),
+                'failed' => $this->total($queues, 'failed'),
             ],
         ]);
+    }
+
+    /**
+     * Do not present an unreadable queue count as an empty queue.
+     *
+     * @param  list<array<string, mixed>>  $queues
+     */
+    protected function total(array $queues, string $key): ?int
+    {
+        $values = array_column($queues, $key);
+
+        if (in_array(null, $values, true)) {
+            return null;
+        }
+
+        return array_sum($values);
     }
 
     /**
@@ -101,26 +117,30 @@ class QueueController extends Controller
     }
 
     /**
-     * The number of jobs waiting on a queue, or null when it cannot be read.
+     * The number of jobs waiting on a queue, or null when the backend cannot be read.
      */
-    protected function queued(string $name): int
+    protected function queued(string $name): ?int
     {
         try {
             return (int) Queue::size($name);
-        } catch (Throwable) {
-            return 0;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return null;
         }
     }
 
     /**
      * The number of jobs that failed on a queue and are waiting on a decision.
      */
-    protected function failed(string $name): int
+    protected function failed(string $name): ?int
     {
         try {
             return (int) DB::table('failed_jobs')->where('queue', $name)->count();
-        } catch (Throwable) {
-            return 0;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return null;
         }
     }
 

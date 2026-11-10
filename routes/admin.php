@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\SupportCategoryController;
 use App\Http\Controllers\Admin\SupportController;
 use App\Http\Controllers\Admin\SupportTeamController;
 use App\Http\Controllers\Admin\SupportTicketController;
+use App\Http\Controllers\Admin\SystemController;
 use App\Http\Controllers\Admin\TemplateApprovalController;
 use App\Http\Controllers\Admin\TemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\TemplateUsageController;
@@ -92,6 +93,8 @@ Route::middleware(['auth', 'verified', 'platform'])
         });
 
         Route::middleware('can:queues.view')->group(function (): void {
+            Route::get('system', [SystemController::class, 'index'])->name('system.index');
+            Route::get('system/runbook', [SystemController::class, 'runbook'])->name('system.runbook');
             Route::get('queues', [QueueController::class, 'index'])->name('queues.index');
         });
 

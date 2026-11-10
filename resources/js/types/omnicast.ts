@@ -1104,8 +1104,8 @@ export type DeliveryQueueRow = {
     tries: number;
     backoff: string;
     timeout: string;
-    queued: number;
-    failed: number;
+    queued: number | null;
+    failed: number | null;
 };
 
 export type DeliveryChannelRow = {

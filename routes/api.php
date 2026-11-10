@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('v1/health', HealthController::class)->name('api.v1.health');
+Route::get('v1/health/ready', [HealthController::class, 'ready'])
+    ->middleware('throttle:api')
+    ->name('api.v1.health.ready');
 
 Route::middleware(['auth:sanctum', 'throttle:api'])
     ->prefix('v1')

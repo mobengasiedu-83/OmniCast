@@ -62,6 +62,7 @@ import {
 import { urls } from '@/lib/urls';
 import clients from '@/routes/admin/clients';
 import registrations from '@/routes/admin/client-registrations';
+import systemRoutes from '@/routes/admin/system';
 import type { Auth, ModuleAvailability, ModuleKey, NavItem } from '@/types';
 
 const platformNavItems: NavItem[] = [
@@ -222,6 +223,11 @@ const identityNavItems: NavItem[] = [
 ];
 
 const operationsNavItems: NavItem[] = [
+    {
+        title: 'System health',
+        href: systemRoutes.index.url(),
+        icon: ServerCog,
+    },
     {
         title: 'Delivery queues',
         href: urls.admin.queues.index,
