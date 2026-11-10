@@ -7,12 +7,15 @@ use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\EnsurePlatformUser;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequestLogContext;
 use App\Http\Middleware\VerifyTurnstile;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Inertia\ExceptionResponse;
+use Inertia\Inertia;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -45,6 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            RequestLogContext::class,
             HandleAppearance::class,
             EnsureAccountIsActive::class,
             HandleInertiaRequests::class,
@@ -55,4 +59,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        Inertia::handleExceptionsUsing(function (ExceptionResponse $response): ?ExceptionResponse {
+            $status = $response->statusCode();
+
+            if (
+                $response->request->is('api/*')
+                || $response->request->expectsJson()
+                || ! in_array($status, [403, 404, 419, 429, 500], true)
+            ) {
+                return null;
+            }
+
+            return $response->render('error', ['status' => $status]);
+        });
     })->create();

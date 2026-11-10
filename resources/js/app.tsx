@@ -24,6 +24,7 @@ void createInertiaApp({
             case name === 'help/index':
             case name === 'help/show':
                 return MarketingLayout;
+            case name === 'error':
             case name === 'contacts/dnd':
                 return null;
             case name.startsWith('auth/'):

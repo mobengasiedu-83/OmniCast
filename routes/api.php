@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthenticatedUserController;
 use App\Http\Controllers\Api\V1\CampaignController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Middleware\RequestLogContext;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,12 +18,14 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('v1/health', HealthController::class)->name('api.v1.health');
+Route::get('v1/health', HealthController::class)
+    ->middleware(RequestLogContext::class)
+    ->name('api.v1.health');
 Route::get('v1/health/ready', [HealthController::class, 'ready'])
-    ->middleware('throttle:api')
+    ->middleware(['throttle:api', RequestLogContext::class])
     ->name('api.v1.health.ready');
 
-Route::middleware(['auth:sanctum', 'throttle:api'])
+Route::middleware(['auth:sanctum', 'throttle:api', RequestLogContext::class])
     ->prefix('v1')
     ->name('api.v1.')
     ->group(function (): void {

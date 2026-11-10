@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\CampaignContactStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
+use App\Enums\ClientStatus;
 use App\Models\Campaign;
 use App\Models\CampaignContact;
+use App\Models\Client;
 use App\Models\Contact;
 use App\Models\User;
 use App\Services\ModuleAvailability;
@@ -32,6 +34,22 @@ class DashboardController extends Controller
 
         /** @var User $user */
         $user = $request->user();
+
+        if ($user->isPlatformUser()) {
+            return Inertia::render('admin/dashboard', [
+                'stats' => [
+                    'clients' => Client::query()->count(),
+                    'pending_clients' => Client::query()
+                        ->where('status', ClientStatus::Pending->value)
+                        ->count(),
+                    'campaigns' => Campaign::query()->count(),
+                    'pending_campaigns' => Campaign::query()
+                        ->where('status', CampaignStatus::PendingApproval->value)
+                        ->count(),
+                ],
+            ]);
+        }
+
         $campaigns = Campaign::query()->forUser($user);
 
         $wallet = $user->client !== null ? $this->wallets->walletFor($user->client) : null;
