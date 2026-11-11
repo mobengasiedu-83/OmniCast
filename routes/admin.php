@@ -37,6 +37,7 @@ use App\Http\Controllers\Admin\TemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\TemplateUsageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WebhookController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -54,6 +55,8 @@ Route::middleware(['auth', 'verified', 'platform'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function (): void {
+        Route::get('/', DashboardController::class)->name('dashboard');
+
         Route::middleware('can:users.manage')->group(function (): void {
             Route::get('users', [UserController::class, 'index'])->name('users.index');
             Route::post('users', [UserController::class, 'store'])->name('users.store');
@@ -126,6 +129,8 @@ Route::middleware(['auth', 'verified', 'platform'])
 
             Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
             Route::put('packages/{package}', [PackageController::class, 'update'])->name('packages.update');
+            Route::patch('packages/{package}/details', [PackageController::class, 'updateDetails'])
+                ->name('packages.details.update');
 
             Route::get('pricing', [AdminPricingController::class, 'index'])->name('pricing.index');
             Route::put('pricing', [AdminPricingController::class, 'update'])->name('pricing.update');

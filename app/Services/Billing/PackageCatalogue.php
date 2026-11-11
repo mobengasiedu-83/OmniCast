@@ -5,6 +5,7 @@ namespace App\Services\Billing;
 use App\Models\PlatformSetting;
 use App\Models\User;
 use App\Services\PlatformConfiguration;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The "top up your wallet" catalogue from `config/billing.php`.
@@ -13,11 +14,10 @@ use App\Services\PlatformConfiguration;
  * the package price, and the per-service allocation says how far that price
  * stretches on SMS, voice and email.
  *
- * Whether a package is on sale is decided per package: the `enabled` flag in
- * the configuration is the default, and a `billing.<key>.enabled` platform
- * setting — written by the Admin → Wallet packages screen — overrides it. A
- * hidden package keeps its price and allocation but leaves the price list and
- * is refused at checkout.
+ * Configuration defines package defaults. The Admin → Wallet packages screen
+ * stores detail overrides and per-package availability as `billing` platform
+ * settings, so edits survive a deployment. A hidden package keeps its price
+ * and allocation but leaves the price list and is refused at checkout.
  */
 class PackageCatalogue
 {
@@ -25,6 +25,20 @@ class PackageCatalogue
      * The platform setting group that records package availability.
      */
     private const SETTINGS_GROUP = 'billing';
+
+    /**
+     * Fields stored as persistent package overrides.
+     *
+     * @var list<string>
+     */
+    private const EDITABLE_FIELDS = ['name', 'price', 'popular', 'tagline'];
+
+    /**
+     * Billable services that may have an explicit package allocation.
+     *
+     * @var list<string>
+     */
+    private const PACKAGE_SERVICES = ['sms', 'voice', 'email'];
 
     public function __construct(
         protected PlatformConfiguration $configuration,
@@ -206,6 +220,46 @@ class PackageCatalogue
     }
 
     /**
+     * Persist editable package details without freezing rate-derived allocations.
+     *
+     * @param  array{
+     *     name: string,
+     *     price: float,
+     *     popular: bool,
+     *     tagline: string,
+     *     units?: array{sms: int, voice: int, email: int}
+     * }  $details
+     */
+    public function setDetails(string $key, array $details, ?User $user = null): void
+    {
+        $values = [
+            'name' => $details['name'],
+            'price' => number_format(round($details['price'], 2), 2, '.', ''),
+            'popular' => $details['popular'] ? '1' : '0',
+            'tagline' => $details['tagline'],
+        ];
+
+        if (isset($details['units'])) {
+            foreach (self::PACKAGE_SERVICES as $service) {
+                $values['units.'.$service] = (string) $details['units'][$service];
+            }
+        }
+
+        DB::transaction(function () use ($key, $values, $user): void {
+            foreach ($values as $field => $value) {
+                $setting = PlatformSetting::query()->firstOrNew([
+                    'group' => self::SETTINGS_GROUP,
+                    'key' => $key.'.'.$field,
+                ]);
+                $setting->value = $value;
+                $setting->is_secret = false;
+                $setting->updated_by = $user?->id;
+                $setting->save();
+            }
+        });
+    }
+
+    /**
      * The line written on the payment, ledger entry and invoice.
      */
     public function describe(string $key): string
@@ -243,7 +297,7 @@ class PackageCatalogue
     }
 
     /**
-     * The raw catalogue as configured.
+     * The catalogue defaults with persistent platform overrides applied.
      *
      * @return array<string, array{name: string, price: float, popular?: bool, tagline?: string, units?: array<string, int>, enabled?: bool}>
      */
@@ -251,7 +305,64 @@ class PackageCatalogue
     {
         $packages = config('billing.packages', []);
 
-        return is_array($packages) ? $packages : [];
+        if (! is_array($packages) || $packages === []) {
+            return [];
+        }
+
+        $fields = [
+            ...self::EDITABLE_FIELDS,
+            ...array_map(fn (string $service): string => 'units.'.$service, self::PACKAGE_SERVICES),
+        ];
+        $settingKeys = [];
+
+        foreach (array_keys($packages) as $key) {
+            foreach ($fields as $field) {
+                $settingKeys[] = (string) $key.'.'.$field;
+            }
+        }
+
+        $overrides = PlatformSetting::query()
+            ->where('group', self::SETTINGS_GROUP)
+            ->whereIn('key', $settingKeys)
+            ->get(['key', 'value'])
+            ->mapWithKeys(fn (PlatformSetting $setting): array => [$setting->key => $setting->value])
+            ->all();
+
+        foreach ($packages as $key => $package) {
+            $prefix = (string) $key.'.';
+
+            foreach (self::EDITABLE_FIELDS as $field) {
+                $settingKey = $prefix.$field;
+
+                if (! array_key_exists($settingKey, $overrides)) {
+                    continue;
+                }
+
+                $package[$field] = match ($field) {
+                    'price' => (float) $overrides[$settingKey],
+                    'popular' => (bool) filter_var($overrides[$settingKey], FILTER_VALIDATE_BOOL),
+                    default => (string) $overrides[$settingKey],
+                };
+            }
+
+            $units = is_array($package['units'] ?? null) ? $package['units'] : [];
+
+            foreach (self::PACKAGE_SERVICES as $service) {
+                $settingKey = $prefix.'units.'.$service;
+
+                if (array_key_exists($settingKey, $overrides)) {
+                    $units[$service] = (int) $overrides[$settingKey];
+                }
+            }
+
+            if ($units !== []) {
+                $package['units'] = $units;
+            }
+
+            $packages[$key] = $package;
+        }
+
+        return $packages;
     }
 
     /**

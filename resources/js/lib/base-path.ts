@@ -11,7 +11,9 @@
  * same variable to rewrite the root-relative route URLs that Wayfinder
  * generates, so a rebuild is required after changing it.
  */
-export const appBasePath = (import.meta.env.VITE_APP_BASE_PATH ?? '').replace(
+export const appBasePath = (
+    import.meta.env.VITE_APP_BASE_PATH ?? '/gwosevo-omnicast/public'
+).replace(
     /\/+$/,
     '',
 );
