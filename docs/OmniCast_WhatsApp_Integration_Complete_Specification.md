@@ -20,7 +20,7 @@ This document defines the architecture, implementation plan, operational control
 
 This scope includes provider connections, WABA and sender assignment, approved template synchronization, campaign creation, segmentation, opt-in evidence, queue-based sending, message logs, delivery events, reporting, wallet funding, rate-card management, markup, reconciliation, security, and operations.
 
-Phase 1 supports outbound approved-template messaging documented by Pro Plus. Inbound chat and template-submission capabilities remain conditional on additional provider APIs and clear compliance controls.
+The initial release supports outbound approved-template messaging documented by Pro Plus. Inbound chat and template-submission capabilities remain conditional on additional provider APIs and clear compliance controls.
 
 ## 2. Architecture and deployment
 
@@ -374,19 +374,142 @@ Implement retention, deletion/export workflows, audit trails, backup/restore, se
 
 Do not expose inbound chat or free-form reply features until provider confirmation, consent, and service-window controls are in place.
 
-## 15. Implementation roadmap and gates
+## 15. Phased implementation plan
 
-| Phase | Deliverables / exit gate |
-| --- | --- |
-| 1 — Foundation | WhatsApp module, migrations, roles, encrypted settings, tested Pro Plus authentication and connector retrieval |
-| 2 — Connectors & Templates | WABA assignment, template sync, statuses, previews, validated template variable schemas |
-| 3 — Contacts & Campaigns | Consent, imports, groups, campaign wizard, snapshots, schedules, and test sends |
-| 4 — Dispatch Engine | Queues, throttling, idempotency strategy, retries, unknown outcomes, pause/resume |
-| 5 — Pricing & Unified Wallet | Meta rate import, markup, FX, provider fees, shared wallet reservations, Paystack top-ups, atomic ledger |
-| 6 — Status & Reconciliation | Provider callback usage contract, event ingestion, delivered-message settlement, financial reports |
-| 7 — QA & Launch | Tenant security, load tests, failure recovery, monitoring, pilot clients, go/no-go checklist |
+Sections 2–14 define the target architecture, product behavior, and control requirements. The phases below turn those requirements into a sequenced delivery plan. Each phase has a completion gate; do not progress to production use of a capability until its gate and relevant acceptance tests pass.
 
-Indicative delivery: 9–10 weeks with an experienced focused team, dependent on provider documentation and commercial agreements. Feature flags should hide unsupported delivery/read or two-way features until they are validated.
+Some work can proceed in parallel after its dependencies are met. Provider-dependent features must remain disabled until Pro Plus confirms the required API and commercial contracts.
+
+### Phase 0 — Provider discovery and delivery planning
+
+**Goal:** Resolve external dependencies early so implementation is based on verified provider behavior rather than assumptions.
+
+**Work items:**
+
+- Obtain sandbox credentials and the actual API base URL.
+- Confirm authentication, request encoding, endpoint limits, response schemas, error codes, recipient limits, and throughput limits.
+- Confirm connector and sender ownership/assignment rules and template status semantics.
+- Request webhook or status-callback specifications, message ID semantics, idempotency behavior, and reconciliation options.
+- Confirm media requirements, provider fetch timing, supported formats and limits.
+- Obtain provider fees, invoice format, billing basis, and any inbound messaging or template-submission contracts.
+- Verify current Meta rate-card sources, recipient-market mapping, applicable exceptions, and the intended FX source.
+- Record unresolved items as launch blockers; do not infer missing contracts from successful HTTP responses.
+
+**Exit gate:** A reviewed provider contract and sandbox test plan are available. Any unavailable callback, billing, inbound, or template-submission feature is explicitly out of initial-release scope.
+
+### Phase 1 — Foundation and platform integration
+
+**Goal:** Establish the WhatsApp module and shared platform foundations without changing existing channel behavior.
+
+**Work items:**
+
+- Add the WhatsApp domain structure, migrations, models, tenant relationships, and required indexes.
+- Define the `WhatsAppProvider` contract and the Pro Plus adapter boundary.
+- Add provider configuration with encrypted credentials, connection status, timeouts, and tested-at tracking.
+- Add granular permissions, policies, audit events, and tenant-isolation rules.
+- Establish request correlation, credential/OTP redaction, response normalization, and error classification.
+- Configure WhatsApp queue names and worker conventions alongside existing infrastructure.
+- Reuse existing users, clients, contacts, payments, storage, notifications, Redis, and Horizon where applicable.
+
+**Exit gate:** Schema and authorization tests pass; credentials are encrypted and excluded from logs; existing channel behavior remains unchanged.
+
+### Phase 2 — Provider connection, connectors, templates, and media
+
+**Goal:** Make approved sender accounts and template data available to the application.
+
+**Work items:**
+
+- Implement and sandbox-test Pro Plus authentication and connector retrieval.
+- Add provider, WABA, sender, and client-connector assignment management.
+- Synchronize templates and their statuses, languages, categories, components, and versions.
+- Validate template variables and supported fixed, body-variable, header-variable, media, location, custom-payload, and OTP formats.
+- Add template preview and approval-state handling; allow only approved templates for campaign use.
+- Integrate the existing media library with WhatsApp-specific MIME/size validation and per-client authorization.
+- Provide controlled HTTPS media access and verify remote retrieval without exposing private library assets.
+
+**Exit gate:** A permitted client can view its assigned connectors and approved templates; payload validation and provider-retrievable media tests pass in the sandbox.
+
+### Phase 3 — Consent, contacts, and campaign authoring
+
+**Goal:** Prepare eligible, auditable campaign recipients and campaign definitions.
+
+**Work items:**
+
+- Record WhatsApp consent by client, purpose, source, wording, and timestamp; support revocation and suppression.
+- Add contact import, groups, tags, segmentation, normalization, deduplication, and global/client suppression checks.
+- Build campaign creation for sender, approved template, audience, variable mapping, optional media, schedule, and time zone.
+- Create immutable recipient snapshots and validate required variables and phone numbers.
+- Recheck consent and suppression immediately before dispatch.
+- Add cost estimation and clear eligibility/error previews before the user schedules or sends.
+- Support draft, clone, test-send, and schedule workflows.
+
+**Exit gate:** Campaign validation produces a reproducible recipient snapshot; ineligible, suppressed, or non-consenting recipients cannot be dispatched.
+
+### Phase 4 — Dispatch engine and operational controls
+
+**Goal:** Send eligible messages reliably while avoiding accidental duplicate sends.
+
+**Work items:**
+
+- Implement prepare, batch-dispatch, and send jobs on the agreed priority queues.
+- Add per-provider, connector, and client rate limits using Redis.
+- Implement timeouts, retry classification, exponential backoff with jitter, and idempotency protections.
+- Represent ambiguous provider outcomes as `Unknown` and hold them for reconciliation instead of blindly retrying.
+- Add pause, resume, cancellation, sending windows, and per-recipient attempt history.
+- Add queue health checks, API latency and queue-delay metrics, and operational alerts.
+- Initially exercise dispatch in the sandbox and with controlled test sends.
+
+**Exit gate:** Sandbox and controlled test sends demonstrate throttling, safe retry behavior, no duplicate dispatch on retry, and effective pause/cancel controls.
+
+### Phase 5 — Pricing, unified wallet, and reservations
+
+**Goal:** Quote and reserve customer funds accurately while preserving existing package balances.
+
+**Work items:**
+
+- Implement effective-dated rate cards, recipient-market lookup, category mapping, FX snapshots, provider fees, markup, rounding, and approval controls.
+- Clearly mark illustrative rates as unverified until the current official rate card and provider charges are confirmed.
+- Reuse the unified wallet and existing Paystack top-up flow; do not require a separate WhatsApp bundle.
+- Preserve package-specific channel units and apply existing package-first rules where relevant.
+- Implement atomic wallet reservations, immutable ledger entries, settlement references, and financial adjustment permissions.
+- Snapshot the applied price inputs for every estimate and billable message.
+- Define reservation handling and exception deadlines for unresolved `Unknown` outcomes.
+
+**Exit gate:** Pricing calculations are reviewed against approved rate inputs; concurrent reservation tests prevent overspending; WhatsApp charges do not consume unrelated package units.
+
+### Phase 6 — Delivery events, settlement, and reconciliation
+
+**Goal:** Tie message and financial outcomes to evidence from the provider.
+
+**Work items:**
+
+- Implement verified webhook/status ingestion only when the provider supplies and supports the contract.
+- Persist and deduplicate provider events; correlate provider IDs and prevent stale events from regressing message state.
+- Map provider evidence to internal statuses such as `Accepted`, `Sent`, `Delivered`, `Read`, `Failed`, and `Unknown`.
+- Settle billable usage using the saved rate snapshot and the confirmed billing evidence.
+- Release unused reservations and retain unresolved reservations according to the agreed exception policy.
+- Ingest provider invoices or usage records and report reconciliation differences for review.
+- Add traceable message, event, usage, ledger, and invoice histories.
+
+**Exit gate:** Delivery and billable records have traceable provider evidence; duplicate events cannot double-settle; invoice variances are visible and never silently written off. If provider callbacks or usage evidence are unavailable, delivery-dependent billing remains blocked.
+
+### Phase 7 — Portals, reporting, compliance, and launch readiness
+
+**Goal:** Expose the validated capabilities to administrators and clients and prepare for production operation.
+
+**Work items:**
+
+- Add admin views for providers, connectors, templates, campaigns, messages, pricing, wallet activity, compliance, and operations.
+- Add client views for campaign management, approved templates, contacts, assigned senders, messages, wallet usage, reports, and eligible media.
+- Add delivery, usage, cost, revenue, margin, provider-health, and reconciliation reports with tenant-safe exports.
+- Complete retention, deletion/export, audit, backup/restore, secret rotation, least-privilege, and alerting procedures.
+- Run tenant-isolation, load, concurrency, failure-recovery, media-access, and end-to-end billing tests.
+- Pilot with approved clients, review operational metrics and reconciliation, and complete a documented go/no-go.
+- Keep unsupported inbound, read-status, delivery-status, or template-submission features hidden behind feature flags.
+
+**Exit gate:** All applicable production release checklist items in Section 16 pass; provider and commercial blockers are resolved or the affected features remain disabled.
+
+**Indicative delivery:** 9–10 weeks with an experienced focused team, subject to provider access, commercial agreements, and the outcomes of Phase 0. Parallel work may change calendar duration but must not bypass phase exit gates.
 
 ## 16. Acceptance tests and production release checklist
 
