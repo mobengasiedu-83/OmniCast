@@ -93,6 +93,9 @@ export default function Dashboard({
     channelBreakdown,
     recentCampaigns,
 }: PageProps) {
+    const availableChannels = Array.isArray(channelBreakdown)
+        ? channelBreakdown
+        : [];
     const overview = [
         {
             title: 'Campaigns',
@@ -124,7 +127,7 @@ export default function Dashboard({
         },
     ];
 
-    const channelTotal = channelBreakdown.reduce(
+    const channelTotal = availableChannels.reduce(
         (total, row) => total + row.total,
         0,
     );
@@ -391,12 +394,12 @@ export default function Dashboard({
                             </CardHeader>
 
                             <CardContent className="space-y-3.5">
-                                {channelBreakdown.length === 0 ? (
+                                {availableChannels.length === 0 ? (
                                     <p className="text-sm text-muted-foreground">
                                         No campaigns yet.
                                     </p>
                                 ) : (
-                                    channelBreakdown.map((row) => {
+                                    availableChannels.map((row) => {
                                         const share =
                                             channelTotal === 0
                                                 ? 0

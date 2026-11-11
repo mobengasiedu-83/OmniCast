@@ -104,6 +104,7 @@ class DashboardController extends Controller
                     ->values()
                     ->all(),
                 'channelBreakdown' => collect(Channel::cases())
+                    ->filter(fn (Channel $channel): bool => $this->modules->allowsChannel($channel))
                     ->map(fn (Channel $channel): array => [
                         'channel' => $channel->value,
                         'label' => $channel->label(),

@@ -96,8 +96,7 @@ const documentationNavItems: NavItem[] = [
 const messagingNavItems = (modules: ModuleAvailability): NavItem[] => {
     const enabled = (module: ModuleKey): boolean => modules?.[module] ?? true;
     const anyModule = enabled('sms') || enabled('voice') || enabled('email');
-
-    return [
+    const items: NavItem[] = [
         {
             title: 'Campaigns',
             href: urls.campaigns.index,
@@ -113,16 +112,20 @@ const messagingNavItems = (modules: ModuleAvailability): NavItem[] => {
                     href: urls.contacts.index,
                     icon: Users,
                 },
-                {
-                    title: 'Audiences',
-                    href: urls.contacts.audiences,
-                    icon: Tags,
-                },
-                {
-                    title: 'DND',
-                    href: urls.contacts.dndRegistry,
-                    icon: ShieldBan,
-                },
+                ...(enabled('sms')
+                    ? [
+                          {
+                              title: 'Audiences',
+                              href: urls.contacts.audiences,
+                              icon: Tags,
+                          },
+                          {
+                              title: 'DND',
+                              href: urls.contacts.dndRegistry,
+                              icon: ShieldBan,
+                          },
+                      ]
+                    : []),
             ],
         },
         ...(anyModule
@@ -162,6 +165,8 @@ const messagingNavItems = (modules: ModuleAvailability): NavItem[] => {
               ]
             : []),
     ];
+
+    return items.filter((item) => item.title !== 'Contacts' || anyModule);
 };
 
 const identityNavItems: NavItem[] = [

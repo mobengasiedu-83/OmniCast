@@ -83,6 +83,24 @@ it('closes a switched-off module to its tenants even when they are entitled', fu
             ->where('channels', fn ($channels): bool => collect($channels)->pluck('value')->doesntContain('email')));
 });
 
+it('keeps unrelated dashboard routes available when a module is switched off platform-wide', function (): void {
+    [, , $user] = clientWithWallet();
+
+    PlatformSetting::query()->create([
+        'group' => 'channels',
+        'key' => ClientService::Email->value.'.enabled',
+        'value' => '0',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('modules.email', false)
+            ->has('channelBreakdown', 3));
+});
+
 it('drops a module the tenant switched off from its own screens', function (): void {
     [$client, , $user] = clientWithWallet();
 
