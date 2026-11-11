@@ -6,6 +6,7 @@ use App\Enums\OrganisationDpaStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -76,6 +77,16 @@ class OrganisationDpa extends Model
     public function version(): BelongsTo
     {
         return $this->belongsTo(LegalDocumentVersion::class, 'legal_document_version_id');
+    }
+
+    /**
+     * Private, append-only copies of countersigned agreements.
+     *
+     * @return HasMany<OrganisationDpaEvidence, $this>
+     */
+    public function evidence(): HasMany
+    {
+        return $this->hasMany(OrganisationDpaEvidence::class);
     }
 
     /**

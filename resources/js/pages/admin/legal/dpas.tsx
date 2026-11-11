@@ -23,6 +23,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    downloadEvidence,
+    storeEvidence,
+} from '@/actions/App/Http/Controllers/Admin/OrganisationDpaController';
 import { badgeTone } from '@/lib/tone';
 import { urls } from '@/lib/urls';
 import type { Paginated, SelectOption } from '@/types';
@@ -40,6 +44,14 @@ type DpaRow = {
     requested_at: string | null;
     signed_at: string | null;
     notes: string | null;
+    evidence: {
+        id: number;
+        name: string;
+        size_bytes: number;
+        sha256: string;
+        uploaded_at: string | null;
+        uploaded_by: string | null;
+    }[];
 };
 
 type PageProps = {
@@ -242,6 +254,9 @@ function DpaRowForm({
         signed_at: row.signed_at ? row.signed_at.slice(0, 10) : '',
         notes: row.notes ?? '',
     });
+    const evidenceForm = useForm<{ document: File | null }>({
+        document: null,
+    });
 
     const submit = (event: FormEvent): void => {
         event.preventDefault();
@@ -249,6 +264,17 @@ function DpaRowForm({
             preserveScroll: true,
             onSuccess: () => setEditing(false),
         });
+    };
+
+    const uploadEvidence = (event: FormEvent): void => {
+        event.preventDefault();
+        evidenceForm.post(
+            storeEvidence.url(row.client_id),
+            {
+                preserveScroll: true,
+                onSuccess: () => evidenceForm.reset(),
+            },
+        );
     };
 
     return (
@@ -278,6 +304,9 @@ function DpaRowForm({
                     {row.signed_at
                         ? new Date(row.signed_at).toLocaleDateString()
                         : '—'}
+                    {row.evidence.length > 0 && (
+                        <p>{row.evidence.length} private evidence file(s)</p>
+                    )}
                 </TableCell>
                 <TableCell className="text-right">
                     <Button
@@ -412,6 +441,95 @@ function DpaRowForm({
                                 </Button>
                             </div>
                         </form>
+                        {row.status === 'signed' && (
+                            <div className="grid gap-3 border-t border-border/60 px-4 py-4">
+                                <div>
+                                    <p className="text-sm font-medium">
+                                        Signed agreement evidence
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        PDF files are append-only and stored on
+                                        the configured private disk.
+                                    </p>
+                                </div>
+                                {row.evidence.length > 0 && (
+                                    <ul className="grid gap-2">
+                                        {row.evidence.map((evidence) => (
+                                            <li
+                                                key={evidence.id}
+                                                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 p-3 text-xs"
+                                            >
+                                                <div>
+                                                    <p className="font-medium">
+                                                        {evidence.name}
+                                                    </p>
+                                                    <p className="text-muted-foreground">
+                                                        SHA-256{' '}
+                                                        <span className="font-mono">
+                                                            {evidence.sha256}
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <a
+                                                        href={downloadEvidence.url(
+                                                            {
+                                                                client: row.client_id,
+                                                                evidence:
+                                                                    evidence.id,
+                                                            },
+                                                        )}
+                                                    >
+                                                        Download
+                                                    </a>
+                                                </Button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                <form
+                                    className="flex flex-wrap items-end gap-3"
+                                    onSubmit={uploadEvidence}
+                                >
+                                    <div className="grid gap-1.5">
+                                        <Label
+                                            htmlFor={`evidence-${row.client_id}`}
+                                        >
+                                            Signed DPA PDF (max 20 MB)
+                                        </Label>
+                                        <Input
+                                            id={`evidence-${row.client_id}`}
+                                            type="file"
+                                            accept="application/pdf,.pdf"
+                                            onChange={(event) =>
+                                                evidenceForm.setData(
+                                                    'document',
+                                                    event.target.files?.[0] ??
+                                                        null,
+                                                )
+                                            }
+                                        />
+                                        {evidenceForm.errors.document && (
+                                            <p className="text-xs text-destructive">
+                                                {evidenceForm.errors.document}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        size="sm"
+                                        disabled={evidenceForm.processing}
+                                    >
+                                        Upload evidence
+                                    </Button>
+                                </form>
+                            </div>
+                        )}
                     </TableCell>
                 </TableRow>
             )}

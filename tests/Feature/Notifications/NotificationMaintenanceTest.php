@@ -2,18 +2,34 @@
 
 use App\Enums\AnnouncementStatus;
 use App\Enums\NotificationCategory;
+use App\Enums\PrivacyRetentionCategory;
 use App\Models\Announcement;
 use App\Models\AnnouncementRecipient;
+use App\Models\PrivacyRetentionPolicy;
 use App\Models\User;
 use App\Services\Notifications\AnnouncementDispatcher;
 use App\Services\Notifications\NotificationDispatcher;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function (): void {
+    config()->set('notifications.enabled', true);
+
     [$this->client, $this->wallet, $this->user] = clientWithWallet();
 });
 
+function approveNotificationRetention(PrivacyRetentionCategory $category, int $days): void
+{
+    PrivacyRetentionPolicy::query()->create([
+        'category' => $category,
+        'retention_days' => $days,
+        'approved_by' => platformUser()->id,
+        'approved_at' => now(),
+    ]);
+}
+
 it('prunes read notifications past the window and leaves unread ones alone', function (): void {
+    approveNotificationRetention(PrivacyRetentionCategory::ReadNotifications, 7);
+
     $dispatcher = app(NotificationDispatcher::class);
 
     $dispatcher->send($this->user, NotificationCategory::Campaigns, 'Read one', 'Body.');
@@ -32,6 +48,8 @@ it('prunes read notifications past the window and leaves unread ones alone', fun
 });
 
 it('reports a dry run without deleting anything', function (): void {
+    approveNotificationRetention(PrivacyRetentionCategory::ReadNotifications, 7);
+
     app(NotificationDispatcher::class)->send($this->user, NotificationCategory::Campaigns, 'Read one', 'Body.');
 
     $this->user->notifications()->sole()
@@ -46,6 +64,8 @@ it('reports a dry run without deleting anything', function (): void {
 });
 
 it('deletes a delivered announcement past its window with its receipts', function (): void {
+    approveNotificationRetention(PrivacyRetentionCategory::SentAnnouncements, 365);
+
     $old = Announcement::factory()->forClient($this->client)->create();
     app(AnnouncementDispatcher::class)->deliver($old);
 

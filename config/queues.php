@@ -102,8 +102,8 @@ return [
     | Failed job retention
     |--------------------------------------------------------------------------
     |
-    | Ops needs a week of failures to investigate a carrier outage, then the
-    | nightly prune takes them out of the table.
+    | This minimum may extend the approved period. Failed-job pruning stays
+    | disabled until a legal approval is recorded in Admin > Data retention.
     |
     */
 

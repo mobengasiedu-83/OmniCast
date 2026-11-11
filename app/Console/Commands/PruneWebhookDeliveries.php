@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\PrivacyRetentionCategory;
 use App\Enums\WebhookDeliveryStatus;
 use App\Models\WebhookDelivery;
+use App\Services\Privacy\PrivacyRetentionPolicyService;
 use Illuminate\Console\Command;
 
 /**
@@ -34,17 +36,31 @@ class PruneWebhookDeliveries extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(PrivacyRetentionPolicyService $policies): int
     {
-        $days = max((int) ($this->option('days') ?: config('webhooks.retention_days', 30)), 1);
+        $approvedDays = $policies->approvedDays(PrivacyRetentionCategory::WebhookDeliveries);
+        if ($approvedDays === null) {
+            $this->info('Webhook delivery pruning is disabled until a legally approved retention period is configured.');
+
+            return self::SUCCESS;
+        }
+
+        $days = max(
+            $approvedDays,
+            (int) ($this->option('days') ?: config('webhooks.retention_days', $approvedDays)),
+        );
         $cutoff = now()->subDays($days);
 
         $query = WebhookDelivery::query()
-            ->whereIn('status', [
-                WebhookDeliveryStatus::Delivered->value,
-                WebhookDeliveryStatus::Failed->value,
-            ])
-            ->where('created_at', '<', $cutoff);
+            ->where(function ($query) use ($cutoff): void {
+                $query->where(function ($query) use ($cutoff): void {
+                    $query->where('status', WebhookDeliveryStatus::Delivered->value)
+                        ->where('delivered_at', '<', $cutoff);
+                })->orWhere(function ($query) use ($cutoff): void {
+                    $query->where('status', WebhookDeliveryStatus::Failed->value)
+                        ->where('failed_at', '<', $cutoff);
+                });
+            });
 
         if ((bool) $this->option('dry-run')) {
             $this->info("{$query->count()} delivery row(s) older than {$days} day(s) would be deleted.");

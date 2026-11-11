@@ -17,6 +17,8 @@ use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PricingController as AdminPricingController;
+use App\Http\Controllers\Admin\PrivacyRequestController;
+use App\Http\Controllers\Admin\PrivacyRetentionController;
 use App\Http\Controllers\Admin\QueueController;
 use App\Http\Controllers\Admin\RateCardController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
@@ -237,6 +239,7 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::get('legal-acceptances/export', [LegalAcceptanceController::class, 'export'])->name('legal-acceptances.export');
 
             Route::get('legal-dpas', [OrganisationDpaController::class, 'index'])->name('legal-dpas.index');
+            Route::get('privacy/retention', [PrivacyRetentionController::class, 'index'])->name('privacy-retention.index');
         });
 
         Route::middleware('can:legal.manage')->group(function (): void {
@@ -261,6 +264,24 @@ Route::middleware(['auth', 'verified', 'platform'])
                 ->name('legal-document-versions.notify');
 
             Route::put('legal-dpas/{client}', [OrganisationDpaController::class, 'update'])->name('legal-dpas.update');
+            Route::post('legal-dpas/{client}/evidence', [OrganisationDpaController::class, 'storeEvidence'])
+                ->name('legal-dpas.evidence.store');
+            Route::get('legal-dpas/{client}/evidence/{evidence}', [OrganisationDpaController::class, 'downloadEvidence'])
+                ->whereNumber('evidence')
+                ->name('legal-dpas.evidence.download');
+            Route::put('privacy/retention/{category}', [PrivacyRetentionController::class, 'update'])
+                ->name('privacy-retention.update');
+            Route::delete('privacy/retention/{category}', [PrivacyRetentionController::class, 'destroy'])
+                ->name('privacy-retention.destroy');
+
+            Route::get('privacy/requests', [PrivacyRequestController::class, 'index'])->name('privacy-requests.index');
+            Route::post('privacy/requests', [PrivacyRequestController::class, 'store'])->name('privacy-requests.store');
+            Route::post('privacy/requests/{privacyRequest}/review', [PrivacyRequestController::class, 'review'])
+                ->name('privacy-requests.review');
+            Route::get('privacy/requests/{privacyRequest}/export', [PrivacyRequestController::class, 'export'])
+                ->name('privacy-requests.export');
+            Route::post('privacy/requests/{privacyRequest}/erase', [PrivacyRequestController::class, 'erase'])
+                ->name('privacy-requests.erase');
         });
 
         /*

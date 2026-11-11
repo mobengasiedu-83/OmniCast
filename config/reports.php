@@ -34,7 +34,8 @@ return [
         'max_rows' => (int) env('REPORTS_EXPORT_MAX_ROWS', 50000),
 
         /*
-        | How long a generated CSV stays downloadable.
+        | Minimum download period after legal approval. This value cannot
+        | enable pruning or shorten the approved period.
         */
         'retention_days' => (int) env('REPORTS_EXPORT_RETENTION_DAYS', 30),
     ],

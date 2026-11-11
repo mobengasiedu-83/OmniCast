@@ -84,8 +84,8 @@ return [
     | Run retention
     |--------------------------------------------------------------------------
     |
-    | `automations:prune-runs` deletes finished runs older than this so the run
-    | history does not grow without bound.
+    | This value may extend the approved period. Run pruning stays disabled
+    | until a legal approval is recorded in Admin > Data retention.
     |
     */
 

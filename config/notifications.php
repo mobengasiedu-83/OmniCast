@@ -81,9 +81,9 @@ return [
     | Inbox size and retention
     |--------------------------------------------------------------------------
     |
-    | The bell reads `bell_items` and the inbox pages by `per_page`. Read rows
-    | and sent announcements are pruned by `notifications:prune` once they are
-    | older than the retention window.
+    | The bell reads `bell_items` and the inbox pages by `per_page`. These
+    | windows may extend a legally approved retention period; pruning remains
+    | disabled until an approval is recorded in Admin > Data retention.
     |
     */
 

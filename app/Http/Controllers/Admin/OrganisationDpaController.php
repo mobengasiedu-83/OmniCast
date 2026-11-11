@@ -6,15 +6,23 @@ use App\Enums\LegalDocumentType;
 use App\Enums\OrganisationDpaStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Legal\OrganisationDpaRequest;
+use App\Http\Requests\Legal\UploadOrganisationDpaEvidenceRequest;
 use App\Models\Client;
 use App\Models\LegalDocument;
 use App\Models\OrganisationDpa;
+use App\Models\OrganisationDpaEvidence;
 use App\Services\Legal\LegalLibrary;
+use App\Services\PlatformConfiguration;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
 
 /**
  * Data processing agreements, tracked per organisation.
@@ -39,7 +47,7 @@ class OrganisationDpaController extends Controller
         ];
 
         $clients = Client::query()
-            ->with(['organisationDpa.version'])
+            ->with(['organisationDpa.version', 'organisationDpa.evidence.uploader'])
             ->when($filters['status'] === OrganisationDpaStatus::NotStarted->value, fn (Builder $query) => $query->whereDoesntHave('organisationDpa'))
             ->when($filters['status'] !== '' && $filters['status'] !== OrganisationDpaStatus::NotStarted->value, fn (Builder $query) => $query->whereHas(
                 'organisationDpa',
@@ -70,6 +78,14 @@ class OrganisationDpaController extends Controller
                     'requested_at' => $dpa?->requested_at?->toIso8601String(),
                     'signed_at' => $dpa?->signed_at?->toIso8601String(),
                     'notes' => $dpa?->notes,
+                    'evidence' => $dpa?->evidence->map(fn (OrganisationDpaEvidence $evidence): array => [
+                        'id' => $evidence->id,
+                        'name' => $evidence->original_name,
+                        'size_bytes' => $evidence->size_bytes,
+                        'sha256' => $evidence->sha256,
+                        'uploaded_at' => $evidence->created_at?->toIso8601String(),
+                        'uploaded_by' => $evidence->uploader?->name,
+                    ])->values()->all() ?? [],
                 ];
             });
 
@@ -126,5 +142,93 @@ class OrganisationDpaController extends Controller
             'type' => 'success',
             'message' => "The data processing agreement for {$client->name} is now \"{$status->label()}\".",
         ]);
+    }
+
+    /**
+     * Store a countersigned PDF on a configured private disk.
+     */
+    public function storeEvidence(
+        UploadOrganisationDpaEvidenceRequest $request,
+        Client $client,
+        PlatformConfiguration $configuration,
+    ): RedirectResponse {
+        $dpa = OrganisationDpa::query()->whereBelongsTo($client)->firstOrFail();
+        abort_unless($dpa->status === OrganisationDpaStatus::Signed, 422, 'A signed agreement must be recorded before its evidence can be uploaded.');
+
+        $file = $request->file('document');
+        if ($file === null) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Choose a PDF to upload.',
+            ]);
+        }
+
+        $disk = (string) $configuration->resolve('storage', 'client_documents_disk', 'local', $client);
+        $diskConfiguration = config('filesystems.disks.'.$disk);
+        abort_unless(is_array($diskConfiguration) && ($diskConfiguration['visibility'] ?? 'private') !== 'public', 422, 'DPA evidence storage must use a configured private disk.');
+
+        $path = $file->store('organisation-dpa-evidence/'.$client->id, $disk);
+        if (! is_string($path) || $path === '') {
+            throw new RuntimeException('The DPA evidence file could not be stored.');
+        }
+
+        $originalName = preg_replace('/[\x00-\x1F\x7F]/u', '', $file->getClientOriginalName()) ?: 'signed-dpa.pdf';
+        $originalName = mb_substr($originalName, 0, 255);
+        $localPath = $file->getRealPath();
+        $sha256 = is_string($localPath) ? hash_file('sha256', $localPath) : false;
+        if (! is_string($sha256)) {
+            Storage::disk($disk)->delete($path);
+
+            throw new RuntimeException('The DPA evidence file could not be fingerprinted.');
+        }
+
+        try {
+            $evidence = DB::transaction(fn (): OrganisationDpaEvidence => $dpa->evidence()->create([
+                'storage_disk' => $disk,
+                'path' => $path,
+                'original_name' => $originalName,
+                'mime_type' => 'application/pdf',
+                'size_bytes' => (int) $file->getSize(),
+                'sha256' => $sha256,
+                'uploaded_by' => $request->user()?->getAuthIdentifier(),
+            ]));
+        } catch (Throwable $exception) {
+            Storage::disk($disk)->delete($path);
+
+            throw $exception;
+        }
+
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($evidence)
+            ->withProperties(['client_id' => $client->id, 'sha256' => $sha256])
+            ->log('uploaded signed data processing agreement evidence');
+
+        return back()->with('toast', [
+            'type' => 'success',
+            'message' => 'Signed DPA evidence uploaded to private storage.',
+        ]);
+    }
+
+    /**
+     * Download evidence only through the platform's authenticated legal area.
+     */
+    public function downloadEvidence(Client $client, OrganisationDpaEvidence $evidence): StreamedResponse
+    {
+        abort_unless($evidence->organisationDpa()->where('client_id', $client->id)->exists(), 404);
+
+        $diskConfiguration = config('filesystems.disks.'.$evidence->storage_disk);
+        abort_unless(is_array($diskConfiguration) && ($diskConfiguration['visibility'] ?? 'private') !== 'public', 404);
+        abort_unless(Storage::disk($evidence->storage_disk)->exists($evidence->path), 404);
+
+        return Storage::disk($evidence->storage_disk)->download(
+            $evidence->path,
+            $evidence->original_name,
+            [
+                'Cache-Control' => 'private, no-store',
+                'X-Content-Type-Options' => 'nosniff',
+                'Content-Security-Policy' => 'sandbox',
+            ],
+        );
     }
 }

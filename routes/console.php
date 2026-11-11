@@ -37,13 +37,11 @@ Schedule::command('horizon:snapshot')
     ->everyFiveMinutes()
     ->onOneServer();
 
-Schedule::command('queue:prune-failed --hours='.config('queues.failed.prune_after_hours', 168))
-    ->description('Prune failed jobs that are past their retention window')
-    ->daily();
-
-Schedule::command('queue:prune-batches --hours=48')
-    ->description('Prune completed job batches')
-    ->daily();
+Schedule::command('privacy:prune-queue-artifacts')
+    ->description('Prune queue artifacts only when legal-approved retention policies exist')
+    ->daily()
+    ->withoutOverlapping()
+    ->onOneServer();
 
 Schedule::command('webhooks:prune-deliveries')
     ->description('Delete finished webhook deliveries past their retention window')

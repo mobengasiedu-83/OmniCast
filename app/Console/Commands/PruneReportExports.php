@@ -2,10 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\PrivacyRetentionCategory;
 use App\Enums\ReportExportStatus;
 use App\Models\ReportExport;
+use App\Services\Privacy\PrivacyRetentionPolicyService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Deletes report files that are past their retention window.
@@ -34,9 +37,19 @@ class PruneReportExports extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(PrivacyRetentionPolicyService $policies): int
     {
-        $days = max((int) ($this->option('days') ?: config('reports.exports.retention_days', 30)), 1);
+        $approvedDays = $policies->approvedDays(PrivacyRetentionCategory::ReportExports);
+        if ($approvedDays === null) {
+            $this->info('Report export pruning is disabled until a legally approved retention period is configured.');
+
+            return self::SUCCESS;
+        }
+
+        $days = max(
+            $approvedDays,
+            (int) ($this->option('days') ?: config('reports.exports.retention_days', $approvedDays)),
+        );
         $cutoff = now()->subDays($days);
         $disk = Storage::disk((string) config('reports.exports.disk', 'local'));
         $pruned = 0;
@@ -44,12 +57,15 @@ class PruneReportExports extends Command
         ReportExport::query()
             ->whereNotNull('file_path')
             ->where('status', ReportExportStatus::Completed->value)
-            ->where('created_at', '<', $cutoff)
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '<', $cutoff)
             ->orderBy('id')
             ->chunkById(100, function ($exports) use ($disk, $days, &$pruned): void {
                 foreach ($exports as $export) {
-                    if ($export->file_path !== null && $disk->exists($export->file_path)) {
-                        $disk->delete($export->file_path);
+                    if ($export->file_path !== null
+                        && $disk->exists($export->file_path)
+                        && ! $disk->delete($export->file_path)) {
+                        throw new RuntimeException("The expired report file [{$export->file_path}] could not be deleted.");
                     }
 
                     $export->forceFill([

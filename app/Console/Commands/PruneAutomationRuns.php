@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Enums\AutomationRunStatus;
+use App\Enums\PrivacyRetentionCategory;
 use App\Models\AutomationRun;
+use App\Services\Privacy\PrivacyRetentionPolicyService;
 use Illuminate\Console\Command;
 
 /**
@@ -35,9 +37,19 @@ class PruneAutomationRuns extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(PrivacyRetentionPolicyService $policies): int
     {
-        $days = max((int) ($this->option('days') ?: config('automations.retention_days', 90)), 1);
+        $approvedDays = $policies->approvedDays(PrivacyRetentionCategory::AutomationRuns);
+        if ($approvedDays === null) {
+            $this->info('Automation run pruning is disabled until a legally approved retention period is configured.');
+
+            return self::SUCCESS;
+        }
+
+        $days = max(
+            $approvedDays,
+            (int) ($this->option('days') ?: config('automations.retention_days', $approvedDays)),
+        );
         $cutoff = now()->subDays($days);
 
         $query = AutomationRun::query()
@@ -46,7 +58,8 @@ class PruneAutomationRuns extends Command
                 AutomationRunStatus::Failed->value,
                 AutomationRunStatus::Cancelled->value,
             ])
-            ->where('created_at', '<', $cutoff);
+            ->whereNotNull('finished_at')
+            ->where('finished_at', '<', $cutoff);
 
         if ((bool) $this->option('dry-run')) {
             $this->info("{$query->count()} run row(s) older than {$days} day(s) would be deleted.");

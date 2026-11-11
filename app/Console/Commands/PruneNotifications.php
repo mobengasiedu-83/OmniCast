@@ -3,8 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Enums\AnnouncementStatus;
+use App\Enums\PrivacyRetentionCategory;
 use App\Models\Announcement;
 use App\Models\User;
+use App\Services\Privacy\PrivacyRetentionPolicyService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -16,10 +18,7 @@ use Illuminate\Support\Facades\DB;
  * the account's to dismiss. Announcements that have been delivered for longer
  * than the window go with their receipts, so the admin history stays bounded.
  *
- * Orphans are swept on the same run, whatever their age: a receipt whose account
- * or announcement was deleted points at nothing, and a notice whose owner is gone
- * can never be read. `--dry-run` reports the same counts without deleting, which
- * is how a retention change is sized before it is trusted.
+ * Each category is disabled until a legal-approved retention period is recorded.
  */
 class PruneNotifications extends Command
 {
@@ -43,55 +42,65 @@ class PruneNotifications extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(PrivacyRetentionPolicyService $policies): int
     {
-        $readDays = max((int) ($this->option('read-days') ?: config('notifications.retention.read_days', 90)), 1);
-        $sentDays = max((int) ($this->option('sent-days') ?: config('notifications.retention.sent_days', 365)), 1);
         $dryRun = (bool) $this->option('dry-run');
+        $orphanedNotifications = DB::table('notifications')
+            ->where('notifiable_type', (new User)->getMorphClass())
+            ->whereNotExists(fn (Builder $users): Builder => $users
+                ->selectRaw('1')
+                ->from('users')
+                ->whereColumn('users.id', 'notifications.notifiable_id'));
+        $orphanedCount = $dryRun ? $orphanedNotifications->count() : $orphanedNotifications->delete();
+        $readDays = $policies->approvedDays(PrivacyRetentionCategory::ReadNotifications);
+        $sentDays = $policies->approvedDays(PrivacyRetentionCategory::SentAnnouncements);
+        $deletedNotifications = 0;
+        $deletedAnnouncements = 0;
 
-        $deletedNotifications = $this->prune(
-            DB::table('notifications')
-                ->whereNotNull('read_at')
-                ->where('read_at', '<', now()->subDays($readDays)),
-            $dryRun,
-        );
+        $orphanVerb = $dryRun ? 'Would prune' : 'Pruned';
+        $this->info("{$orphanVerb} {$orphanedCount} orphaned notification(s).");
 
-        $deletedAnnouncements = $this->prune(
-            Announcement::query()
+        if ($readDays === null) {
+            $this->line('Skipped read notifications: no legally approved retention period is configured.');
+        } else {
+            $readDays = max(
+                $readDays,
+                (int) ($this->option('read-days') ?: config('notifications.retention.read_days', $readDays)),
+            );
+            $deletedNotifications = $this->prune(
+                DB::table('notifications')
+                    ->whereNotNull('read_at')
+                    ->where('read_at', '<', now()->subDays($readDays)),
+                $dryRun,
+            );
+        }
+
+        if ($sentDays === null) {
+            $this->line('Skipped sent announcements: no legally approved retention period is configured.');
+        } else {
+            $sentDays = max(
+                $sentDays,
+                (int) ($this->option('sent-days') ?: config('notifications.retention.sent_days', $sentDays)),
+            );
+            $sentAnnouncements = Announcement::query()
                 ->where('status', AnnouncementStatus::Sent->value)
                 ->whereNotNull('sent_at')
                 ->where('sent_at', '<', now()->subDays($sentDays))
-                ->toBase(),
-            $dryRun,
-        );
+                ->toBase();
 
-        $orphanNotifications = $this->prune(
-            DB::table('notifications')
-                ->where('notifiable_type', (new User)->getMorphClass())
-                ->whereNotExists(fn (Builder $query): Builder => $query
-                    ->select(DB::raw(1))
-                    ->from('users')
-                    ->whereColumn('users.id', 'notifications.notifiable_id')),
-            $dryRun,
-        );
+            $deletedAnnouncements = $dryRun
+                ? $sentAnnouncements->count()
+                : DB::transaction(function () use ($sentAnnouncements): int {
+                    DB::table('announcement_recipients')
+                        ->whereIn('announcement_id', (clone $sentAnnouncements)->select('id'))
+                        ->delete();
 
-        $orphanReceipts = $this->prune(
-            DB::table('announcement_recipients')
-                ->whereNotExists(fn (Builder $query): Builder => $query
-                    ->select(DB::raw(1))
-                    ->from('users')
-                    ->whereColumn('users.id', 'announcement_recipients.user_id'))
-                ->orWhereNotExists(fn (Builder $query): Builder => $query
-                    ->select(DB::raw(1))
-                    ->from('announcements')
-                    ->whereColumn('announcements.id', 'announcement_recipients.announcement_id')),
-            $dryRun,
-        );
+                    return $sentAnnouncements->delete();
+                });
+        }
 
         $verb = $dryRun ? 'Would prune' : 'Pruned';
-
         $this->info("{$verb} {$deletedNotifications} read notification(s) and {$deletedAnnouncements} sent announcement(s).");
-        $this->info("{$verb} {$orphanNotifications} orphaned notification(s) and {$orphanReceipts} orphaned receipt(s).");
 
         return self::SUCCESS;
     }

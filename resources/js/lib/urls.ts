@@ -372,6 +372,23 @@ export const urls = {
             dpas: {
                 index: path('/admin/legal-dpas'),
                 update: (client: number) => path(`/admin/legal-dpas/${client}`),
+                uploadEvidence: (client: number) =>
+                    path(`/admin/legal-dpas/${client}/evidence`),
+                evidence: (client: number, evidence: number) =>
+                    path(`/admin/legal-dpas/${client}/evidence/${evidence}`),
+            },
+            privacyRetention: path('/admin/privacy/retention'),
+            privacyRetentionUpdate: (category: string) =>
+                path(`/admin/privacy/retention/${category}`),
+            privacyRequests: {
+                index: path('/admin/privacy/requests'),
+                store: path('/admin/privacy/requests'),
+                review: (id: number) =>
+                    path(`/admin/privacy/requests/${id}/review`),
+                export: (id: number) =>
+                    path(`/admin/privacy/requests/${id}/export`),
+                erase: (id: number) =>
+                    path(`/admin/privacy/requests/${id}/erase`),
             },
             complianceSettings: path('/admin/legal-compliance-settings'),
             notifications: path('/admin/legal-notifications'),

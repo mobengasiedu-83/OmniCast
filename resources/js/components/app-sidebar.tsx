@@ -311,6 +311,7 @@ export function AppSidebar() {
     const canViewAnnouncements =
         isPlatformUser && permissions.includes('announcements.view');
     const canViewLegal = isPlatformUser && permissions.includes('legal.view');
+    const canManageLegal = isPlatformUser && permissions.includes('legal.manage');
     const canViewSupport =
         isPlatformUser && permissions.includes('support.view');
     const canViewTemplates = permissions.includes('templates.view');
@@ -692,6 +693,20 @@ export function AppSidebar() {
                                 href: urls.admin.legal.reports,
                                 icon: BarChart3,
                             },
+                            {
+                                title: 'Data retention',
+                                href: urls.admin.legal.privacyRetention,
+                                icon: Settings,
+                            },
+                            ...(canManageLegal
+                                ? [
+                                      {
+                                          title: 'Privacy requests',
+                                          href: urls.admin.legal.privacyRequests.index,
+                                          icon: ShieldCheck,
+                                      },
+                                  ]
+                                : []),
                         ]}
                         label="Legal & compliance"
                     />

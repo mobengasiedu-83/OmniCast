@@ -26,10 +26,12 @@
         <env name="APP_URL" value="http://localhost" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4" force="true"/>
+        <env name="BILLING_DYNAMIC_PRICING" value="true" force="true"/>
         <env name="BROADCAST_CONNECTION" value="null" force="true"/>
         <env name="CACHE_STORE" value="array" force="true"/>
         <env name="DB_CONNECTION" value="sqlite" force="true"/>
         <env name="DB_DATABASE" value=":memory:" force="true"/>
+        <env name="DB_FOREIGN_KEYS" value="true" force="true"/>
         <env name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
@@ -37,6 +39,18 @@
         <env name="PULSE_ENABLED" value="false" force="true"/>
         <env name="TELESCOPE_ENABLED" value="false" force="true"/>
         <env name="NIGHTWATCH_ENABLED" value="false" force="true"/>
+        <env name="NOTIFICATIONS_ENABLED" value="true" force="true"/>
+        <env name="NOTIFICATIONS_ANNOUNCEMENT_CHUNK" value="200" force="true"/>
+        <env name="NOTIFICATIONS_BELL_ITEMS" value="6" force="true"/>
+        <env name="NOTIFICATIONS_PER_PAGE" value="20" force="true"/>
+        <env name="NOTIFICATIONS_READ_RETENTION_DAYS" value="90" force="true"/>
+        <env name="NOTIFICATIONS_SENT_RETENTION_DAYS" value="365" force="true"/>
+        <env name="NOTIFICATIONS_SMS_ENABLED" value="false" force="true"/>
+        <env name="NOTIFICATIONS_SMS_SENDER" value="OMNICAST" force="true"/>
+        <env name="REPORTS_EXPORT_RETENTION_DAYS" value="30" force="true"/>
+        <env name="WEBHOOKS_RETENTION_DAYS" value="30" force="true"/>
+        <env name="AUTOMATIONS_RETENTION_DAYS" value="90" force="true"/>
+        <env name="QUEUE_FAILED_PRUNE_HOURS" value="168" force="true"/>
         <!-- SMS transport is pinned so a suite run can never post to the live
              provider: the shell or .env may point SMS_BROADCAST_DRIVER at
              txtconnect while the developer is testing deliveries by hand. -->
@@ -46,10 +60,12 @@
         <server name="APP_URL" value="http://localhost"/>
         <server name="APP_MAINTENANCE_DRIVER" value="file"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
+        <server name="BILLING_DYNAMIC_PRICING" value="true"/>
         <server name="BROADCAST_CONNECTION" value="null"/>
         <server name="CACHE_STORE" value="array"/>
         <server name="DB_CONNECTION" value="sqlite"/>
         <server name="DB_DATABASE" value=":memory:"/>
+        <server name="DB_FOREIGN_KEYS" value="true"/>
         <server name="DB_URL" value=""/>
         <server name="DB_HOST" value=""/>
         <server name="DB_PORT" value=""/>
@@ -61,6 +77,18 @@
         <server name="PULSE_ENABLED" value="false"/>
         <server name="TELESCOPE_ENABLED" value="false"/>
         <server name="NIGHTWATCH_ENABLED" value="false"/>
+        <server name="NOTIFICATIONS_ENABLED" value="true"/>
+        <server name="NOTIFICATIONS_ANNOUNCEMENT_CHUNK" value="200"/>
+        <server name="NOTIFICATIONS_BELL_ITEMS" value="6"/>
+        <server name="NOTIFICATIONS_PER_PAGE" value="20"/>
+        <server name="NOTIFICATIONS_READ_RETENTION_DAYS" value="90"/>
+        <server name="NOTIFICATIONS_SENT_RETENTION_DAYS" value="365"/>
+        <server name="NOTIFICATIONS_SMS_ENABLED" value="false"/>
+        <server name="NOTIFICATIONS_SMS_SENDER" value="OMNICAST"/>
+        <server name="REPORTS_EXPORT_RETENTION_DAYS" value="30"/>
+        <server name="WEBHOOKS_RETENTION_DAYS" value="30"/>
+        <server name="AUTOMATIONS_RETENTION_DAYS" value="90"/>
+        <server name="QUEUE_FAILED_PRUNE_HOURS" value="168"/>
         <server name="SMS_BROADCAST_DRIVER" value="log"/>
         <server name="SMS_BROADCAST_ENABLED" value="true"/>
     </php>
