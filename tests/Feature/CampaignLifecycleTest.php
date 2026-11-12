@@ -4,7 +4,6 @@ use App\Contracts\SmsGateway;
 use App\Enums\CampaignContactStatus;
 use App\Enums\CampaignStatus;
 use App\Enums\Channel;
-use App\Enums\ClientStatus;
 use App\Enums\ReservationStatus;
 use App\Jobs\DispatchCampaignJob;
 use App\Models\BillingReservation;
@@ -127,35 +126,6 @@ it('queues the campaign for dispatch as soon as it is launched', function (): vo
         ->and($campaign->launched_at)->not->toBeNull();
 
     Queue::assertPushed(DispatchCampaignJob::class, fn (DispatchCampaignJob $job): bool => $job->campaignId === $campaign->id);
-});
-
-it('allows a pending client to prepare campaigns but blocks launch', function (): void {
-    $this->client->update(['status' => ClientStatus::Pending]);
-    $campaign = ($this->draft)();
-    $this->service->submit($campaign, $this->user);
-
-    Queue::fake();
-
-    expect(fn () => $this->service->launch($campaign->refresh()))
-        ->toThrow(ValidationException::class, 'Your organisation must be activated before a campaign can be launched.');
-
-    expect($campaign->refresh()->status)->toBe(CampaignStatus::Approved);
-
-    Queue::assertNothingPushed();
-});
-
-it('does not dispatch a queued campaign for a pending client', function (): void {
-    $campaign = ($this->draft)();
-    $this->service->submit($campaign, $this->user);
-    $this->service->launch($campaign->refresh());
-    $this->client->update(['status' => ClientStatus::Pending]);
-    Queue::fake();
-
-    (new DispatchCampaignJob($campaign->id))->handle(app(CampaignDispatcher::class), app(QueueTopology::class));
-
-    expect($campaign->refresh()->status)->toBe(CampaignStatus::Paused);
-
-    Queue::assertNothingPushed();
 });
 
 it('waits for the start time when a campaign is scheduled', function (): void {

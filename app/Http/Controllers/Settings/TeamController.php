@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Concerns\RecordsActivity;
+use App\Enums\ClientStatus;
 use App\Enums\Role as RoleEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\InviteUserRequest;
@@ -35,6 +36,8 @@ class TeamController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+        $isClientActive = $user->client?->status === ClientStatus::Active;
+
         Gate::authorize('create', UserInvitation::class);
 
         abort_if($user->client_id === null, 403);
@@ -101,8 +104,9 @@ class TeamController extends Controller
                     ->count(),
             ],
             'can' => [
-                'invite' => Gate::allows('create', UserInvitation::class),
+                'invite' => Gate::allows('create', UserInvitation::class) && $isClientActive,
             ],
+            'clientActive' => $isClientActive,
         ]);
     }
 
@@ -111,6 +115,13 @@ class TeamController extends Controller
      */
     public function store(InviteUserRequest $request): RedirectResponse
     {
+        if ($request->user()->client?->status !== ClientStatus::Active) {
+            return back()->with('toast', [
+                'type' => 'error',
+                'message' => 'Your organisation can invite team members after account approval.',
+            ]);
+        }
+
         $invitation = $this->invitations->issue($request->invitationAttributes(), $request->user());
 
         $this->recordActivity('invited teammate', $invitation, [

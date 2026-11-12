@@ -294,26 +294,12 @@ class CampaignService
      */
     public function launch(Campaign $campaign): Campaign
     {
-        $campaign->loadMissing('client');
-
-        if (! $campaign->client?->canBroadcast()) {
-            throw ValidationException::withMessages([
-                'campaign' => 'Your organisation must be activated before a campaign can be launched.',
-            ]);
-        }
-
         $this->ensureChannelsEnabled($campaign);
         $this->readiness->assertReady($campaign);
         $this->versions->assertMatchesApprovedSnapshot($campaign);
 
         $campaign = DB::transaction(function () use ($campaign): Campaign {
             $campaign = Campaign::query()->lockForUpdate()->findOrFail($campaign->id);
-
-            if (! $campaign->client?->canBroadcast()) {
-                throw ValidationException::withMessages([
-                    'campaign' => 'Your organisation must be activated before a campaign can be launched.',
-                ]);
-            }
 
             if (! $campaign->status->canBeScheduled()) {
                 throw ValidationException::withMessages([

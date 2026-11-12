@@ -64,15 +64,6 @@ class CampaignDispatcher
     public function run(Campaign $campaign): bool
     {
         $campaign->loadMissing(['client', 'emailAttachments']);
-
-        if (! $campaign->client?->canBroadcast()) {
-            if (! $campaign->status->isTerminal()) {
-                $campaign->forceFill(['status' => CampaignStatus::Paused])->save();
-            }
-
-            return false;
-        }
-
         $disabledChannels = array_filter(
             $campaign->channel->deliveryChannels(),
             fn (Channel $channel): bool => ! $this->configuration->channelEnabled($channel->value, $campaign->client),
