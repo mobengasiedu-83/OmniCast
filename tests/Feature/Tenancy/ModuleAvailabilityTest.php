@@ -20,13 +20,14 @@ it('lists every module with its platform-wide reach', function (): void {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/settings/modules')
-            ->has('modules', 3)
+            ->has('modules', 4)
             ->where('modules.0.value', 'sms')
             ->where('modules.0.enabled', true)
             ->where('modules.0.clients_disabled', 0)
             ->where('modules.1.value', 'voice')
             ->where('modules.1.clients_disabled', 1)
-            ->where('modules.2.value', 'email'));
+            ->where('modules.2.value', 'email')
+            ->where('modules.3.value', 'whatsapp'));
 });
 
 it('switches a module off for every client and records who did it', function (): void {
@@ -38,6 +39,7 @@ it('switches a module off for every client and records who did it', function ():
                 ['value' => ClientService::Sms->value, 'enabled' => false],
                 ['value' => ClientService::Voice->value, 'enabled' => true],
                 ['value' => ClientService::Email->value, 'enabled' => true],
+                ['value' => ClientService::WhatsApp->value, 'enabled' => false],
             ],
         ])
         ->assertRedirect()
@@ -54,7 +56,46 @@ it('switches a module off for every client and records who did it', function ():
         ->and($setting->updated_by)->toBe($admin->id)
         ->and($modules->universallyEnabled(ClientService::Sms))->toBeFalse()
         ->and($modules->universallyEnabled(ClientService::Voice))->toBeTrue()
+        ->and($modules->universallyEnabled(ClientService::WhatsApp))->toBeFalse()
         ->and(Activity::query()->where('description', 'updated module availability')->exists())->toBeTrue();
+});
+
+it('closes WhatsApp tenant pages when the platform disables the module without blanking other pages', function (): void {
+    [, , $user] = clientWithWallet();
+    PlatformSetting::query()->create([
+        'group' => 'channels',
+        'key' => ClientService::WhatsApp->value.'.enabled',
+        'value' => '0',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('whatsapp.index'))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('modules.whatsapp', false)
+            ->has('channelBreakdown', 4));
+});
+
+it('closes WhatsApp tenant pages when only that client entitlement is disabled', function (): void {
+    [$client, , $user] = clientWithWallet();
+    ClientEntitlement::factory()->for($client)->disabled()->create([
+        'service' => ClientService::WhatsApp,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('whatsapp.index'))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('modules.whatsapp', false)
+            ->where('modules.sms', true));
 });
 
 it('closes a switched-off module to its tenants even when they are entitled', function (): void {
@@ -108,17 +149,16 @@ it('hides switched-off channels from the platform dashboard without blanking it'
         'value' => '0',
     ]);
 
+    expect(app(ModuleAvailability::class)->universallyEnabled(ClientService::Email))->toBeFalse();
+
     $this->actingAs(platformUser())
         ->get(route('admin.dashboard'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/dashboard')
             ->where('modules.email', false)
-            ->where('channelBreakdown', [
-                ['channel' => 'voice', 'label' => 'Voice', 'total' => 0],
-                ['channel' => 'sms', 'label' => 'SMS', 'total' => 0],
-                ['channel' => 'multi_channel', 'label' => 'Multi-Channel', 'total' => 0],
-            ]));
+            ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->doesntContain('email'))
+            ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->sort()->values()->all() === ['multi_channel', 'sms', 'voice']));
 });
 
 it('drops a module the tenant switched off from its own screens', function (): void {

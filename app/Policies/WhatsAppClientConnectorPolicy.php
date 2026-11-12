@@ -21,7 +21,7 @@ class WhatsAppClientConnectorPolicy
 
     public function create(User $user): bool
     {
-        return $user->client_id !== null && $user->can('whatsapp.connectors.manage');
+        return $user->client_id !== null && $user->can('whatsapp.connectors.view');
     }
 
     public function update(User $user, WhatsAppClientConnector $whatsAppClientConnector): bool

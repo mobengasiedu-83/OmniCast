@@ -208,6 +208,7 @@ class SettingsController extends Controller
             ClientService::Sms->value => 'Sender IDs, SMS campaigns and the SMS delivery report.',
             ClientService::Email->value => 'Email campaigns and the email delivery report.',
             ClientService::Voice->value => 'Caller IDs, voice campaigns and the voice delivery report.',
+            ClientService::WhatsApp->value => 'WhatsApp sender access, approved templates and media.',
         ];
     }
 

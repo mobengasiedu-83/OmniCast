@@ -22,6 +22,7 @@ import {
     Mail,
     MailPlus,
     Megaphone,
+    MessageCircle,
     MessageSquareText,
     MonitorSmartphone,
     PackageCheck,
@@ -50,6 +51,8 @@ import AppLogo from '@/components/app-logo';
 import PoweredBy from '@/components/powered-by';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import adminWhatsAppRoutes from '@/routes/admin/whatsapp';
+import whatsAppRoutes from '@/routes/whatsapp';
 import {
     Sidebar,
     SidebarContent,
@@ -93,9 +96,9 @@ const documentationNavItems: NavItem[] = [
     },
 ];
 
-const messagingNavItems = (modules: ModuleAvailability): NavItem[] => {
+const messagingNavItems = (modules: ModuleAvailability, canViewWhatsApp: boolean): NavItem[] => {
     const enabled = (module: ModuleKey): boolean => modules?.[module] ?? true;
-    const anyModule = enabled('sms') || enabled('voice') || enabled('email');
+    const anyModule = enabled('sms') || enabled('voice') || enabled('email') || enabled('whatsapp');
     const items: NavItem[] = [
         {
             title: 'Campaigns',
@@ -161,6 +164,15 @@ const messagingNavItems = (modules: ModuleAvailability): NavItem[] => {
                       title: 'Email messages',
                       href: urls.reports.email,
                       icon: Mail,
+                  },
+              ]
+            : []),
+        ...(enabled('whatsapp') && canViewWhatsApp
+            ? [
+                  {
+                      title: 'WhatsApp',
+                      href: whatsAppRoutes.index.url(),
+                      icon: MessageCircle,
                   },
               ]
             : []),
@@ -313,6 +325,8 @@ export function AppSidebar() {
     const canViewQueues = isPlatformUser && permissions.includes('queues.view');
     const canViewWhatsAppProviders =
         isPlatformUser && permissions.includes('whatsapp.providers.view');
+    const canViewWhatsAppConnectors = isPlatformUser && permissions.includes('whatsapp.connectors.view');
+    const canUseWhatsAppPortal = !isPlatformUser && permissions.includes('whatsapp.connectors.view');
     const canViewReports = permissions.includes('reports.view');
     const canViewAutomations = permissions.includes('automations.view');
     const canViewAnnouncements =
@@ -562,7 +576,7 @@ export function AppSidebar() {
 
             <SidebarContent className="gap-2">
                 <NavMain items={platformNavItems} label="Platform" />
-                <NavMain items={messagingNavItems(modules)} label="Messaging" />
+                <NavMain items={messagingNavItems(modules, canUseWhatsAppPortal)} label="Messaging" />
                 {templateNavItems.length > 0 && (
                     <NavMain items={templateNavItems} label="Templates" />
                 )}
@@ -653,14 +667,19 @@ export function AppSidebar() {
                 {isPlatformUser && canManageUsers && (
                     <NavMain items={identityNavItems} label="Users" />
                 )}
-                {canViewWhatsAppProviders && (
+                {(canViewWhatsAppProviders || canViewWhatsAppConnectors) && (
                     <NavMain
                         items={[
-                            {
+                            ...(canViewWhatsAppProviders ? [{
                                 title: 'Providers',
                                 href: urls.admin.whatsappProviders.index,
                                 icon: Plug,
-                            },
+                            }] : []),
+                            ...(canViewWhatsAppConnectors ? [{
+                                title: 'Connectors',
+                                href: adminWhatsAppRoutes.connectors.index.url(),
+                                icon: Radio,
+                            }] : []),
                         ]}
                         label="WhatsApp"
                     />

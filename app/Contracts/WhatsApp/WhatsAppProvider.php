@@ -12,6 +12,8 @@ interface WhatsAppProvider
 
     public function getConnectors(WhatsAppProviderConfig $provider): WhatsAppProviderResponse;
 
+    public function getTemplate(WhatsAppProviderConfig $provider, string $metaTemplateId): WhatsAppProviderResponse;
+
     public function getTemplates(
         WhatsAppProviderConfig $provider,
         string $wabaId,

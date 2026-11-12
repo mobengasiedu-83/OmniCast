@@ -23,6 +23,7 @@ class WhatsAppConnectorFactory extends Factory
         return [
             'provider_id' => WhatsAppProvider::factory(),
             'external_id' => Str::uuid()->toString(),
+            'connector_name' => 'WhatsApp Connector',
             'waba_id' => (string) fake()->numerify('############'),
             'sender_number' => '+233200000000',
             'status' => WhatsAppConnectorStatus::Available,

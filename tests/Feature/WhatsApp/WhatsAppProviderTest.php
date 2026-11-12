@@ -124,6 +124,12 @@ it('lets platform administrators configure a provider while shared secrets stay 
     expect($audit->properties)->not->toHaveKey('client_id')
         ->and($audit->properties)->not->toHaveKey('api_key');
 
+    config([
+        'whatsapp.provider.base_url' => null,
+        'whatsapp.provider.client_id' => null,
+        'whatsapp.provider.api_key' => null,
+    ]);
+
     $this->actingAs($administrator)
         ->withoutVite()
         ->get('/admin/whatsapp/providers')

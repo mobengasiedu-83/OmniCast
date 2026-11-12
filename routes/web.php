@@ -37,6 +37,8 @@ use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\VoiceWebhookController;
 use App\Http\Controllers\WalletCheckoutController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WhatsAppController;
+use App\Http\Controllers\WhatsAppMediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -104,6 +106,10 @@ Route::match(['get', 'post'], 'webhooks/email', EmailWebhookController::class)->
 
 Route::post('webhooks/paystack', PaystackWebhookController::class)->name('webhooks.paystack');
 
+Route::get('whatsapp/media/{asset}', [WhatsAppMediaController::class, 'show'])
+    ->middleware(['signed', 'throttle:60,1'])
+    ->name('whatsapp.media.show');
+
 Route::middleware('guest')->group(function (): void {
     Route::redirect('register', 'register-client')->name('register');
 
@@ -131,6 +137,12 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::middleware('module:whatsapp')->group(function (): void {
+        Route::get('whatsapp', [WhatsAppController::class, 'index'])->name('whatsapp.index');
+        Route::post('whatsapp/connectors', [WhatsAppController::class, 'requestConnector'])->name('whatsapp.connectors.request');
+        Route::post('whatsapp/media', [WhatsAppController::class, 'upload'])->middleware('throttle:30,1')->name('whatsapp.media.store');
+        Route::get('whatsapp/media/{asset}/url', [WhatsAppController::class, 'mediaUrl'])->name('whatsapp.media.url');
+    });
     Route::get('settings/organisation', [ClientSettingsController::class, 'edit'])->name('organisation-settings.edit');
     Route::put('settings/organisation', [ClientSettingsController::class, 'update'])->name('organisation-settings.update');
     Route::post('settings/organisation/documents', [ClientSettingsController::class, 'storeDocument'])->name('organisation-settings.documents.store');

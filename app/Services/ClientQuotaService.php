@@ -71,6 +71,7 @@ class ClientQuotaService
             ClientService::Voice => [Channel::Voice->value, Channel::MultiChannel->value],
             ClientService::Sms => [Channel::Sms->value, Channel::MultiChannel->value],
             ClientService::Email => [Channel::Email->value],
+            ClientService::WhatsApp => [],
         };
 
         if ($channels === []) {

@@ -17,12 +17,13 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $provider_id
  * @property string $external_id
+ * @property string|null $connector_name
  * @property string|null $waba_id
  * @property string|null $sender_number
  * @property WhatsAppConnectorStatus $status
  * @property Carbon|null $last_synced_at
  */
-#[Fillable(['provider_id', 'external_id', 'waba_id', 'sender_number', 'status', 'last_synced_at'])]
+#[Fillable(['provider_id', 'external_id', 'connector_name', 'waba_id', 'sender_number', 'status', 'last_synced_at'])]
 class WhatsAppConnector extends Model
 {
     protected $table = 'whatsapp_connectors';
@@ -49,5 +50,11 @@ class WhatsAppConnector extends Model
     public function clientAssignments(): HasMany
     {
         return $this->hasMany(WhatsAppClientConnector::class, 'connector_id');
+    }
+
+    /** @return HasMany<WhatsAppTemplate, $this> */
+    public function templates(): HasMany
+    {
+        return $this->hasMany(WhatsAppTemplate::class, 'connector_id');
     }
 }

@@ -26,6 +26,13 @@ class ProPlusWhatsAppProvider implements WhatsAppProviderContract
         return $this->get($provider, (string) config('whatsapp.provider.endpoints.connectors'));
     }
 
+    public function getTemplate(WhatsAppProvider $provider, string $metaTemplateId): WhatsAppProviderResponse
+    {
+        return $this->get($provider, (string) config('whatsapp.provider.endpoints.template'), [
+            'MetaTemplateId' => $metaTemplateId,
+        ]);
+    }
+
     public function getTemplates(
         WhatsAppProvider $provider,
         string $wabaId,
@@ -124,9 +131,11 @@ class ProPlusWhatsAppProvider implements WhatsAppProviderContract
         $data = is_array($body) ? $this->redact($body) : [];
         $httpStatus = $response->status();
         $successful = $response->successful();
+        $applicationError = is_array($body) && $this->hasApplicationError($body);
 
         $status = match (true) {
             ! $successful && $httpStatus >= 400 && $httpStatus < 500 && $httpStatus !== 429 => WhatsAppProviderResultStatus::Rejected,
+            $applicationError => WhatsAppProviderResultStatus::Rejected,
             $successful && (! $isSubmission || $providerReference !== null) => WhatsAppProviderResultStatus::Accepted,
             default => WhatsAppProviderResultStatus::Unknown,
         };
@@ -138,6 +147,19 @@ class ProPlusWhatsAppProvider implements WhatsAppProviderContract
             $this->errorCategory($httpStatus),
             $data,
         );
+    }
+
+    /** @param array<string,mixed> $body */
+    protected function hasApplicationError(array $body): bool
+    {
+        foreach (['statusCode', 'errorCode'] as $key) {
+            if (array_key_exists($key, $body) && is_numeric($body[$key]) && (int) $body[$key] !== 0) {
+                return true;
+            }
+        }
+
+        return isset($body['status']) && is_string($body['status'])
+            && in_array(strtolower($body['status']), ['error', 'failed', 'failure', 'rejected'], true);
     }
 
     /** @param array<string, mixed> $payload */

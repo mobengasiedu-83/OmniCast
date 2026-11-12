@@ -13,4 +13,8 @@ return [
             'send' => env('WHATSAPP_SEND_ENDPOINT', '/api/whatsapp/v1/Send'),
         ],
     ],
+    'media' => [
+        'disk' => env('WHATSAPP_MEDIA_DISK', 'local'),
+        'max_kilobytes' => (int) env('WHATSAPP_MEDIA_MAX_KILOBYTES', 16384),
+    ],
 ];

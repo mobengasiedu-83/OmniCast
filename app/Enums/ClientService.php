@@ -13,6 +13,7 @@ enum ClientService: string
     case Sms = 'sms';
     case Voice = 'voice';
     case Email = 'email';
+    case WhatsApp = 'whatsapp';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum ClientService: string
             self::Sms => 'SMS',
             self::Voice => 'Voice',
             self::Email => 'Email',
+            self::WhatsApp => 'WhatsApp',
         };
     }
 

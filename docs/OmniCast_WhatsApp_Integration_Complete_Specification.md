@@ -431,17 +431,21 @@ Shared deployment configuration is supplied through `WHATSAPP_API_BASE_URL`, `WH
 
 **Goal:** Make approved sender accounts and template data available to the application.
 
-**Work items:**
+**Implemented:**
 
-- Implement and sandbox-test Pro Plus authentication and connector retrieval.
-- Add provider, WABA, sender, and client-connector assignment management.
-- Synchronize templates and their statuses, languages, categories, components, and versions.
-- Validate template variables and supported fixed, body-variable, header-variable, media, location, custom-payload, and OTP formats.
-- Add template preview and approval-state handling; allow only approved templates for campaign use.
-- Integrate the existing media library with WhatsApp-specific MIME/size validation and per-client authorization.
-- Provide controlled HTTPS media access and verify remote retrieval without exposing private library assets.
+- Pro Plus uses the shared base URL, Basic Auth client ID/API key, and endpoint paths from `.env`; connector retrieval, template list, and template detail have been verified against the configured provider over HTTPS.
+- Added admin connector sync and client sender access requests, review, enable/disable controls, connector/WABA/number display, and audit records.
+- Added template synchronization for metadata, language, category, status, components and immutable content versions. Sync uses `Template/Get` to fetch details when list items omit components. Unknown or numeric provider statuses remain non-approved; only an explicit `approved` status is exposed to clients.
+- Added payload validation for Pro Plus `BulkPayload` and `CustomPayload` forms, ordered body/header variables, media/document URLs, location details, carousel cards, and authentication/OTP templates. This is validation groundwork; message submission remains disabled and no campaign composition or dispatch UI was added.
+- Added client template previews and history counts. Client queries include only templates from enabled and approved connector assignments.
+- Registered WhatsApp in platform and tenant module availability. The global and tenant entitlement switches hide the client navigation and reject direct portal routes while leaving unrelated pages available; WhatsApp is not added as a campaign channel in this phase.
+- Added WhatsApp beside SMS, Voice, and Email in the platform module availability screen and tenant module map. Client navigation, module status, and route middleware all read the same live platform switch plus client entitlement; changes take effect without stale in-process module state. Admin provider and connector management remains governed by its separate permissions.
+- Added private WhatsApp media storage, MIME allowlist (JPEG, PNG, WebP, MP4, PDF), configurable `WHATSAPP_MEDIA_MAX_KILOBYTES` (16 MB default pending provider limit confirmation), tenant ownership checks, and signed HTTPS URLs that expire after 30 minutes. Signed media responses stream private bytes with `no-store` and `nosniff` headers.
+- Applied the four additive Phase 2 migrations to local MySQL: template catalog, template versions, media assets, and connector names. The separate legacy configuration cleanup migration remains pending; it is not required by Phase 2 and was not run as part of this database change.
 
-**Exit gate:** A permitted client can view its assigned connectors and approved templates; payload validation and provider-retrievable media tests pass in the sandbox.
+**Verification (12 November 2026):** Provider `Connector/GetAll`, `Template/GetAll`, and `Template/Get` returned HTTP 200 using the configured HTTPS endpoint; only response status and record counts were inspected. Phase 2, provider, and module-availability feature tests pass (26 tests, 175 assertions) on the isolated SQLite test database. Coverage includes signed media retrieval, expiry/signature rejection, catalog synchronization, version capture, application-level error handling, numeric-status safety, and global/tenant WhatsApp module switches that preserve unrelated pages. MySQL schema inspection confirms the Phase 2 tables, indexes, and foreign keys. TypeScript checking, production build, Pint, and `git diff --check` pass.
+
+**Deployment check:** The signed media route is implemented and locally verified. Provider-side retrieval over a public HTTPS deployment URL must be confirmed after deployment because the local application URL is not a public provider-retrievable origin. Message sending remains disabled; campaign authoring and dispatch remain Phase 3/4 work.
 
 ### Phase 3 — Consent, contacts, and campaign authoring
 

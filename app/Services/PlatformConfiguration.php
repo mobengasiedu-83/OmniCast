@@ -8,13 +8,6 @@ use App\Models\PlatformSetting;
 /** Resolves configuration in order: global defaults, plan defaults, then tenant overrides. */
 class PlatformConfiguration
 {
-    /**
-     * The platform-wide module switches, resolved once per instance.
-     *
-     * @var array<string, bool>
-     */
-    private array $moduleSwitches = [];
-
     public function resolve(string $group, string $key, mixed $default = null, ?Client $client = null, array $plan = []): mixed
     {
         $setting = PlatformSetting::query()->where('group', $group)->where('key', $key)->first();
@@ -61,16 +54,12 @@ class PlatformConfiguration
      */
     public function moduleEnabled(string $module): bool
     {
-        if (array_key_exists($module, $this->moduleSwitches)) {
-            return $this->moduleSwitches[$module];
-        }
-
         $setting = PlatformSetting::query()
             ->where('group', 'channels')
             ->where('key', $module.'.enabled')
             ->first();
 
-        return $this->moduleSwitches[$module] = $setting === null
+        return $setting === null
             || filter_var($setting->value, FILTER_VALIDATE_BOOL);
     }
 
