@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\Channel;
 use App\Enums\ClientService;
+use App\Models\Campaign;
 use App\Models\ClientEntitlement;
 use App\Models\PlatformSetting;
 use App\Models\SenderId;
@@ -125,7 +127,8 @@ it('closes a switched-off module to its tenants even when they are entitled', fu
 });
 
 it('keeps unrelated dashboard routes available when a module is switched off platform-wide', function (): void {
-    [, , $user] = clientWithWallet();
+    [$client, , $user] = clientWithWallet();
+    Campaign::factory()->forClient($client)->create(['channel' => Channel::Email]);
 
     PlatformSetting::query()->create([
         'group' => 'channels',
@@ -139,7 +142,8 @@ it('keeps unrelated dashboard routes available when a module is switched off pla
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')
             ->where('modules.email', false)
-            ->has('channelBreakdown', 3));
+            ->where('channelBreakdown', fn ($channels): bool => collect($channels)
+                ->contains(fn (array $channel): bool => $channel['channel'] === 'email' && $channel['total'] === 1)));
 });
 
 it('hides switched-off channels from the platform dashboard without blanking it', function (): void {
@@ -158,7 +162,7 @@ it('hides switched-off channels from the platform dashboard without blanking it'
             ->component('admin/dashboard')
             ->where('modules.email', false)
             ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->doesntContain('email'))
-            ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->sort()->values()->all() === ['multi_channel', 'sms', 'voice']));
+            ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->sort()->values()->all() === ['multi_channel', 'sms', 'voice', 'whatsapp']));
 });
 
 it('drops a module the tenant switched off from its own screens', function (): void {

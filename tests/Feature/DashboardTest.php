@@ -7,6 +7,7 @@ use App\Models\Campaign;
 use App\Models\CampaignContact;
 use App\Models\Client;
 use App\Models\Contact;
+use App\Models\PlatformSetting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -32,6 +33,23 @@ test('authenticated users can visit the dashboard', function () {
     $response = $this->get(route('dashboard'));
     $response->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('dashboard'));
+});
+
+test('tenant channel mix includes existing campaigns when a channel is disabled', function (): void {
+    [$client, , $user] = clientWithWallet();
+    Campaign::factory()->forClient($client)->create(['channel' => Channel::Email]);
+    PlatformSetting::query()->create([
+        'group' => 'channels',
+        'key' => 'email.enabled',
+        'value' => '0',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('channelBreakdown', fn ($channels): bool => collect($channels)
+                ->contains(fn (array $channel): bool => $channel['channel'] === 'email' && $channel['total'] === 1)));
 });
 
 test('platform users can visit the admin dashboard path', function () {
@@ -100,6 +118,7 @@ test('platform users see campaign trends and delivery breakdowns', function () {
                 ['channel' => 'voice', 'label' => 'Voice', 'total' => 1],
                 ['channel' => 'sms', 'label' => 'SMS', 'total' => 1],
                 ['channel' => 'email', 'label' => 'Email', 'total' => 0],
+                ['channel' => 'whatsapp', 'label' => 'WhatsApp', 'total' => 0],
                 ['channel' => 'multi_channel', 'label' => 'Multi-Channel', 'total' => 1],
             ])
             ->where('recipientStatusBreakdown', [
