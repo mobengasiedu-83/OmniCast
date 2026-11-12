@@ -88,6 +88,12 @@ it('suspends an active tenant with a reason and records the move', function (): 
         ->and($entry?->causer_id)->toBe($admin->id);
 });
 
+it('fails closed when a tenant status is missing', function (): void {
+    $client = Client::factory()->make(['status' => null]);
+
+    expect($client->canBroadcast())->toBeFalse();
+});
+
 it('requires a reason to suspend a tenant', function (): void {
     $client = Client::factory()->create();
 

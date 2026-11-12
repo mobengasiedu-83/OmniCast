@@ -27,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $email
  * @property string|null $phone
  * @property string $timezone
- * @property ClientStatus $status
+ * @property ClientStatus|null $status
  * @property string|null $status_reason
  * @property Carbon|null $status_changed_at
  * @property Carbon|null $activated_at
@@ -231,7 +231,7 @@ class Client extends Model
      */
     public function canBroadcast(): bool
     {
-        return $this->status->canBroadcast();
+        return $this->status?->canBroadcast() ?? false;
     }
 
     /**
