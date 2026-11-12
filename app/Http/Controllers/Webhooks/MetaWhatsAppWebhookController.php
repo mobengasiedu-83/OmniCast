@@ -14,10 +14,12 @@ class MetaWhatsAppWebhookController extends Controller
     public function verify(Request $request): Response
     {
         $verifyToken = (string) config('whatsapp.meta.verify_token', '');
-        abort_unless($verifyToken !== '' && $request->query('hub.mode') === 'subscribe'
-            && hash_equals($verifyToken, (string) $request->query('hub.verify_token')), 403);
+        $mode = (string) $request->query->get('hub.mode', $request->query->get('hub_mode', ''));
+        $providedToken = (string) $request->query->get('hub.verify_token', $request->query->get('hub_verify_token', ''));
+        $challenge = (string) $request->query->get('hub.challenge', $request->query->get('hub_challenge', ''));
+        abort_unless($verifyToken !== '' && $mode === 'subscribe' && hash_equals($verifyToken, $providedToken), 403);
 
-        return response((string) $request->query('hub.challenge'), 200)->header('Content-Type', 'text/plain');
+        return response($challenge, 200)->header('Content-Type', 'text/plain');
     }
 
     public function receive(Request $request, WhatsAppProviderEventIngestor $ingestor): JsonResponse
