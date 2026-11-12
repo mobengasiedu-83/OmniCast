@@ -102,7 +102,9 @@ function DonutBreakdown({
     data: Breakdown[];
     description: string;
 }) {
-    const slices = data.filter((item) => item.total > 0);
+    const slices = (Array.isArray(data) ? data : []).filter(
+        (item) => item.total > 0,
+    );
     const total = slices.reduce((sum, item) => sum + item.total, 0);
 
     if (total === 0) {
@@ -204,12 +206,29 @@ function DonutBreakdown({
 
 export default function AdminDashboard({
     stats,
-    campaignActivity,
-    campaignStatusBreakdown,
-    channelBreakdown,
-    recipientStatusBreakdown,
-    recentCampaigns,
+    campaignActivity: campaignActivityProp,
+    campaignStatusBreakdown: campaignStatusBreakdownProp,
+    channelBreakdown: channelBreakdownProp,
+    recipientStatusBreakdown: recipientStatusBreakdownProp,
+    recentCampaigns: recentCampaignsProp,
 }: PageProps) {
+    const campaignActivity = Array.isArray(campaignActivityProp)
+        ? campaignActivityProp
+        : [];
+    const campaignStatusBreakdown = Array.isArray(campaignStatusBreakdownProp)
+        ? campaignStatusBreakdownProp
+        : [];
+    const channelBreakdown = Array.isArray(channelBreakdownProp)
+        ? channelBreakdownProp
+        : [];
+    const recipientStatusBreakdown = Array.isArray(
+        recipientStatusBreakdownProp,
+    )
+        ? recipientStatusBreakdownProp
+        : [];
+    const recentCampaigns = Array.isArray(recentCampaignsProp)
+        ? recentCampaignsProp
+        : [];
     const overview = [
         {
             title: 'Client accounts',

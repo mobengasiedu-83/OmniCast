@@ -101,6 +101,26 @@ it('keeps unrelated dashboard routes available when a module is switched off pla
             ->has('channelBreakdown', 3));
 });
 
+it('hides switched-off channels from the platform dashboard without blanking it', function (): void {
+    PlatformSetting::query()->create([
+        'group' => 'channels',
+        'key' => ClientService::Email->value.'.enabled',
+        'value' => '0',
+    ]);
+
+    $this->actingAs(platformUser())
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('admin/dashboard')
+            ->where('modules.email', false)
+            ->where('channelBreakdown', [
+                ['channel' => 'voice', 'label' => 'Voice', 'total' => 0],
+                ['channel' => 'sms', 'label' => 'SMS', 'total' => 0],
+                ['channel' => 'multi_channel', 'label' => 'Multi-Channel', 'total' => 0],
+            ]));
+});
+
 it('drops a module the tenant switched off from its own screens', function (): void {
     [$client, , $user] = clientWithWallet();
 
