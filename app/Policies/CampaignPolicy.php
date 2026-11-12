@@ -68,6 +68,7 @@ class CampaignPolicy
     {
         return $user->can(Permission::LaunchCampaigns->value)
             && $this->sameClient($user, $campaign)
+            && $campaign->client?->canBroadcast() === true
             && $campaign->status->canBeScheduled();
     }
 

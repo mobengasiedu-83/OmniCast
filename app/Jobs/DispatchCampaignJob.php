@@ -82,13 +82,21 @@ class DispatchCampaignJob implements ShouldQueue
      */
     public function handle(CampaignDispatcher $dispatcher, QueueTopology $queues): void
     {
-        $campaign = Campaign::query()->find($this->campaignId);
+        $campaign = Campaign::query()->with('client')->find($this->campaignId);
 
         if ($campaign === null) {
             return;
         }
 
         if ($campaign->status->isTerminal() || $campaign->status === CampaignStatus::Paused) {
+            return;
+        }
+
+        if (! $campaign->client?->canBroadcast()) {
+            if (! $campaign->status->isTerminal()) {
+                $campaign->forceFill(['status' => CampaignStatus::Paused])->save();
+            }
+
             return;
         }
 

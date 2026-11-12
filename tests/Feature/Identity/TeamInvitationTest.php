@@ -49,14 +49,14 @@ it('forbids client operators from inviting colleagues', function () {
     expect(UserInvitation::query()->count())->toBe(0);
 });
 
-it('blocks client team invitations until the organisation is activated', function (): void {
+it('allows pending clients to manage their team while awaiting activation', function (): void {
     [$client, , $clientAdmin] = clientWithWallet();
     $client->update(['status' => ClientStatus::Pending]);
 
     $this->actingAs($clientAdmin)
         ->get(route('team.index'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('can.invite', false));
+        ->assertInertia(fn (Assert $page) => $page->where('can.invite', true));
 
     $this->actingAs($clientAdmin)
         ->post(route('team.store'), [
@@ -64,9 +64,9 @@ it('blocks client team invitations until the organisation is activated', functio
             'role' => RoleEnum::ClientOperator->value,
         ])
         ->assertRedirect()
-        ->assertSessionHas('toast');
+        ->assertSessionHasNoErrors();
 
-    expect(UserInvitation::query()->count())->toBe(0);
+    expect(UserInvitation::query()->where('client_id', $client->id)->count())->toBe(1);
 });
 
 it('lists only the organisation team', function () {
