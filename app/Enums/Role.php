@@ -72,6 +72,7 @@ enum Role: string
                 Permission::ViewAutomations,
                 Permission::ManageAutomations,
                 Permission::ViewSmpp,
+                Permission::ViewWhatsAppConnectors,
             ],
             self::ClientOperator => [
                 Permission::ViewContacts,
@@ -87,6 +88,7 @@ enum Role: string
                 Permission::ViewWebhooks,
                 Permission::ViewAutomations,
                 Permission::ManageAutomations,
+                Permission::ViewWhatsAppConnectors,
             ],
             self::ComplianceOfficer => [
                 Permission::ManageClients,
@@ -110,6 +112,9 @@ enum Role: string
                 Permission::ManageLegal,
                 Permission::ViewSupport,
                 Permission::ManageSupport,
+                Permission::ViewWhatsAppProviders,
+                Permission::ViewWhatsAppConnectors,
+                Permission::ApproveWhatsAppConnectors,
             ],
             self::FinanceOfficer => [
                 Permission::ManageClients,

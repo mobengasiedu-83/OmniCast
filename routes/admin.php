@@ -37,6 +37,7 @@ use App\Http\Controllers\Admin\TemplateController as AdminTemplateController;
 use App\Http\Controllers\Admin\TemplateUsageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WebhookController;
+use App\Http\Controllers\Admin\WhatsAppProviderController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -101,6 +102,23 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::get('system', [SystemController::class, 'index'])->name('system.index');
             Route::get('system/runbook', [SystemController::class, 'runbook'])->name('system.runbook');
             Route::get('queues', [QueueController::class, 'index'])->name('queues.index');
+        });
+
+        Route::middleware('can:whatsapp.providers.view')->group(function (): void {
+            Route::get('whatsapp/providers', [WhatsAppProviderController::class, 'index'])
+                ->name('whatsapp.providers.index');
+        });
+
+        Route::middleware('can:whatsapp.providers.manage')->group(function (): void {
+            Route::post('whatsapp/providers', [WhatsAppProviderController::class, 'store'])
+                ->name('whatsapp.providers.store');
+            Route::put('whatsapp/providers/{provider}', [WhatsAppProviderController::class, 'update'])
+                ->name('whatsapp.providers.update');
+        });
+
+        Route::middleware('can:whatsapp.providers.test')->group(function (): void {
+            Route::post('whatsapp/providers/{provider}/test', [WhatsAppProviderController::class, 'testConnection'])
+                ->name('whatsapp.providers.test');
         });
 
         Route::middleware('can:clients.manage')->group(function (): void {

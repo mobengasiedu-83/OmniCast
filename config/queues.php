@@ -57,6 +57,13 @@ return [
             'backoff' => [60, 300, 900],
             'timeout' => (int) env('QUEUE_EMAIL_TIMEOUT', 180),
         ],
+        'whatsapp' => [
+            'queue' => env('QUEUE_WHATSAPP', 'whatsapp'),
+            'cps' => (int) env('WHATSAPP_BROADCAST_GLOBAL_CPS', 0),
+            'tries' => (int) env('QUEUE_WHATSAPP_TRIES', 3),
+            'backoff' => [30, 120, 300],
+            'timeout' => (int) env('QUEUE_WHATSAPP_TIMEOUT', 120),
+        ],
     ],
 
     /*

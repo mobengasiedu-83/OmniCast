@@ -101,6 +101,7 @@ return [
         'redis:sms' => 60,
         'redis:voice' => 60,
         'redis:email' => 90,
+        'redis:whatsapp' => 90,
         'redis:default' => 60,
     ],
 
@@ -258,6 +259,20 @@ return [
             'nice' => 5,
         ],
 
+        'supervisor-whatsapp' => [
+            'connection' => 'redis',
+            'queue' => ['whatsapp'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 2,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 128,
+            'tries' => 3,
+            'timeout' => 120,
+            'nice' => 5,
+        ],
+
         'supervisor-default' => [
             'connection' => 'redis',
             'queue' => ['default'],
@@ -295,6 +310,11 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-whatsapp' => [
+                'maxProcesses' => 4,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
             'supervisor-default' => [
                 'maxProcesses' => 4,
                 'balanceMaxShift' => 1,
@@ -313,6 +333,9 @@ return [
                 'maxProcesses' => 1,
             ],
             'supervisor-email' => [
+                'maxProcesses' => 1,
+            ],
+            'supervisor-whatsapp' => [
                 'maxProcesses' => 1,
             ],
             'supervisor-default' => [

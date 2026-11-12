@@ -104,6 +104,12 @@ class Client extends Model
         return $this->hasMany(Campaign::class);
     }
 
+    /** @return HasMany<WhatsAppClientConnector, $this> */
+    public function whatsappConnectorAssignments(): HasMany
+    {
+        return $this->hasMany(WhatsAppClientConnector::class);
+    }
+
     /**
      * @return HasMany<SenderId, $this>
      */

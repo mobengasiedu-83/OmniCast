@@ -2,9 +2,9 @@
 
 ## Complete Technical & Functional Specification
 
-Version 2.0 | 11 November 2026
+Version 2.1 | 12 November 2026
 
-Laravel 12 • Pro Plus WhatsApp API • Unified Wallet • Existing Media Storage
+Laravel 13 • Pro Plus WhatsApp API • Unified Wallet • Existing Media Storage
 
 This document defines the architecture, implementation plan, operational controls, pricing model, and launch gates for integrating WhatsApp into the OmniCast platform.
 
@@ -30,7 +30,7 @@ MySQL stores campaign state, templates, message events, consent records, and imm
 
 | Layer | Implementation |
 | --- | --- |
-| Backend | Laravel 12, PHP, existing OmniCast authentication and RBAC |
+| Backend | Laravel 13, PHP 8.3, existing OmniCast authentication and RBAC |
 | Database | Existing MySQL; WhatsApp tables namespaced as `whatsapp_*` |
 | Async processing | Redis + Horizon; dedicated priority queues and per-provider throttles |
 | Integration | Laravel HTTP client behind a `WhatsAppProvider` interface |
@@ -39,7 +39,7 @@ MySQL stores campaign state, templates, message events, consent records, and imm
 
 ## 3. Provider API contract
 
-The Pro Plus integration guide uses HTTP Basic authentication with the Client ID as the username and the API key as the password. The base URL is provider-supplied.
+The exported Postman collection `Pro Plus Whatsapp API` uses HTTP Basic authentication with `Client-id` as the username and `ApiKey` as the password. Requests use the `{{whatsapp}}` collection variable as the base URL, but the export contains no value for that variable; obtain the deployment-specific host from Pro Plus and set it as `WHATSAPP_API_BASE_URL`. The credentials belong in `WHATSAPP_API_CLIENT_ID` and `WHATSAPP_API_KEY`. Set the base URL to the origin only, with endpoint paths configured separately. Keep real credentials in an untracked deployment `.env` or secret store, never in `.env.example`.
 
 Documented endpoints include:
 
@@ -48,16 +48,18 @@ Documented endpoints include:
 - `GET /api/whatsapp/v1/Template/GetAll`
 - `POST /api/whatsapp/v1/Send`
 
-`Template/GetAll` accepts `WABAID` and optional `offset`, `limit` (maximum 25), and `templateStatus` values:
+`Template/GetAll` accepts `WABAID` and optional `offset`, `limit` (maximum 25), and `templateStatus` values. The collection models these as form-data fields on GET requests; confirm how Pro Plus expects them encoded in sandbox testing:
 
 - `0` draft
 - `1` pending
 - `2` rejected
 - `3` approved
 
-The guide illustrates GET requests using multipart form fields; the final request encoding must be confirmed in a sandbox. Send payloads use `SenderNumber`, `MetaTemplateId`, and `BulkPayload` or `CustomPayload`. Preserve the provider spelling `RecieverNumber` exactly.
+One saved request description says `2 = Approved`, conflicting with the collection's error-code/status table, which says `2 = Rejected` and `3 = Approved`. Treat this mapping as unconfirmed until Pro Plus clarifies it.
 
-Supported outbound variations documented in the guide include:
+The collection's send examples use `POST /api/whatsapp/v1/Send` with JSON payloads using `SenderNumber`, `MetaTemplateId`, and either `BulkPayload` or `CustomPayload`. Individual custom recipients use the documented spelling `RecieverNumber`. A successful bulk response example has `statusCode: 0`, `status: "Success"`, and a `messages` array whose entries contain `messageId` and `receiverNumber`; accept a submission only when the response includes a provider message reference. The collection documents up to 100,000 valid recipients per request, but OmniCast must apply its own campaign chunking and rate limits rather than send that full amount as one request.
+
+The collection documents these outbound variations:
 
 - Fixed template
 - Body variables
@@ -120,8 +122,7 @@ The WhatsApp data model should be scoped under tenant-aware tables with foreign 
 
 | Table | Core purpose / fields |
 | --- | --- |
-| `whatsapp_providers` | `id`, `name`, `driver`, `base_url`, `status` |
-| `whatsapp_provider_credentials` | `provider_id`, encrypted credentials, `rotated_at` |
+| `whatsapp_providers` | `id`, `name`, `driver`, `status`, enabled state and request timeouts |
 | `whatsapp_connectors` | `provider_id`, `external_id`, `waba_id`, `sender_number`, `status` |
 | `whatsapp_client_connectors` | `client_id`, `connector_id`, `enabled`, `approval_status` |
 | `whatsapp_templates` | `client_id`, `connector_id`, `meta_template_id`, `language`, `category`, `status` |
@@ -397,6 +398,8 @@ Some work can proceed in parallel after its dependencies are met. Provider-depen
 
 **Exit gate:** A reviewed provider contract and sandbox test plan are available. Any unavailable callback, billing, inbound, or template-submission feature is explicitly out of initial-release scope.
 
+Shared deployment configuration is supplied through `WHATSAPP_API_BASE_URL`, `WHATSAPP_API_CLIENT_ID`, and `WHATSAPP_API_KEY`. Endpoint paths can be overridden with `WHATSAPP_CONNECTORS_ENDPOINT`, `WHATSAPP_TEMPLATES_ENDPOINT`, and `WHATSAPP_SEND_ENDPOINT`. These values are consumed through `config/whatsapp.php` and are not stored in the provider database table or exposed as editable form fields.
+
 ### Phase 1 — Foundation and platform integration
 
 **Goal:** Establish the WhatsApp module and shared platform foundations without changing existing channel behavior.
@@ -405,13 +408,24 @@ Some work can proceed in parallel after its dependencies are met. Provider-depen
 
 - Add the WhatsApp domain structure, migrations, models, tenant relationships, and required indexes.
 - Define the `WhatsAppProvider` contract and the Pro Plus adapter boundary.
-- Add provider configuration with encrypted credentials, connection status, timeouts, and tested-at tracking.
+- Add provider configuration with connection status, timeouts, and tested-at tracking. The shared base URL, client ID, API key, and provider endpoint paths live in environment variables and are never stored in MySQL.
 - Add granular permissions, policies, audit events, and tenant-isolation rules.
 - Establish request correlation, credential/OTP redaction, response normalization, and error classification.
 - Configure WhatsApp queue names and worker conventions alongside existing infrastructure.
 - Reuse existing users, clients, contacts, payments, storage, notifications, Redis, and Horizon where applicable.
 
-**Exit gate:** Schema and authorization tests pass; credentials are encrypted and excluded from logs; existing channel behavior remains unchanged.
+**Applied in v2 (12 November 2026):**
+
+- Added the `whatsapp_*` provider, connector, client assignment, and audit tables with foreign keys, uniqueness constraints, and lookup indexes; added typed Eloquent models and tenant relationships. Shared provider credentials are environment-only; a follow-up migration removes the earlier credential table and provider URL column.
+- Added the `WhatsAppProvider` interface, Pro Plus HTTP adapter, normalized response DTO, and connection configuration screen. Shared endpoint and credential values are read from `config/whatsapp.php`, backed by `.env`; the provider table stores only provider metadata, enablement and timeouts.
+- Added provider/connector permission values, role grants, policies, admin routes, and safe provider audit records. Connector assignment policy checks tenant ownership before allowing client access.
+- Added request correlation IDs, bounded HTTP timeouts, recursive response redaction for credentials and OTP values, and normalized accepted/rejected/unknown response handling. A successful HTTP response without a provider message reference remains `Unknown` for submissions.
+- Added a dedicated `whatsapp` queue policy and Horizon supervisor configuration. No message dispatch job or campaign channel was enabled in this phase.
+- Set `WHATSAPP_ENABLED=false` by default. The adapter refuses sends unless both the platform flag and provider switch are enabled; provider contract/sandbox confirmation remains a prerequisite before turning this on.
+
+**Verification (12 November 2026):** Eight WhatsApp feature tests and ten queue feature tests pass (18 tests, 85 assertions) on the isolated SQLite test database. The foundation migration was applied to the local MySQL `gwosevo_omnicast` database; its tables, indexes, and foreign keys were inspected. `RoleSeeder` added the six new WhatsApp permissions to the local database's five built-in roles. `npm run types:check`, the production build, Pint, and `git diff --check` pass. Existing SMS, Voice, and Email behavior is unchanged.
+
+**Remaining gate:** Phase 0's provider contract and sandbox confirmation remains open; this blocks real sending and does not block the Phase 1 foundation work.
 
 ### Phase 2 — Provider connection, connectors, templates, and media
 

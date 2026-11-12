@@ -196,6 +196,12 @@ export const urls = {
             index: path('/admin/integrations'),
             update: path('/admin/integrations'),
         },
+        whatsappProviders: {
+            index: path('/admin/whatsapp/providers'),
+            store: path('/admin/whatsapp/providers'),
+            update: (provider: number) => path(`/admin/whatsapp/providers/${provider}`),
+            test: (provider: number) => path(`/admin/whatsapp/providers/${provider}/test`),
+        },
         packages: {
             index: path('/admin/packages'),
             update: (packageKey: string) =>

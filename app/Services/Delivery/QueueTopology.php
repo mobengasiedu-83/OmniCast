@@ -56,6 +56,14 @@ class QueueTopology
         return (string) config('queues.campaigns', 'campaigns');
     }
 
+    /** The dedicated WhatsApp provider queue. */
+    public function whatsappQueue(): string
+    {
+        $queue = config('queues.channels.whatsapp.queue');
+
+        return is_string($queue) && $queue !== '' ? $queue : 'whatsapp';
+    }
+
     /**
      * The worker policy for a channel's submissions.
      *
@@ -124,6 +132,22 @@ class QueueTopology
                 'policy' => $this->retryPolicy($channel),
             ];
         }
+
+        $whatsapp = (array) config('queues.channels.whatsapp', []);
+        $whatsappName = $this->whatsappQueue();
+
+        $queues[] = [
+            'name' => $whatsappName,
+            'purpose' => 'WhatsApp provider work and retries',
+            'channels' => ['whatsapp'],
+            'supervisor' => $this->supervisorFor($whatsappName),
+            'cps' => max((int) ($whatsapp['cps'] ?? 0), 0),
+            'policy' => [
+                'tries' => max((int) ($whatsapp['tries'] ?? 3), 1),
+                'backoff' => array_values(array_map('intval', (array) ($whatsapp['backoff'] ?? [30, 120, 300]))),
+                'timeout' => max((int) ($whatsapp['timeout'] ?? 120), 1),
+            ],
+        ];
 
         $queues[] = [
             'name' => 'default',

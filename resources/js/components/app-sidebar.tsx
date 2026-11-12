@@ -311,6 +311,8 @@ export function AppSidebar() {
         isPlatformUser && permissions.includes('wallet.manage');
     const canViewRates = isPlatformUser && permissions.includes('rates.view');
     const canViewQueues = isPlatformUser && permissions.includes('queues.view');
+    const canViewWhatsAppProviders =
+        isPlatformUser && permissions.includes('whatsapp.providers.view');
     const canViewReports = permissions.includes('reports.view');
     const canViewAutomations = permissions.includes('automations.view');
     const canViewAnnouncements =
@@ -650,6 +652,18 @@ export function AppSidebar() {
                 )}
                 {isPlatformUser && canManageUsers && (
                     <NavMain items={identityNavItems} label="Users" />
+                )}
+                {canViewWhatsAppProviders && (
+                    <NavMain
+                        items={[
+                            {
+                                title: 'Providers',
+                                href: urls.admin.whatsappProviders.index,
+                                icon: Plug,
+                            },
+                        ]}
+                        label="WhatsApp"
+                    />
                 )}
                 {canViewQueues && (
                     <NavMain items={operationsNavItems} label="Operations" />

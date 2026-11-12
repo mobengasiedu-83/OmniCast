@@ -5,8 +5,13 @@ namespace App\Providers;
 use App\Contracts\EmailGateway;
 use App\Contracts\SmsGateway;
 use App\Contracts\VoiceGateway;
+use App\Contracts\WhatsApp\WhatsAppProvider as WhatsAppProviderContract;
 use App\Models\User;
+use App\Models\WhatsAppClientConnector;
+use App\Models\WhatsAppProvider;
 use App\Policies\RolePolicy;
+use App\Policies\WhatsAppClientConnectorPolicy;
+use App\Policies\WhatsAppProviderPolicy;
 use App\Services\Email\EmailGatewayManager;
 use App\Services\IntegrationScripts;
 use App\Services\PlatformConfiguration;
@@ -14,6 +19,7 @@ use App\Services\Sms\SmsGatewayManager;
 use App\Services\Voice\AmiTransport;
 use App\Services\Voice\StreamAmiTransport;
 use App\Services\Voice\VoiceGatewayManager;
+use App\Services\WhatsApp\ProPlusWhatsAppProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -51,6 +57,7 @@ class AppServiceProvider extends ServiceProvider
             VoiceGateway::class,
             fn (): VoiceGateway => $this->app->make(VoiceGatewayManager::class)->driver(),
         );
+        $this->app->bind(WhatsAppProviderContract::class, ProPlusWhatsAppProvider::class);
     }
 
     /**
@@ -103,6 +110,8 @@ class AppServiceProvider extends ServiceProvider
     protected function configureIdentity(): void
     {
         Gate::policy(RoleModel::class, RolePolicy::class);
+        Gate::policy(WhatsAppProvider::class, WhatsAppProviderPolicy::class);
+        Gate::policy(WhatsAppClientConnector::class, WhatsAppClientConnectorPolicy::class);
 
         Gate::before(static function (User $user, string $ability, array $arguments): ?bool {
             $target = $arguments[0] ?? null;

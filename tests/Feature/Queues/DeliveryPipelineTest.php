@@ -28,10 +28,12 @@ it('routes campaign work to the queue that owns the channel', function (): void 
 it('describes every queue with its supervisor and retry policy', function (): void {
     $queues = app(QueueTopology::class)->queues();
 
-    expect(array_column($queues, 'name'))->toBe(['campaigns', 'sms', 'voice', 'email', 'default'])
+    expect(array_column($queues, 'name'))->toBe(['campaigns', 'sms', 'voice', 'email', 'whatsapp', 'default'])
         ->and($queues[0]['supervisor'])->not->toBeNull()
         ->and($queues[1]['policy']['tries'])->toBeInt()
-        ->and($queues[1]['cps'])->toBeInt();
+        ->and($queues[1]['cps'])->toBeInt()
+        ->and($queues[4]['supervisor'])->toBe('supervisor-whatsapp')
+        ->and($queues[4]['policy']['tries'])->toBe(3);
 });
 
 it('releases a campaign whose scheduled start time has passed', function (): void {
