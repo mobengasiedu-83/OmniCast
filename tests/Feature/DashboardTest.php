@@ -35,7 +35,7 @@ test('authenticated users can visit the dashboard', function () {
         ->assertInertia(fn (Assert $page) => $page->component('dashboard'));
 });
 
-test('tenant channel mix includes existing campaigns when a channel is disabled', function (): void {
+test('tenant channel mix only includes enabled modules', function (): void {
     [$client, , $user] = clientWithWallet();
     Campaign::factory()->forClient($client)->create(['channel' => Channel::Email]);
     PlatformSetting::query()->create([
@@ -49,7 +49,8 @@ test('tenant channel mix includes existing campaigns when a channel is disabled'
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('channelBreakdown', fn ($channels): bool => collect($channels)
-                ->contains(fn (array $channel): bool => $channel['channel'] === 'email' && $channel['total'] === 1)));
+                ->pluck('channel')
+                ->doesntContain('email')));
 });
 
 test('platform users can visit the admin dashboard path', function () {

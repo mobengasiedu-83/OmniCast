@@ -182,8 +182,7 @@ class DashboardController extends Controller
                 'is_low' => $wallet->isLow(),
             ],
             'channelBreakdown' => collect(Channel::cases())
-                ->filter(fn (Channel $channel): bool => $this->modules->allowsChannel($channel, $user->client)
-                    || (clone $campaigns)->where('channel', $channel->value)->exists())
+                ->filter(fn (Channel $channel): bool => $this->modules->allowsChannel($channel, $user->client))
                 ->map(fn (Channel $channel): array => [
                     'channel' => $channel->value,
                     'label' => $channel->label(),

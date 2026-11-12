@@ -143,7 +143,8 @@ it('keeps unrelated dashboard routes available when a module is switched off pla
             ->component('dashboard')
             ->where('modules.email', false)
             ->where('channelBreakdown', fn ($channels): bool => collect($channels)
-                ->contains(fn (array $channel): bool => $channel['channel'] === 'email' && $channel['total'] === 1)));
+                ->pluck('channel')
+                ->doesntContain('email')));
 });
 
 it('hides switched-off channels from the platform dashboard without blanking it', function (): void {
