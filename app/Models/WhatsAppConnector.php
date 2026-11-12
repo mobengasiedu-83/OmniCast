@@ -23,10 +23,12 @@ use Illuminate\Support\Carbon;
  * @property WhatsAppConnectorStatus $status
  * @property Carbon|null $last_synced_at
  */
-#[Fillable(['provider_id', 'external_id', 'connector_name', 'waba_id', 'sender_number', 'status', 'last_synced_at'])]
+#[Fillable(['provider_id', 'client_id', 'external_id', 'connector_name', 'waba_id', 'business_id', 'access_token', 'token_expires_at', 'sender_number', 'status', 'last_synced_at'])]
 class WhatsAppConnector extends Model
 {
     protected $table = 'whatsapp_connectors';
+
+    protected $hidden = ['access_token'];
 
     /** @use HasFactory<WhatsAppConnectorFactory> */
     use HasFactory;
@@ -37,6 +39,8 @@ class WhatsAppConnector extends Model
         return [
             'status' => WhatsAppConnectorStatus::class,
             'last_synced_at' => 'datetime',
+            'access_token' => 'encrypted',
+            'token_expires_at' => 'datetime',
         ];
     }
 
@@ -44,6 +48,12 @@ class WhatsAppConnector extends Model
     public function provider(): BelongsTo
     {
         return $this->belongsTo(WhatsAppProvider::class, 'provider_id');
+    }
+
+    /** @return BelongsTo<Client, $this> */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
     }
 
     /** @return HasMany<WhatsAppClientConnector, $this> */

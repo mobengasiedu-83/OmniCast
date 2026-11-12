@@ -52,6 +52,18 @@ class WhatsAppProvider extends Model
         return $this->hasMany(WhatsAppConnector::class, 'provider_id');
     }
 
+    /** @return HasMany<WhatsAppProviderEvent, $this> */
+    public function whatsappEvents(): HasMany
+    {
+        return $this->hasMany(WhatsAppProviderEvent::class, 'provider_id');
+    }
+
+    /** @return HasMany<WhatsAppProviderInvoice, $this> */
+    public function whatsappInvoices(): HasMany
+    {
+        return $this->hasMany(WhatsAppProviderInvoice::class, 'provider_id');
+    }
+
     /** @return HasMany<WhatsAppAuditLog, $this> */
     public function auditLogs(): HasMany
     {

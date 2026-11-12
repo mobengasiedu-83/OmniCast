@@ -52,6 +52,10 @@ class CampaignRequest extends FormRequest
      */
     public function rules(): array
     {
+        if ($this->input('channel') === Channel::WhatsApp->value) {
+            return ['channel' => ['prohibited'], 'name' => ['required', 'string', 'max:120']];
+        }
+
         $clientId = $this->input('client_id');
         $channel = $this->enum('channel', Channel::class);
         $requiresSms = $channel?->requiresSmsContent() ?? false;

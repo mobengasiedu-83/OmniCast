@@ -63,6 +63,13 @@ class CampaignDispatcher
      */
     public function run(Campaign $campaign): bool
     {
+        if ($campaign->channel === Channel::WhatsApp) {
+            $this->failPending($campaign, 'WhatsApp dispatch is not enabled until Phase 4 is complete.');
+            $this->finalize($campaign);
+
+            return false;
+        }
+
         $campaign->loadMissing(['client', 'emailAttachments']);
         $disabledChannels = array_filter(
             $campaign->channel->deliveryChannels(),
@@ -203,6 +210,7 @@ class CampaignDispatcher
                 Channel::Sms => $this->smsCostFor($campaign, $contact, $smsPartCost),
                 Channel::Voice => $voiceCallCost,
                 Channel::Email => $emailCostPerRecipient,
+                Channel::WhatsApp => 0.0,
                 default => 0.0,
             };
 
@@ -222,6 +230,7 @@ class CampaignDispatcher
                 Channel::Sms => $this->sendSms($campaign, $row, $contact, $unitCost),
                 Channel::Voice => $this->callVoice($campaign, $row, $contact, $voiceCallCost),
                 Channel::Email => $this->sendEmail($campaign, $row, $contact, $emailCostPerRecipient),
+                Channel::WhatsApp => false,
                 default => false,
             };
 

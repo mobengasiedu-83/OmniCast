@@ -62,6 +62,11 @@ class ProPlusWhatsAppProvider implements WhatsAppProviderContract
         return $this->request($provider, 'POST', (string) config('whatsapp.provider.endpoints.send'), $payload, true);
     }
 
+    public function sendBatch(WhatsAppProvider $provider, array $payload): WhatsAppProviderResponse
+    {
+        return $this->send($provider, $payload);
+    }
+
     /** @param array<string, int|string> $query */
     protected function get(WhatsAppProvider $provider, string $path, array $query = []): WhatsAppProviderResponse
     {
@@ -136,7 +141,7 @@ class ProPlusWhatsAppProvider implements WhatsAppProviderContract
         $status = match (true) {
             ! $successful && $httpStatus >= 400 && $httpStatus < 500 && $httpStatus !== 429 => WhatsAppProviderResultStatus::Rejected,
             $applicationError => WhatsAppProviderResultStatus::Rejected,
-            $successful && (! $isSubmission || $providerReference !== null) => WhatsAppProviderResultStatus::Accepted,
+            $successful && (! $isSubmission || ($providerReference !== null && $this->hasUnambiguousMessageReferences($body))) => WhatsAppProviderResultStatus::Accepted,
             default => WhatsAppProviderResultStatus::Unknown,
         };
 
@@ -146,7 +151,39 @@ class ProPlusWhatsAppProvider implements WhatsAppProviderContract
             $providerReference,
             $this->errorCategory($httpStatus),
             $data,
+            $this->messageReferences($body),
         );
+    }
+
+    /** @param array<string, mixed>|null $body @return array<string, string> */
+    protected function messageReferences(?array $body): array
+    {
+        $references = [];
+        foreach ((array) ($body['messages'] ?? []) as $message) {
+            if (! is_array($message)) {
+                continue;
+            }
+            $reference = $this->providerReference($message);
+            $phone = $message['receiverNumber'] ?? $message['RecieverNumber'] ?? null;
+            if ($reference !== null && is_scalar($phone) && (string) $phone !== '') {
+                $references[(string) $phone] = $reference;
+            }
+        }
+
+        return $references;
+    }
+
+    /** @param array<string, mixed>|null $body */
+    protected function hasUnambiguousMessageReferences(?array $body): bool
+    {
+        if (! is_array($body)) {
+            return false;
+        }
+        if (isset($body['messages']) && is_array($body['messages'])) {
+            return $body['messages'] !== [] && collect($body['messages'])->every(fn (mixed $message): bool => is_array($message) && $this->providerReference($message) !== null);
+        }
+
+        return $this->providerReference($body) !== null;
     }
 
     /** @param array<string,mixed> $body */

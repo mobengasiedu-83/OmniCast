@@ -18,6 +18,11 @@ use App\Models\SmppAccount;
 use App\Models\User;
 use App\Models\UserInvitation;
 use App\Models\WebhookEndpoint;
+use App\Models\WhatsAppCampaign;
+use App\Models\WhatsAppCampaignRecipient;
+use App\Models\WhatsAppClientConnector;
+use App\Models\WhatsAppContactConsent;
+use App\Models\WhatsAppMediaAsset;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
@@ -126,6 +131,56 @@ class PrivacyRequestProcessor
                 ], $first);
             }
 
+            echo '],"whatsapp_history":[';
+            $first = true;
+            $whatsappRecipients = DB::table('whatsapp_campaign_recipients as recipients')
+                ->join('whatsapp_campaigns as campaigns', 'campaigns.id', '=', 'recipients.campaign_id')
+                ->where('campaigns.client_id', $client->id)
+                ->when($contact !== null, fn ($query) => $query->where('recipients.contact_id', $contact->id))
+                ->select(['recipients.id', 'recipients.phone', 'recipients.status', 'recipients.provider_message_id', 'recipients.variables_json', 'recipients.snapshot_json', 'recipients.unit_price', 'recipients.unit_price_snapshot', 'recipients.submitted_at', 'recipients.accepted_at', 'recipients.delivered_at', 'recipients.read_at', 'recipients.failed_at', 'campaigns.name as campaign_name'])
+                ->orderBy('recipients.id');
+
+            foreach ($whatsappRecipients->lazyById(100, 'recipients.id', 'id') as $recipient) {
+                $this->writeArrayItem(['type' => 'message', ...(array) $recipient], $first);
+            }
+
+            $recipientIds = DB::table('whatsapp_campaign_recipients as recipients')
+                ->join('whatsapp_campaigns as campaigns', 'campaigns.id', '=', 'recipients.campaign_id')
+                ->where('campaigns.client_id', $client->id)
+                ->when($contact !== null, fn ($query) => $query->where('recipients.contact_id', $contact->id))
+                ->select('recipients.id');
+            foreach (DB::table('whatsapp_message_attempts')->whereIn('recipient_id', $recipientIds)->orderBy('id')->lazyById(100) as $attempt) {
+                $this->writeArrayItem(['type' => 'attempt', ...(array) $attempt], $first);
+            }
+            foreach (DB::table('whatsapp_provider_events')->whereIn('recipient_id', $recipientIds)->orderBy('id')->lazyById(100) as $event) {
+                $this->writeArrayItem(['type' => 'provider_event', ...(array) $event], $first);
+            }
+            foreach (DB::table('whatsapp_usage_records')->whereIn('recipient_id', $recipientIds)->orderBy('id')->lazyById(100) as $usage) {
+                $this->writeArrayItem(['type' => 'billable_usage', ...(array) $usage], $first);
+            }
+            $usageIds = DB::table('whatsapp_usage_records')->whereIn('recipient_id', $recipientIds)->select('id');
+            foreach (DB::table('whatsapp_invoice_reconciliations as reconciliations')
+                ->join('whatsapp_provider_invoices as invoices', 'invoices.id', '=', 'reconciliations.invoice_id')
+                ->whereIn('reconciliations.usage_record_id', $usageIds)
+                ->select(['reconciliations.id', 'invoices.invoice_number', 'invoices.currency', 'invoices.status as invoice_status', 'reconciliations.provider_reference', 'reconciliations.provider_amount', 'reconciliations.internal_amount', 'reconciliations.variance', 'reconciliations.status as review_status', 'reconciliations.review_note'])
+                ->orderBy('reconciliations.id')->lazyById(100, 'reconciliations.id', 'id') as $reconciliation) {
+                $this->writeArrayItem(['type' => 'invoice_reconciliation', ...(array) $reconciliation], $first);
+            }
+            if ($contact === null) {
+                foreach (DB::table('wallet_transactions as transactions')
+                    ->join('wallets', 'wallets.id', '=', 'transactions.wallet_id')
+                    ->where('wallets.client_id', $client->id)
+                    ->where('transactions.metadata->channel', 'whatsapp')
+                    ->select(['transactions.id', 'transactions.type', 'transactions.amount', 'transactions.balance_after', 'transactions.reference', 'transactions.description', 'transactions.metadata', 'transactions.created_at'])
+                    ->orderBy('transactions.id')->lazyById(100, 'transactions.id', 'id') as $transaction) {
+                    $this->writeArrayItem(['type' => 'wallet_ledger', ...(array) $transaction], $first);
+                }
+            }
+            if ($contact !== null) {
+                foreach (WhatsAppContactConsent::query()->where('contact_id', $contact->id)->orderBy('id')->lazyById(100) as $consent) {
+                    $this->writeArrayItem(['type' => 'consent_evidence', ...$consent->attributesToArray()], $first);
+                }
+            }
             echo ']}';
 
             PrivacyRequest::query()
@@ -292,6 +347,20 @@ class PrivacyRequestProcessor
             ]);
 
         $this->anonymiseContacts($client->contacts()->withTrashed(), $client->id);
+        WhatsAppClientConnector::query()->where('client_id', $client->id)->update(['enabled' => false]);
+        WhatsAppCampaign::query()->where('client_id', $client->id)->whereNotIn('status', ['completed', 'cancelled', 'failed'])
+            ->update(['status' => 'cancelled', 'control_state' => 'cancelled', 'updated_at' => now()]);
+        WhatsAppCampaign::query()->where('client_id', $client->id)->orderBy('id')->chunkById(100, function ($campaigns): void {
+            foreach ($campaigns as $campaign) {
+                WhatsAppCampaign::withoutEvents(fn () => $campaign->forceFill(['name' => 'Archived WhatsApp campaign '.$campaign->id, 'variable_mapping' => []])->save());
+            }
+        });
+        WhatsAppMediaAsset::query()->where('client_id', $client->id)->orderBy('id')->chunkById(100, function ($assets): void {
+            foreach ($assets as $asset) {
+                Storage::disk($asset->storage_disk)->delete($asset->path);
+                $asset->delete();
+            }
+        });
     }
 
     /**
@@ -380,6 +449,30 @@ class PrivacyRequestProcessor
                         'error_message' => null,
                         'last_event' => null,
                     ]);
+
+                WhatsAppContactConsent::query()->whereIn('contact_id', $contactIds)->whereNull('revoked_at')->update(['revoked_at' => now(), 'updated_at' => now()]);
+                $recipientIds = WhatsAppCampaignRecipient::query()->whereIn('contact_id', $contactIds)->select('id');
+                WhatsAppCampaignRecipient::query()->whereIn('id', $recipientIds)->orderBy('id')->chunkById(100, function ($recipients): void {
+                    foreach ($recipients as $recipient) {
+                        $snapshot = (array) $recipient->snapshot_json;
+                        foreach (['name', 'phone', 'custom_fields', 'tags'] as $key) {
+                            unset($snapshot[$key]);
+                        }
+                        WhatsAppCampaignRecipient::withoutEvents(fn () => $recipient->forceFill([
+                            'phone' => 'ERASED-'.$recipient->id,
+                            'variables_json' => null,
+                            'errors_json' => [],
+                            'snapshot_json' => [...$snapshot, 'privacy_redacted' => true],
+                            'last_error' => null,
+                        ])->save());
+                    }
+                });
+                DB::table('whatsapp_message_attempts')->whereIn('recipient_id', $recipientIds)->update([
+                    'error_message' => null,
+                    'request_payload_redacted' => null,
+                    'response_payload_redacted' => null,
+                    'updated_at' => now(),
+                ]);
             });
 
         $this->expireRecipientReportExports($clientId);

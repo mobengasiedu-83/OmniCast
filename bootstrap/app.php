@@ -37,6 +37,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/sms',
             'webhooks/email',
             'webhooks/paystack',
+            'webhooks/whatsapp/pro-plus',
+            'webhooks/whatsapp/meta',
         ]);
 
         $middleware->alias([

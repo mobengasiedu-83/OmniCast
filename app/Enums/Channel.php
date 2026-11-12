@@ -10,6 +10,7 @@ enum Channel: string
     case Voice = 'voice';
     case Sms = 'sms';
     case Email = 'email';
+    case WhatsApp = 'whatsapp';
     case MultiChannel = 'multi_channel';
 
     public function label(): string
@@ -18,6 +19,7 @@ enum Channel: string
             self::Voice => 'Voice',
             self::Sms => 'SMS',
             self::Email => 'Email',
+            self::WhatsApp => 'WhatsApp',
             self::MultiChannel => 'Multi-Channel',
         };
     }
@@ -36,6 +38,7 @@ enum Channel: string
             self::Voice => [self::Voice],
             self::Sms => [self::Sms],
             self::Email => [self::Email],
+            self::WhatsApp => [self::WhatsApp],
             self::MultiChannel => [self::Voice, self::Sms],
         };
     }
@@ -53,6 +56,11 @@ enum Channel: string
     public function requiresEmailContent(): bool
     {
         return $this === self::Email;
+    }
+
+    public function requiresWhatsAppContent(): bool
+    {
+        return $this === self::WhatsApp;
     }
 
     public function isMultiChannel(): bool

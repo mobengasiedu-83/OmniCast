@@ -33,6 +33,7 @@
         <env name="DB_DATABASE" value=":memory:" force="true"/>
         <env name="DB_FOREIGN_KEYS" value="true" force="true"/>
         <env name="DB_URL" value="" force="true"/>
+        <env name="ACTIVITY_LOGGER_DB_CONNECTION" value="sqlite" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync" force="true"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
@@ -67,6 +68,7 @@
         <server name="DB_DATABASE" value=":memory:"/>
         <server name="DB_FOREIGN_KEYS" value="true"/>
         <server name="DB_URL" value=""/>
+        <server name="ACTIVITY_LOGGER_DB_CONNECTION" value="sqlite"/>
         <server name="DB_HOST" value=""/>
         <server name="DB_PORT" value=""/>
         <server name="DB_USERNAME" value=""/>

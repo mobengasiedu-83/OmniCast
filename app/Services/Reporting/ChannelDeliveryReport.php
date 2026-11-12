@@ -211,6 +211,7 @@ class ChannelDeliveryReport
                     EmailMessageStatus::Failed->value,
                 ],
             ],
+            Channel::WhatsApp => throw new InvalidArgumentException('WhatsApp reporting is not available until delivery evidence is implemented.'),
             default => throw new InvalidArgumentException("{$channel->value} is not a delivery channel."),
         };
     }

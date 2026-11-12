@@ -31,6 +31,17 @@ class WalletTransaction extends Model
     /** @use HasFactory<WalletTransactionFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::updating(function (): never {
+            throw new \LogicException('Wallet ledger transactions are immutable. Record a compensating transaction instead.');
+        });
+
+        static::deleting(function (): never {
+            throw new \LogicException('Wallet ledger transactions cannot be deleted. Record a compensating transaction instead.');
+        });
+    }
+
     /**
      * Get the attributes that should be cast.
      *

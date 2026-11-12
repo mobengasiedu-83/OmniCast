@@ -142,6 +142,7 @@ class TemplateRequest extends FormRequest
             Channel::MultiChannel => 1600,
             Channel::Voice => 4000,
             Channel::Email => 100000,
+            Channel::WhatsApp => 100000,
         };
     }
 }

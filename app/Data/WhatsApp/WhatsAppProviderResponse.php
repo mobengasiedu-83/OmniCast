@@ -19,5 +19,7 @@ final readonly class WhatsAppProviderResponse
         public ?string $providerReference,
         public ?WhatsAppProviderErrorCategory $errorCategory,
         public array $data = [],
+        /** @var array<string, string> phone number => provider message reference */
+        public array $messageReferences = [],
     ) {}
 }

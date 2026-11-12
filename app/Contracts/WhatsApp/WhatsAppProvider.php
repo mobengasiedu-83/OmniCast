@@ -24,4 +24,7 @@ interface WhatsAppProvider
 
     /** @param array<string, mixed> $payload */
     public function send(WhatsAppProviderConfig $provider, array $payload): WhatsAppProviderResponse;
+
+    /** Submit an already validated bounded recipient batch. @param array<string, mixed> $payload */
+    public function sendBatch(WhatsAppProviderConfig $provider, array $payload): WhatsAppProviderResponse;
 }

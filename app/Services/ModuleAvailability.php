@@ -47,6 +47,10 @@ class ModuleAvailability
      */
     public function allowsChannel(Channel $channel, ?Client $client = null): bool
     {
+        if ($channel === Channel::WhatsApp) {
+            return $this->enabled(ClientService::WhatsApp, $client);
+        }
+
         foreach ($channel->deliveryChannels() as $deliveryChannel) {
             $module = ClientService::fromChannel($deliveryChannel);
 

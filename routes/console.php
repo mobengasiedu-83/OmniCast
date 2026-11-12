@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\WhatsApp\WhatsAppWalletService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -26,6 +27,18 @@ Schedule::command('campaigns:dispatch-scheduled')
     ->withoutOverlapping()
     ->onOneServer();
 
+Schedule::command('whatsapp:dispatch-scheduled')
+    ->description('Queue WhatsApp campaigns whose scheduled start time has arrived')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::call(fn () => app(WhatsAppWalletService::class)->flagOverdueUnknownReservations())
+    ->description('Flag WhatsApp reservations with unresolved provider outcomes for manual review')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('campaigns:sweep')
     ->description('Re-queue campaigns that stopped making progress')
     ->everyFiveMinutes()
@@ -39,6 +52,12 @@ Schedule::command('horizon:snapshot')
 
 Schedule::command('privacy:prune-queue-artifacts')
     ->description('Prune queue artifacts only when legal-approved retention policies exist')
+    ->daily()
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('whatsapp:prune-sensitive-payloads')
+    ->description('Redact old WhatsApp payload copies only after approved legal retention')
     ->daily()
     ->withoutOverlapping()
     ->onOneServer();

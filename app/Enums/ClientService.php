@@ -34,6 +34,7 @@ enum ClientService: string
             Channel::Sms => self::Sms,
             Channel::Voice => self::Voice,
             Channel::Email => self::Email,
+            Channel::WhatsApp => self::WhatsApp,
             Channel::MultiChannel => null,
         };
     }

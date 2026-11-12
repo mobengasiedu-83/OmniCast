@@ -19,7 +19,7 @@ use App\Services\Sms\SmsGatewayManager;
 use App\Services\Voice\AmiTransport;
 use App\Services\Voice\StreamAmiTransport;
 use App\Services\Voice\VoiceGatewayManager;
-use App\Services\WhatsApp\ProPlusWhatsAppProvider;
+use App\Services\WhatsApp\WhatsAppProviderManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -57,7 +57,7 @@ class AppServiceProvider extends ServiceProvider
             VoiceGateway::class,
             fn (): VoiceGateway => $this->app->make(VoiceGatewayManager::class)->driver(),
         );
-        $this->app->bind(WhatsAppProviderContract::class, ProPlusWhatsAppProvider::class);
+        $this->app->bind(WhatsAppProviderContract::class, WhatsAppProviderManager::class);
     }
 
     /**

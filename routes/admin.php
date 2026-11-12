@@ -38,7 +38,10 @@ use App\Http\Controllers\Admin\TemplateUsageController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\Admin\WhatsAppConnectorController;
+use App\Http\Controllers\Admin\WhatsAppOperationsController;
+use App\Http\Controllers\Admin\WhatsAppPricingRateController;
 use App\Http\Controllers\Admin\WhatsAppProviderController;
+use App\Http\Controllers\Admin\WhatsAppReconciliationController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -108,6 +111,8 @@ Route::middleware(['auth', 'verified', 'platform'])
         Route::middleware('can:whatsapp.providers.view')->group(function (): void {
             Route::get('whatsapp/providers', [WhatsAppProviderController::class, 'index'])
                 ->name('whatsapp.providers.index');
+            Route::get('whatsapp/operations', [WhatsAppOperationsController::class, 'index'])
+                ->name('whatsapp.operations.index');
         });
 
         Route::middleware('can:whatsapp.providers.manage')->group(function (): void {
@@ -203,10 +208,15 @@ Route::middleware(['auth', 'verified', 'platform'])
 
         Route::middleware('can:rates.view')->group(function (): void {
             Route::get('rate-cards', [RateCardController::class, 'index'])->name('rate-cards.index');
+            Route::get('whatsapp-pricing', [WhatsAppPricingRateController::class, 'index'])->name('whatsapp-pricing.index');
+            Route::get('whatsapp-reconciliation', [WhatsAppReconciliationController::class, 'index'])->name('whatsapp-reconciliation.index');
         });
 
         Route::middleware('can:rates.manage')->group(function (): void {
             Route::put('rates/{rate}', [RateCardController::class, 'updateRate'])->name('rates.update');
+            Route::post('whatsapp-pricing', [WhatsAppPricingRateController::class, 'store'])->name('whatsapp-pricing.store');
+            Route::post('whatsapp-pricing/{rate}/approve', [WhatsAppPricingRateController::class, 'approve'])->name('whatsapp-pricing.approve');
+            Route::post('whatsapp-reconciliation/{reconciliation}/review', [WhatsAppReconciliationController::class, 'review'])->name('whatsapp-reconciliation.review');
         });
 
         Route::middleware('can:clients.approve')->group(function (): void {

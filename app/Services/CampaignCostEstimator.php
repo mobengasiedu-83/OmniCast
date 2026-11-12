@@ -68,6 +68,10 @@ class CampaignCostEstimator
             ? $this->rates->unitPrice($client, Channel::Email, $destination)
             : null;
 
+        if ($channel === Channel::WhatsApp) {
+            $emailUnitPrice = null;
+        }
+
         $smsCost = $smsUnitPrice === null ? 0.0 : $smsUnitPrice * $parts * $recipients;
         $voiceCost = $voiceUnitPrice === null ? 0.0 : $voiceUnitPrice * $recipients;
         $emailCost = $emailUnitPrice === null ? 0.0 : $emailUnitPrice * $recipients;

@@ -16,6 +16,7 @@ use App\Http\Controllers\EmailWebhookController;
 use App\Http\Controllers\HelpCentreController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\Legal\LegalPageController;
+use App\Http\Controllers\MetaWhatsAppConnectionController;
 use App\Http\Controllers\MobileMoneyCheckoutController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaystackWebhookController;
@@ -37,6 +38,8 @@ use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\VoiceWebhookController;
 use App\Http\Controllers\WalletCheckoutController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\Webhooks\MetaWhatsAppWebhookController;
+use App\Http\Controllers\Webhooks\WhatsAppProviderEventController;
 use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\WhatsAppMediaController;
 use Illuminate\Support\Facades\Route;
@@ -105,6 +108,13 @@ Route::match(['get', 'post'], 'webhooks/sms', SmsWebhookController::class)->name
 Route::match(['get', 'post'], 'webhooks/email', EmailWebhookController::class)->name('webhooks.email');
 
 Route::post('webhooks/paystack', PaystackWebhookController::class)->name('webhooks.paystack');
+Route::post('webhooks/whatsapp/pro-plus', WhatsAppProviderEventController::class)
+    ->middleware('throttle:60,1')
+    ->name('webhooks.whatsapp.pro-plus');
+Route::get('webhooks/whatsapp/meta', [MetaWhatsAppWebhookController::class, 'verify'])
+    ->name('webhooks.whatsapp.meta.verify');
+Route::post('webhooks/whatsapp/meta', [MetaWhatsAppWebhookController::class, 'receive'])
+    ->middleware('throttle:120,1')->name('webhooks.whatsapp.meta.receive');
 
 Route::get('whatsapp/media/{asset}', [WhatsAppMediaController::class, 'show'])
     ->middleware(['signed', 'throttle:60,1'])
@@ -139,6 +149,17 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('module:whatsapp')->group(function (): void {
         Route::get('whatsapp', [WhatsAppController::class, 'index'])->name('whatsapp.index');
+        Route::post('whatsapp/meta/complete', [MetaWhatsAppConnectionController::class, 'complete'])
+            ->middleware('throttle:6,1')->name('whatsapp.meta.complete');
+        Route::get('whatsapp/messages/export', [WhatsAppController::class, 'exportMessages'])->name('whatsapp.messages.export');
+        Route::post('whatsapp/consents', [WhatsAppController::class, 'storeConsent'])->name('whatsapp.consents.store');
+        Route::delete('whatsapp/consents/{consent}', [WhatsAppController::class, 'revokeConsent'])->name('whatsapp.consents.revoke');
+        Route::post('whatsapp/campaigns', [WhatsAppController::class, 'storeCampaign'])->name('whatsapp.campaigns.store');
+        Route::post('whatsapp/campaigns/{campaign}/dispatch', [WhatsAppController::class, 'dispatchCampaign'])->name('whatsapp.campaigns.dispatch');
+        Route::post('whatsapp/campaigns/{campaign}/test', [WhatsAppController::class, 'testCampaign'])->name('whatsapp.campaigns.test');
+        Route::post('whatsapp/campaigns/{campaign}/pause', [WhatsAppController::class, 'pauseCampaign'])->name('whatsapp.campaigns.pause');
+        Route::post('whatsapp/campaigns/{campaign}/resume', [WhatsAppController::class, 'resumeCampaign'])->name('whatsapp.campaigns.resume');
+        Route::post('whatsapp/campaigns/{campaign}/cancel', [WhatsAppController::class, 'cancelCampaign'])->name('whatsapp.campaigns.cancel');
         Route::post('whatsapp/connectors', [WhatsAppController::class, 'requestConnector'])->name('whatsapp.connectors.request');
         Route::post('whatsapp/media', [WhatsAppController::class, 'upload'])->middleware('throttle:30,1')->name('whatsapp.media.store');
         Route::get('whatsapp/media/{asset}/url', [WhatsAppController::class, 'mediaUrl'])->name('whatsapp.media.url');

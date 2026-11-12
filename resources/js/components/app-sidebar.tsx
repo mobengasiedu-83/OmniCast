@@ -52,6 +52,8 @@ import PoweredBy from '@/components/powered-by';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import adminWhatsAppRoutes from '@/routes/admin/whatsapp';
+import adminWhatsAppPricingRoutes from '@/routes/admin/whatsapp-pricing';
+import adminWhatsAppReconciliationRoutes from '@/routes/admin/whatsapp-reconciliation';
 import whatsAppRoutes from '@/routes/whatsapp';
 import {
     Sidebar,
@@ -679,6 +681,20 @@ export function AppSidebar() {
                                 title: 'Connectors',
                                 href: adminWhatsAppRoutes.connectors.index.url(),
                                 icon: Radio,
+                            }] : []),
+                            ...(canViewRates ? [{
+                                title: 'Pricing',
+                                href: adminWhatsAppPricingRoutes.index.url(),
+                                icon: Banknote,
+                            }, {
+                                title: 'Reconciliation',
+                                href: adminWhatsAppReconciliationRoutes.index.url(),
+                                icon: ReceiptText,
+                            }] : []),
+                            ...(canViewWhatsAppProviders ? [{
+                                title: 'Operations',
+                                href: adminWhatsAppRoutes.operations.index.url(),
+                                icon: Gauge,
                             }] : []),
                         ]}
                         label="WhatsApp"

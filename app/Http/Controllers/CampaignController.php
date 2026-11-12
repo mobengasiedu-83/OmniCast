@@ -579,6 +579,7 @@ class CampaignController extends Controller
                 'email_body' => $template->body,
                 'email_format' => $template->email_format->value,
             ],
+            Channel::WhatsApp => [],
             default => ['sms_message' => $template->body],
         };
     }

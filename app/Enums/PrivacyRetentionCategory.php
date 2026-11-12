@@ -11,6 +11,7 @@ enum PrivacyRetentionCategory: string
     case AutomationRuns = 'automation_runs';
     case FailedJobs = 'failed_jobs';
     case JobBatches = 'job_batches';
+    case WhatsAppSensitivePayloads = 'whatsapp_sensitive_payloads';
 
     public function label(): string
     {
@@ -22,6 +23,7 @@ enum PrivacyRetentionCategory: string
             self::AutomationRuns => 'Finished automation runs',
             self::FailedJobs => 'Failed queue jobs',
             self::JobBatches => 'Completed queue batches',
+            self::WhatsAppSensitivePayloads => 'WhatsApp provider and attempt payload copies',
         };
     }
 
@@ -35,6 +37,7 @@ enum PrivacyRetentionCategory: string
             self::AutomationRuns => 'Completed, failed and cancelled runs are eligible after the approved period; active runs remain.',
             self::FailedJobs => 'Failed queue jobs are eligible after the approved period.',
             self::JobBatches => 'Completed queue batches are eligible after the approved period.',
+            self::WhatsAppSensitivePayloads => 'Redact stored request, response, and callback payload copies after the approved period; preserve provider event IDs, message statuses, usage, and ledger links.',
         };
     }
 }

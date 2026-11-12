@@ -30,6 +30,14 @@ use App\Models\VoiceCall;
 use App\Models\Wallet;
 use App\Models\WebhookDelivery;
 use App\Models\WebhookEndpoint;
+use App\Models\WhatsAppCampaign;
+use App\Models\WhatsAppCampaignRecipient;
+use App\Models\WhatsAppClientConnector;
+use App\Models\WhatsAppConnector;
+use App\Models\WhatsAppContactConsent;
+use App\Models\WhatsAppMediaAsset;
+use App\Models\WhatsAppProvider;
+use App\Models\WhatsAppTemplate;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -124,6 +132,17 @@ it('streams an approved account export without authentication secrets', function
         'first_name' => 'Recipient',
         'email' => 'recipient@example.test',
     ]);
+    $provider = WhatsAppProvider::factory()->create();
+    $connector = WhatsAppConnector::factory()->create(['provider_id' => $provider->id]);
+    $template = WhatsAppTemplate::factory()->create(['connector_id' => $connector->id]);
+    $campaign = WhatsAppCampaign::query()->create([
+        'client_id' => $client->id, 'connector_id' => $connector->id, 'template_id' => $template->id,
+        'name' => 'Exported WhatsApp campaign', 'status' => 'completed', 'schedule_type' => 'now', 'timezone' => 'Africa/Accra',
+    ]);
+    WhatsAppCampaignRecipient::query()->create([
+        'campaign_id' => $campaign->id, 'contact_id' => $contact->id, 'phone' => $contact->phone,
+        'eligibility' => 'eligible', 'status' => 'delivered', 'snapshot_json' => ['phone' => $contact->phone],
+    ]);
     $privacyRequest = approvedPrivacyRequest(
         $client,
         $requester,
@@ -142,6 +161,7 @@ it('streams an approved account export without authentication secrets', function
     expect($export['client']['id'])->toBe($client->id)
         ->and($export['users'][0]['email'])->toBe($user->email)
         ->and($export['contacts'][0]['email'])->toBe($contact->email)
+        ->and(collect($export['whatsapp_history'])->firstWhere('type', 'message')['phone'])->toBe($contact->phone)
         ->and($export['users'][0])->not->toHaveKey('password');
     expect($privacyRequest->fresh()->status)->toBe(PrivacyRequestStatus::Completed);
 });
@@ -182,6 +202,36 @@ it('anonymises contact data and invalidates copied recipient records after confi
     $voiceCall = VoiceCall::factory()->forCampaign($campaign)->create([
         'campaign_contact_id' => $campaignContact->id,
         'to_number' => '+233200000001',
+    ]);
+    $whatsAppProvider = WhatsAppProvider::factory()->create();
+    $whatsAppConnector = WhatsAppConnector::factory()->create(['provider_id' => $whatsAppProvider->id]);
+    $whatsAppTemplate = WhatsAppTemplate::factory()->create(['connector_id' => $whatsAppConnector->id]);
+    $whatsAppCampaign = WhatsAppCampaign::query()->create([
+        'client_id' => $client->id,
+        'connector_id' => $whatsAppConnector->id,
+        'template_id' => $whatsAppTemplate->id,
+        'name' => 'Private Recipient Campaign',
+        'status' => 'completed',
+        'control_state' => 'completed',
+        'schedule_type' => 'now',
+        'timezone' => 'Africa/Accra',
+    ]);
+    $whatsAppRecipient = WhatsAppCampaignRecipient::query()->create([
+        'campaign_id' => $whatsAppCampaign->id,
+        'contact_id' => $contact->id,
+        'phone' => $contact->phone,
+        'eligibility' => 'eligible',
+        'status' => 'delivered',
+        'snapshot_json' => ['phone' => $contact->phone, 'name' => 'Private Recipient'],
+        'variables_json' => ['1' => 'Private Recipient'],
+    ]);
+    $whatsAppConsent = WhatsAppContactConsent::query()->create([
+        'client_id' => $client->id,
+        'contact_id' => $contact->id,
+        'purpose' => 'marketing',
+        'source' => 'Web form',
+        'wording' => 'I consent to receive updates.',
+        'granted_at' => now()->subDay(),
     ]);
     $workflow = AutomationWorkflow::factory()->for($client)->create();
     $run = AutomationRun::factory()
@@ -243,6 +293,10 @@ it('anonymises contact data and invalidates copied recipient records after confi
         ->and($email->fresh()->to_address)->toBe('redacted@privacy.invalid')
         ->and($email->fresh()->body)->toBe('[redacted]')
         ->and($voiceCall->fresh()->to_number)->toBe('ERASED')
+        ->and($whatsAppRecipient->fresh()->phone)->toBe('ERASED-'.$whatsAppRecipient->id)
+        ->and($whatsAppRecipient->fresh()->variables_json)->toBeNull()
+        ->and($whatsAppRecipient->fresh()->snapshot_json)->not->toHaveKey('phone')
+        ->and($whatsAppConsent->fresh()->revoked_at)->not->toBeNull()
         ->and($run->fresh()->status)->toBe(AutomationRunStatus::Cancelled)
         ->and($run->fresh()->contact_id)->toBeNull()
         ->and($run->fresh()->context)->toBeNull()
@@ -255,6 +309,7 @@ it('anonymises contact data and invalidates copied recipient records after confi
 });
 
 it('anonymises a client account and revokes member and integration credentials', function (): void {
+    Storage::fake('local');
     $client = Client::factory()->create([
         'email' => 'account@example.test',
         'phone' => '+233200000002',
@@ -270,6 +325,17 @@ it('anonymises a client account and revokes member and integration credentials',
     $endpointSecret = $endpoint->secret;
     $smppAccount = SmppAccount::factory()->for($client)->create();
     $smppPasswordHash = $smppAccount->password_hash;
+    $provider = WhatsAppProvider::factory()->create();
+    $connector = WhatsAppConnector::factory()->create(['provider_id' => $provider->id]);
+    $assignment = WhatsAppClientConnector::factory()->create(['client_id' => $client->id, 'connector_id' => $connector->id, 'enabled' => true]);
+    $template = WhatsAppTemplate::factory()->create(['connector_id' => $connector->id]);
+    $media = WhatsAppMediaAsset::factory()->for($client)->create(['path' => 'whatsapp/account/private.jpg']);
+    Storage::disk('local')->put($media->path, 'private media');
+    $whatsAppCampaign = WhatsAppCampaign::query()->create([
+        'client_id' => $client->id, 'connector_id' => $connector->id, 'template_id' => $template->id,
+        'media_asset_id' => $media->id, 'name' => 'Private account campaign', 'status' => 'scheduled',
+        'schedule_type' => 'now', 'timezone' => 'Africa/Accra', 'variable_mapping' => ['1' => 'first_name'],
+    ]);
     $dpa = OrganisationDpa::query()->create([
         'client_id' => $client->id,
         'status' => OrganisationDpaStatus::Signed,
@@ -299,9 +365,16 @@ it('anonymises a client account and revokes member and integration credentials',
         ->and($endpoint->fresh()->secret)->not->toBe($endpointSecret)
         ->and($smppAccount->fresh()->is_active)->toBeFalse()
         ->and($smppAccount->fresh()->password_hash)->not->toBe($smppPasswordHash)
+        ->and($assignment->fresh()->enabled)->toBeFalse()
+        ->and($whatsAppCampaign->fresh()->status)->toBe('cancelled')
+        ->and($whatsAppCampaign->fresh()->name)->toBe('Archived WhatsApp campaign '.$whatsAppCampaign->id)
+        ->and($whatsAppCampaign->fresh()->variable_mapping)->toBe([])
+        ->and(WhatsAppMediaAsset::query()->whereKey($media->id)->exists())->toBeFalse()
         ->and($wallet->fresh()->balance)->toBe('80.0000')
         ->and($dpa->fresh()->status)->toBe(OrganisationDpaStatus::Signed)
         ->and($token->accessToken->fresh())->toBeNull();
+
+    Storage::disk('local')->assertMissing('whatsapp/account/private.jpg');
 });
 
 it('requires an approved retention value and provides a separate disable action', function (): void {
