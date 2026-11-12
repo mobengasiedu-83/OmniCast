@@ -53,6 +53,28 @@ test('tenant channel mix only includes enabled modules', function (): void {
                 ->doesntContain('email')));
 });
 
+test('tenant channel mix stays an array when the first module is disabled', function (): void {
+    [$client, , $user] = clientWithWallet();
+    Campaign::factory()->forClient($client)->create(['channel' => Channel::Sms]);
+    Campaign::factory()->forClient($client)->create(['channel' => Channel::Email]);
+    PlatformSetting::query()->create([
+        'group' => 'channels',
+        'key' => 'voice.enabled',
+        'value' => '0',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('channelBreakdown', 3)
+            ->where('channelBreakdown.0.channel', 'sms')
+            ->where('channelBreakdown.0.total', 1)
+            ->where('channelBreakdown.1.channel', 'email')
+            ->where('channelBreakdown.1.total', 1)
+            ->where('channelBreakdown.2.channel', 'whatsapp'));
+});
+
 test('platform users can visit the admin dashboard path', function () {
     $this->actingAs(platformUser())
         ->get(route('admin.dashboard'))

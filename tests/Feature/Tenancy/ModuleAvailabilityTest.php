@@ -163,7 +163,8 @@ it('hides switched-off channels from the platform dashboard without blanking it'
             ->component('admin/dashboard')
             ->where('modules.email', false)
             ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->doesntContain('email'))
-            ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->sort()->values()->all() === ['multi_channel', 'sms', 'voice', 'whatsapp']));
+            ->where('channelBreakdown', fn ($channels): bool => collect($channels)->pluck('channel')->sort()->values()->all() === ['multi_channel', 'sms', 'voice', 'whatsapp'])
+            ->where('channelBreakdown.2.channel', 'whatsapp'));
 });
 
 it('drops a module the tenant switched off from its own screens', function (): void {

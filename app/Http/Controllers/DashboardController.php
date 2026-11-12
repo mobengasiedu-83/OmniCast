@@ -110,6 +110,7 @@ class DashboardController extends Controller
                         'label' => $channel->label(),
                         'total' => (int) $channelTotals->get($channel->value, 0),
                     ])
+                    ->values()
                     ->all(),
                 'recipientStatusBreakdown' => collect(CampaignContactStatus::cases())
                     ->map(fn (CampaignContactStatus $status): array => [
@@ -188,6 +189,7 @@ class DashboardController extends Controller
                     'label' => $channel->label(),
                     'total' => (clone $campaigns)->where('channel', $channel->value)->count(),
                 ])
+                ->values()
                 ->all(),
             'recentCampaigns' => (clone $campaigns)
                 ->with(['senderId:id,name', 'contactList:id,name'])
