@@ -153,6 +153,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('throttle:6,1')->name('whatsapp.meta.complete');
         Route::get('whatsapp/messages/export', [WhatsAppController::class, 'exportMessages'])->name('whatsapp.messages.export');
         Route::post('whatsapp/consents', [WhatsAppController::class, 'storeConsent'])->name('whatsapp.consents.store');
+        Route::post('whatsapp/templates', [WhatsAppController::class, 'storeTemplateSubmission'])->name('whatsapp.templates.store');
         Route::delete('whatsapp/consents/{consent}', [WhatsAppController::class, 'revokeConsent'])->name('whatsapp.consents.revoke');
         Route::post('whatsapp/campaigns', [WhatsAppController::class, 'storeCampaign'])->name('whatsapp.campaigns.store');
         Route::post('whatsapp/campaigns/{campaign}/dispatch', [WhatsAppController::class, 'dispatchCampaign'])->name('whatsapp.campaigns.dispatch');

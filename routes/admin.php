@@ -42,6 +42,7 @@ use App\Http\Controllers\Admin\WhatsAppOperationsController;
 use App\Http\Controllers\Admin\WhatsAppPricingRateController;
 use App\Http\Controllers\Admin\WhatsAppProviderController;
 use App\Http\Controllers\Admin\WhatsAppReconciliationController;
+use App\Http\Controllers\Admin\WhatsAppTemplateSubmissionController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -131,6 +132,12 @@ Route::middleware(['auth', 'verified', 'platform'])
             Route::get('whatsapp/connectors', [WhatsAppConnectorController::class, 'index'])->name('whatsapp.connectors.index');
             Route::post('whatsapp/providers/{provider}/connectors/sync', [WhatsAppConnectorController::class, 'sync'])->middleware('can:whatsapp.providers.test')->name('whatsapp.connectors.sync');
             Route::post('whatsapp/connectors/{connector}/templates/sync', [WhatsAppConnectorController::class, 'syncTemplates'])->name('whatsapp.connectors.templates.sync');
+        });
+
+        Route::middleware('can:whatsapp.templates.approve')->group(function (): void {
+            Route::get('whatsapp/template-submissions', [WhatsAppTemplateSubmissionController::class, 'index'])->name('whatsapp.template-submissions.index');
+            Route::post('whatsapp/template-submissions/{submission}/approve', [WhatsAppTemplateSubmissionController::class, 'approve'])->name('whatsapp.template-submissions.approve');
+            Route::post('whatsapp/template-submissions/{submission}/reject', [WhatsAppTemplateSubmissionController::class, 'reject'])->name('whatsapp.template-submissions.reject');
         });
         Route::middleware('can:whatsapp.connectors.approve')->group(function (): void {
             Route::put('whatsapp/connector-assignments/{assignment}', [WhatsAppConnectorController::class, 'review'])->name('whatsapp.connector-assignments.review');

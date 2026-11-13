@@ -8,6 +8,7 @@ use App\Http\Requests\WhatsApp\StoreWhatsAppCampaignRequest;
 use App\Http\Requests\WhatsApp\StoreWhatsAppConnectorAssignmentRequest;
 use App\Http\Requests\WhatsApp\StoreWhatsAppConsentRequest;
 use App\Http\Requests\WhatsApp\StoreWhatsAppMediaAssetRequest;
+use App\Http\Requests\WhatsApp\StoreWhatsAppTemplateSubmissionRequest;
 use App\Jobs\PrepareWhatsAppCampaign;
 use App\Models\Contact;
 use App\Models\ContactList;
@@ -20,6 +21,7 @@ use App\Models\WhatsAppClientConnector;
 use App\Models\WhatsAppConnector;
 use App\Models\WhatsAppContactConsent;
 use App\Models\WhatsAppMediaAsset;
+use App\Models\WhatsAppTemplateSubmission;
 use App\Models\WhatsAppUsageRecord;
 use App\Services\WhatsApp\WhatsAppAuditLogger;
 use App\Services\WhatsApp\WhatsAppCampaignBuilder;
@@ -58,7 +60,16 @@ class WhatsAppController extends Controller
                 'graphVersion' => config('whatsapp.meta.graph_version'),
                 'solutionId' => config('whatsapp.meta.solution_id'),
             ],
-            'templates' => WhatsAppClientConnector::query()->with(['connector.templates' => fn ($query) => $query->where('status', 'approved')])->where('client_id', $clientId)->where('enabled', true)->where('approval_status', WhatsAppApprovalStatus::Approved)->get()->pluck('connector.templates')->flatten()->map(fn ($template) => ['id' => $template->id, 'name' => $template->name, 'language' => $template->language, 'category' => $template->category, 'components' => $template->components, 'versions' => $template->versions()->limit(5)->get(['version', 'status', 'captured_at'])]),
+            'templates' => WhatsAppClientConnector::query()->with(['connector.templates' => fn ($query) => $query->where('status', 'approved')->where(fn ($templates) => $templates
+                ->whereNotExists(fn ($submissions) => $submissions->selectRaw('1')->from('whatsapp_template_submissions as pending_template_submissions')
+                    ->whereColumn('pending_template_submissions.connector_id', 'whatsapp_templates.connector_id')
+                    ->whereColumn('pending_template_submissions.name', 'whatsapp_templates.name')
+                    ->whereColumn('pending_template_submissions.language', 'whatsapp_templates.language')
+                    ->where('pending_template_submissions.client_id', $clientId))
+                ->orWhereHas('submissions', fn ($submissions) => $submissions->where('client_id', $clientId)->where('review_status', 'approved')->where('provider_status', 'approved')))])
+                ->where('client_id', $clientId)->where('enabled', true)->where('approval_status', WhatsAppApprovalStatus::Approved)->get()->pluck('connector.templates')->flatten()->map(fn ($template) => ['id' => $template->id, 'name' => $template->name, 'language' => $template->language, 'category' => $template->category, 'components' => $template->components, 'versions' => $template->versions()->limit(5)->get(['version', 'status', 'captured_at'])]),
+            'templateConnectors' => WhatsAppClientConnector::query()->with('connector:id,connector_name,sender_number')->where('client_id', $clientId)->where('enabled', true)->where('approval_status', WhatsAppApprovalStatus::Approved)->get()->map(fn (WhatsAppClientConnector $assignment): array => ['id' => $assignment->connector_id, 'name' => $assignment->connector->connector_name ?: $assignment->connector->sender_number]),
+            'templateSubmissions' => WhatsAppTemplateSubmission::query()->where('client_id', $clientId)->with('connector:id,connector_name,sender_number')->latest()->limit(50)->get()->map(fn (WhatsAppTemplateSubmission $submission): array => ['id' => $submission->id, 'name' => $submission->name, 'language' => $submission->language, 'category' => $submission->category, 'components' => $submission->components, 'review_status' => $submission->review_status, 'provider_status' => $submission->provider_status, 'rejection_reason' => $submission->rejection_reason, 'connector' => $submission->connector->connector_name ?: $submission->connector->sender_number]),
             'media' => WhatsAppMediaAsset::query()->where('client_id', $clientId)->latest()->get(['id', 'original_name', 'mime_type', 'size_bytes', 'created_at']),
             'maxUploadKilobytes' => (int) config('whatsapp.media.max_kilobytes', 16384),
             'sendingEnabled' => (bool) config('whatsapp.sending_enabled', false),
@@ -78,6 +89,29 @@ class WhatsAppController extends Controller
             ],
             'usageReport' => $this->clientUsageReport($clientId),
         ]);
+    }
+
+    public function storeTemplateSubmission(StoreWhatsAppTemplateSubmissionRequest $request, WhatsAppAuditLogger $audit): RedirectResponse
+    {
+        $validated = $request->validated();
+        $components = [['type' => 'BODY', 'text' => $validated['body']]];
+        $hash = hash('sha256', json_encode([$validated['name'], $validated['language'], $validated['category'], $components], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
+        $submission = WhatsAppTemplateSubmission::query()->create([
+            'client_id' => $request->user()->client_id,
+            'connector_id' => $validated['connector_id'],
+            'created_by' => $request->user()->id,
+            'name' => $validated['name'],
+            'language' => $validated['language'],
+            'category' => $validated['category'],
+            'components' => $components,
+            'content_hash' => $hash,
+            'review_status' => 'pending',
+            'provider_status' => 'not_submitted',
+            'submitted_at' => now(),
+        ]);
+        $audit->record('template.submitted', $request->user(), $request->user()->client, $submission, ['submission_id' => $submission->id, 'connector_id' => $submission->connector_id]);
+
+        return back()->with('toast', ['type' => 'success', 'message' => 'WhatsApp template submitted for OmniCast review. Provider approval is still required before campaign use.']);
     }
 
     public function exportMessages(Request $request, WhatsAppAuditLogger $audit): StreamedResponse

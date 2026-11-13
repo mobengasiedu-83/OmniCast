@@ -42,6 +42,7 @@ enum Permission: string
     case ViewWhatsAppConnectors = 'whatsapp.connectors.view';
     case ManageWhatsAppConnectors = 'whatsapp.connectors.manage';
     case ApproveWhatsAppConnectors = 'whatsapp.connectors.approve';
+    case ApproveWhatsAppTemplates = 'whatsapp.templates.approve';
     case ViewAutomations = 'automations.view';
     case ManageAutomations = 'automations.manage';
     case ViewAnnouncements = 'announcements.view';
@@ -89,6 +90,7 @@ enum Permission: string
             self::ViewWhatsAppConnectors => 'View WhatsApp Connectors',
             self::ManageWhatsAppConnectors => 'Manage WhatsApp Connectors',
             self::ApproveWhatsAppConnectors => 'Approve WhatsApp Connectors',
+            self::ApproveWhatsAppTemplates => 'Approve WhatsApp Templates',
             self::ViewAutomations => 'View Automations',
             self::ManageAutomations => 'Manage Automations',
             self::ViewAnnouncements => 'View Announcements',

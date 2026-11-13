@@ -115,6 +115,7 @@ enum Role: string
                 Permission::ViewWhatsAppProviders,
                 Permission::ViewWhatsAppConnectors,
                 Permission::ApproveWhatsAppConnectors,
+                Permission::ApproveWhatsAppTemplates,
             ],
             self::FinanceOfficer => [
                 Permission::ManageClients,

@@ -9,6 +9,7 @@ use App\Enums\WhatsAppTemplateStatus;
 use App\Models\WhatsAppConnector;
 use App\Models\WhatsAppProvider;
 use App\Models\WhatsAppTemplate;
+use App\Models\WhatsAppTemplateSubmission;
 use App\Models\WhatsAppTemplateVersion;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -154,6 +155,20 @@ class WhatsAppCatalogSync
                 WhatsAppTemplateVersion::create(['template_id' => $template->id, 'version' => $version, 'content_hash' => $hash, 'name' => $name, 'language' => Str::limit($language, 16, ''), 'category' => $category, 'status' => $status, 'components' => $components, 'captured_at' => Carbon::now()]);
             } else {
                 $template->forceFill(['last_synced_at' => now()])->save();
+            }
+            $submissionHash = hash('sha256', json_encode([$name, Str::limit($language, 16, ''), $category, $components], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
+            $submissions = WhatsAppTemplateSubmission::query()
+                ->where('connector_id', $connector->id)
+                ->where('name', $name)
+                ->where('language', Str::limit($language, 16, ''))
+                ->where('review_status', 'approved')
+                ->get();
+            foreach ($submissions as $submission) {
+                $matchesSubmission = hash_equals($submission->content_hash, $submissionHash);
+                $submission->forceFill([
+                    'whatsapp_template_id' => $matchesSubmission ? $template->id : null,
+                    'provider_status' => $matchesSubmission ? $status->value : 'content_mismatch',
+                ])->save();
             }
             $counts[$created ? 'created' : ($changed ? 'updated' : 'unchanged')]++;
 

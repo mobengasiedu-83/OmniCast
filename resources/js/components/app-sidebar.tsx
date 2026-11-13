@@ -328,6 +328,7 @@ export function AppSidebar() {
     const canViewWhatsAppProviders =
         isPlatformUser && permissions.includes('whatsapp.providers.view');
     const canViewWhatsAppConnectors = isPlatformUser && permissions.includes('whatsapp.connectors.view');
+    const canApproveWhatsAppTemplates = isPlatformUser && permissions.includes('whatsapp.templates.approve');
     const canUseWhatsAppPortal = !isPlatformUser && permissions.includes('whatsapp.connectors.view');
     const canViewReports = permissions.includes('reports.view');
     const canViewAutomations = permissions.includes('automations.view');
@@ -669,7 +670,7 @@ export function AppSidebar() {
                 {isPlatformUser && canManageUsers && (
                     <NavMain items={identityNavItems} label="Users" />
                 )}
-                {(canViewWhatsAppProviders || canViewWhatsAppConnectors) && (
+                {(canViewWhatsAppProviders || canViewWhatsAppConnectors || canApproveWhatsAppTemplates) && (
                     <NavMain
                         items={[
                             ...(canViewWhatsAppProviders ? [{
@@ -681,6 +682,11 @@ export function AppSidebar() {
                                 title: 'Connectors',
                                 href: adminWhatsAppRoutes.connectors.index.url(),
                                 icon: Radio,
+                            }] : []),
+                            ...(canApproveWhatsAppTemplates ? [{
+                                title: 'Template approvals',
+                                href: adminWhatsAppRoutes.templateSubmissions.index.url(),
+                                icon: ClipboardCheck,
                             }] : []),
                             ...(canViewRates ? [{
                                 title: 'Pricing',

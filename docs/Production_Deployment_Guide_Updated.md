@@ -81,6 +81,22 @@ NOTIFICATIONS_SMS_MAX_LENGTH=320
 
 Check that cache and lock table names are not empty. `CACHE_STORE=database` is the attached runbook's current setting, not a universal requirement; retain the configured driver unless changing it intentionally. SMS notification defaults above disable platform notifications until configured; they do not necessarily disable campaign SMS sending.
 
+### WhatsApp sending and template approval
+
+Keep WhatsApp sending off until the provider contract and sandbox checks are complete. The Pro Plus integration reads shared credentials and endpoint paths from the server environment; do not store provider credentials in MySQL or paste them into deployment notes.
+
+```dotenv
+WHATSAPP_ENABLED=false
+WHATSAPP_API_BASE_URL=
+WHATSAPP_API_CLIENT_ID=
+WHATSAPP_API_KEY=
+WHATSAPP_EVENTS_CONTRACT_ENABLED=false
+```
+
+Configure endpoint path variables only when the provider contract confirms their values. A successful connection check does not establish that sending, delivery callbacks, billing evidence, or template submission are supported.
+
+Clients submit WhatsApp template copy against their own approved sender assignments. Client users see only their own submissions and provider-approved templates available through their approved senders. OmniCast Compliance reviewers approve or reject submitted copy. An internally approved template still cannot be used in a campaign until it is submitted through the provider, provider approval is confirmed by **Sync templates**, and the synced name, language, category, and body exactly match the reviewed submission. The current Pro Plus adapter does not create provider templates; provider-side submission is an external operational step. Do not enable campaign sending to test template setup.
+
 ## 4. Update release code and PHP dependencies
 
 Only after confirming a safe working tree and backups:
@@ -193,6 +209,14 @@ sudo -u www-data /usr/bin/php8.3 artisan about --only=environment
 
 Confirm `Environment: production` and `Debug Mode: DISABLED`. The attached runbook's privacy migration should remain applied if recorded as run; Laravel will not reapply it during normal `migrate --force`.
 
+This release adds the `whatsapp_template_submissions` table; confirm its migration is recorded as run before opening the WhatsApp workspace. It also adds the `whatsapp.templates.approve` permission for Compliance reviewers. `RoleSeeder` synchronizes complete built-in role grants using `syncPermissions`, so review its effects on any manually adjusted built-in roles before running it in production. Run it only through the approved database change process, then confirm the Compliance Officer can access **Admin → WhatsApp → Template approvals** and client roles cannot.
+
+After that review and approval, synchronize the built-in permissions:
+
+```bash
+sudo -u www-data /usr/bin/php8.3 artisan db:seed --class=RoleSeeder --force
+```
+
 ## 9. Redis, Horizon, and queue health
 
 ```bash
@@ -249,6 +273,8 @@ sudo -u www-data /usr/bin/php8.3 artisan horizon:status
 
 A homepage `200` is necessary but insufficient. In an authenticated browser session, verify login, dashboard, wallet, packages, campaigns, contacts, templates, notifications, admin queues, system pages, privacy requests/retention, and legal DPA pages. Confirm assets and API calls load without 404/500 errors. Use approved **test accounts and non-chargeable/sandbox flows** for Paystack, SMS, voice, email, and WhatsApp; do not send real campaigns during smoke testing without approval. Check queue processing, scheduler execution, webhooks, and balances.
 
+For WhatsApp template acceptance, submit a template as a client user and confirm it appears only in that client's submission list. Confirm another client cannot view it or submit against the first client's sender assignment. Approve and reject separate submissions as a Compliance Officer, then submit the approved copy through the provider and sync the sender's templates. Confirm provider status becomes `approved` only for an exact content match and campaign authoring offers the template only after both approvals. Leave `WHATSAPP_ENABLED=false` and verify no real message is sent during these checks.
+
 ## 13. Troubleshooting
 
 **HTTP 500 / Vite manifest missing:** verify `public/build/manifest.json`, inspect `storage/logs`, and rebuild only after Wayfinder exports and Node/PHP versions are correct.
@@ -262,6 +288,8 @@ A homepage `200` is necessary but insufficient. In an authenticated browser sess
 **Wrong production links:** ensure `APP_URL` uses HTTPS domain root, `VITE_APP_BASE_PATH` is empty for root deployment, and rebuild Vite assets.
 
 **Cache table error:** inspect effective cache configuration and database cache tables; never wipe the production database to fix configuration.
+
+**WhatsApp template is not available for campaigns:** verify the client's sender assignment is enabled and approved, the OmniCast review status is approved, the provider reports the template as approved, and **Sync templates** found an exact match for name, language, category, and body. Resolve a content mismatch by correcting and resubmitting the provider template; do not bypass the checks by enabling sending.
 
 **Horizon inactive:** check Supervisor process and Horizon logs; avoid duplicate masters.
 

@@ -40,6 +40,12 @@ class WhatsAppTemplate extends Model
         return $this->hasMany(WhatsAppTemplateVersion::class, 'template_id')->orderByDesc('version');
     }
 
+    /** @return HasMany<WhatsAppTemplateSubmission, $this> */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(WhatsAppTemplateSubmission::class, 'whatsapp_template_id');
+    }
+
     public function isApproved(): bool
     {
         return $this->status === WhatsAppTemplateStatus::Approved;

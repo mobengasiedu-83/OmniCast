@@ -32,7 +32,15 @@ class WhatsAppCampaignBuilder
         $assignment = WhatsAppClientConnector::query()->with('connector')->where('client_id', $clientId)
             ->where('connector_id', $data['connector_id'])->where('enabled', true)
             ->where('approval_status', WhatsAppApprovalStatus::Approved)->firstOrFail();
-        $template = WhatsAppTemplate::query()->where('connector_id', $assignment->connector_id)->whereKey($data['template_id'])->where('status', 'approved')->firstOrFail();
+        $template = WhatsAppTemplate::query()->where('connector_id', $assignment->connector_id)->whereKey($data['template_id'])->where('status', 'approved')
+            ->where(fn (Builder $query) => $query
+                ->whereNotExists(fn ($submissions) => $submissions->selectRaw('1')->from('whatsapp_template_submissions as pending_template_submissions')
+                    ->whereColumn('pending_template_submissions.connector_id', 'whatsapp_templates.connector_id')
+                    ->whereColumn('pending_template_submissions.name', 'whatsapp_templates.name')
+                    ->whereColumn('pending_template_submissions.language', 'whatsapp_templates.language')
+                    ->where('pending_template_submissions.client_id', $clientId))
+                ->orWhereHas('submissions', fn (Builder $submissions) => $submissions->where('client_id', $clientId)->where('review_status', 'approved')->where('provider_status', 'approved')))
+            ->firstOrFail();
 
         if (($data['contact_list_id'] ?? null) && ($data['contact_segment_id'] ?? null)) {
             throw ValidationException::withMessages(['audience' => 'Choose a contact list or a saved segment, not both.']);
