@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\Auth\InvitationAcceptanceController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\ClientRegistrationController;
 use App\Http\Controllers\ContactComplianceController;
@@ -47,6 +48,10 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'welcome')->name('home');
 
 Route::get('sitemap.xml', SitemapController::class)->name('sitemap');
+
+Route::get('blog', [BlogController::class, 'index'])->name('blog.index');
+
+Route::get('blog/{blogPost:slug}', [BlogController::class, 'show'])->name('blog.show');
 
 Route::get('pricing', PricingController::class)->name('pricing');
 

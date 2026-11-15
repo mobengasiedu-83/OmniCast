@@ -67,6 +67,7 @@ import {
 import { urls } from '@/lib/urls';
 import clients from '@/routes/admin/clients';
 import registrations from '@/routes/admin/client-registrations';
+import adminBlogRoutes from '@/routes/admin/blog';
 import systemRoutes from '@/routes/admin/system';
 import type { Auth, ModuleAvailability, ModuleKey, NavItem } from '@/types';
 
@@ -336,6 +337,7 @@ export function AppSidebar() {
         isPlatformUser && permissions.includes('announcements.view');
     const canViewLegal = isPlatformUser && permissions.includes('legal.view');
     const canManageLegal = isPlatformUser && permissions.includes('legal.manage');
+    const canManageBlog = isPlatformUser && permissions.includes('blog.manage');
     const canViewSupport =
         isPlatformUser && permissions.includes('support.view');
     const canViewTemplates = permissions.includes('templates.view');
@@ -811,6 +813,16 @@ export function AppSidebar() {
                             },
                         ]}
                         label="Support & enquiries"
+                    />
+                )}
+                {canManageBlog && (
+                    <NavMain
+                        items={[{
+                            title: 'Blog articles',
+                            href: adminBlogRoutes.index.url(),
+                            icon: BookOpen,
+                        }]}
+                        label="Publishing"
                     />
                 )}
                 {supportNavItems.length > 0 && (

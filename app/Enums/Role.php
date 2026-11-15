@@ -112,6 +112,7 @@ enum Role: string
                 Permission::ManageLegal,
                 Permission::ViewSupport,
                 Permission::ManageSupport,
+                Permission::ManageBlog,
                 Permission::ViewWhatsAppProviders,
                 Permission::ViewWhatsAppConnectors,
                 Permission::ApproveWhatsAppConnectors,

@@ -2,6 +2,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     Mail,
+    MessageCircle,
     MessageSquare,
     Phone,
     ShieldCheck,
@@ -18,7 +19,13 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="Welcome" />
+            <Head title="SMS, WhatsApp & Messaging for Ghana | Omnicast">
+                <meta
+                    head-key="description"
+                    name="description"
+                    content="Manage SMS, WhatsApp, voice and email campaigns in one workspace. Connect WhatsApp Business accounts, manage templates and consent, and track delivery when the service is enabled for your account."
+                />
+            </Head>
 
             <section className="grid items-center gap-12 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
                 <div className="animate-fade-in-up space-y-6">
@@ -27,21 +34,23 @@ export default function Welcome() {
                             <span className="absolute inset-0 animate-ping-soft rounded-full bg-brand" />
                             <span className="relative size-1.5 rounded-full bg-brand" />
                         </span>
-                        SMS, voice &amp; email broadcasting
+                        SMS, WhatsApp, voice &amp; email messaging
                     </span>
 
                     <h1 className="text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-5xl">
-                        One workspace for every{' '}
+                        One workspace for customer conversations across{' '}
                         <span className="brand-text">
-                            customer conversation
+                            SMS, WhatsApp, voice and email
                         </span>
                         .
                     </h1>
 
                     <p className="max-w-xl text-base leading-relaxed text-muted-foreground">
-                        Draft a campaign, reserve the credit, get it approved
-                        and launch SMS, voice or email at scale — then watch
-                        delivery and spend land in real time.
+                        Plan campaigns, manage approvals and track delivery from
+                        one workspace. Connect a WhatsApp Business account to
+                        manage templates, consent and campaigns; WhatsApp sending
+                        is available when the service and route are enabled for
+                        your account.
                     </p>
 
                     <div className="flex flex-wrap items-center gap-3">
@@ -71,7 +80,10 @@ export default function Welcome() {
 
                     <dl className="grid max-w-md grid-cols-3 gap-4 border-t border-border/60 pt-6">
                         {[
-                            { label: 'Channels', value: 'SMS · Voice · Email' },
+                            {
+                                label: 'Channels',
+                                value: 'SMS · WhatsApp · Voice · Email',
+                            },
                             { label: 'Billing', value: 'GHS wallet' },
                             { label: 'Tracking', value: 'Per recipient' },
                         ].map((item) => (
@@ -146,10 +158,26 @@ export default function Welcome() {
                             </div>
                         </div>
                     </div>
+
+                    <div className="absolute bottom-24 left-0 animate-fade-in-up rounded-xl surface-glass p-3 shadow-lg ring-1 ring-border/60 transition-transform duration-300 [animation-delay:360ms] hover:-translate-y-0.5">
+                        <div className="flex items-center gap-2.5">
+                            <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                                <MessageCircle className="size-4" />
+                            </span>
+                            <div>
+                                <p className="text-xs font-semibold">
+                                    WhatsApp campaigns
+                                </p>
+                                <p className="text-[11px] text-muted-foreground">
+                                    Templates · consent · delivery
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <section className="grid gap-4 sm:grid-cols-3">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {[
                     {
                         icon: ShieldCheck,
@@ -165,6 +193,11 @@ export default function Welcome() {
                         icon: MessageSquare,
                         title: 'DND built in',
                         copy: 'Every number can be added to the DND list, which blocks SMS, voice and email before a single message is sent.',
+                    },
+                    {
+                        icon: MessageCircle,
+                        title: 'WhatsApp tools',
+                        copy: 'For enabled accounts, connect WhatsApp Business, manage approved templates and consent, and review delivery activity.',
                     },
                 ].map((feature, index) => (
                     <div
@@ -187,12 +220,12 @@ export default function Welcome() {
                 <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
                     <div>
                         <h2 className="text-lg font-semibold tracking-tight">
-                            Three channels, one audience
+                            Four channels, one workspace
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Build the list once, then reach it by text, by call
-                            or by email — with the same budget and the same
-                            reports.
+                            Plan SMS, voice and email alongside WhatsApp for
+                            enabled accounts. Each channel keeps its own consent,
+                            template and delivery requirements.
                         </p>
                     </div>
                     <Button variant="link" asChild className="h-auto px-0">
@@ -203,7 +236,7 @@ export default function Welcome() {
                     </Button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {[
                         {
                             icon: MessageSquare,
@@ -225,6 +258,13 @@ export default function Welcome() {
                             copy: 'Branded subject lines and bodies, bounce handling and per-recipient delivery tracking.',
                             accent: 'bg-brand-soft',
                             iconClassName: 'text-brand',
+                        },
+                        {
+                            icon: MessageCircle,
+                            title: 'WhatsApp',
+                            copy: 'Connect a WhatsApp Business account, manage template approvals and consent, and review message delivery when the service is enabled for your account.',
+                            accent: 'bg-emerald-600',
+                            iconClassName: 'text-white',
                         },
                     ].map((channel) => (
                         <div

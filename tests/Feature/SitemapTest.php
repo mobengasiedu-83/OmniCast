@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\LegalDocumentType;
+use App\Models\BlogPost;
 use App\Models\SupportArticle;
 
 it('serves a valid sitemap of public static pages', function (): void {
@@ -24,12 +25,21 @@ it('serves a valid sitemap of public static pages', function (): void {
         route('user-manual'),
         route('api-docs'),
         route('contact.show'),
+        route('blog.index'),
         route('help.index'),
         route('legal.index'),
     )->not->toContain(route('dashboard'));
 });
 
 it('includes only published help and legal content', function (): void {
+    $blogPost = BlogPost::query()->create([
+        'title' => 'Public blog post', 'slug' => 'public-blog-post', 'body' => 'A public article body.',
+        'status' => 'published', 'published_at' => now(),
+    ]);
+    $draftBlogPost = BlogPost::query()->create([
+        'title' => 'Draft blog post', 'slug' => 'draft-blog-post', 'body' => 'A draft article body.',
+        'status' => 'draft',
+    ]);
     $article = SupportArticle::factory()->published()->create(['slug' => 'public-guide']);
     $draft = SupportArticle::factory()->create(['slug' => 'private-draft']);
     legalDocument(LegalDocumentType::Terms);
@@ -46,7 +56,8 @@ it('includes only published help and legal content', function (): void {
         ->map(fn (SimpleXMLElement $location): string => (string) $location);
 
     expect($locations)->toContain(
+        route('blog.show', $blogPost->slug),
         route('help.show', $article->slug),
         route('legal.show', LegalDocumentType::Terms->value),
-    )->not->toContain(route('help.show', $draft->slug));
+    )->not->toContain(route('blog.show', $draftBlogPost->slug), route('help.show', $draft->slug));
 });

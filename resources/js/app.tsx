@@ -21,6 +21,8 @@ void createInertiaApp({
             case name === 'legal/index':
             case name === 'legal/show':
             case name === 'contact':
+            case name === 'blog/index':
+            case name === 'blog/show':
             case name === 'help/index':
             case name === 'help/show':
                 return MarketingLayout;

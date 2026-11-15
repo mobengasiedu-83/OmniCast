@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -185,5 +186,15 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function isSuperAdmin(): bool
     {
         return $this->hasRoleNamed(Role::SuperAdmin);
+    }
+
+    /** @return list<string> */
+    public function effectivePermissionNames(): array
+    {
+        if ($this->isPlatformUser() && $this->isSuperAdmin()) {
+            return Permission::values();
+        }
+
+        return $this->getAllPermissions()->pluck('name')->values()->all();
     }
 }

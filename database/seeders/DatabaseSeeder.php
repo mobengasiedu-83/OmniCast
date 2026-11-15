@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             LegalDocumentSeeder::class,
             SupportDeskSeeder::class,
+            BlogPostSeeder::class,
             RateCardSeeder::class,
             TemplateLibrarySeeder::class,
             DemoSeeder::class,

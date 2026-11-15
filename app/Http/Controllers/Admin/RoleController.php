@@ -37,7 +37,9 @@ class RoleController extends Controller
             ->map(fn (RoleModel $role): array => [
                 'name' => $role->name,
                 'label' => RoleEnum::tryFrom($role->name)?->label() ?? Str::headline($role->name),
-                'permissions' => $role->getPermissionNames()->values()->all(),
+                'permissions' => $role->name === RoleEnum::SuperAdmin->value
+                    ? PermissionEnum::values()
+                    : $role->getPermissionNames()->values()->all(),
                 'users_count' => $role->users()->count(),
                 'locked' => $role->name === RoleEnum::SuperAdmin->value,
             ])

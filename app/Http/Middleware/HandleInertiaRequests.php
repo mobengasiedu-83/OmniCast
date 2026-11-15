@@ -58,7 +58,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $account,
                 'roles' => fn (): array => $account?->getRoleNames()->values()->all() ?? [],
-                'permissions' => fn (): array => $account?->getAllPermissions()->pluck('name')->values()->all() ?? [],
+                'permissions' => fn (): array => $account?->effectivePermissionNames() ?? [],
                 'isPlatformUser' => fn (): bool => $account?->isPlatformUser() ?? false,
                 'clientId' => fn (): ?int => $account?->client_id,
                 'clientName' => fn (): ?string => $account?->client?->name,

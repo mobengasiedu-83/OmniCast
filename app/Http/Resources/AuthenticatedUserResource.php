@@ -27,7 +27,7 @@ class AuthenticatedUserResource extends JsonResource
             'email' => $user->email,
             'client_id' => $user->client_id,
             'roles' => $user->getRoleNames()->values()->all(),
-            'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
+            'permissions' => $user->effectivePermissionNames(),
             'two_factor_enabled' => $user->two_factor_confirmed_at !== null,
             'last_login_at' => $user->last_login_at?->toIso8601String(),
         ];

@@ -9,6 +9,7 @@ import { apiDocs, dashboard, home, login, pricing, userManual } from '@/routes';
 import { create as clientSignup } from '@/routes/client-registration';
 import { show as contactPage } from '@/routes/contact';
 import { index as helpCentre } from '@/routes/help';
+import { index as blogIndex } from '@/routes/blog';
 import { index as legalIndex, show as legalDocument } from '@/routes/legal';
 
 /**
@@ -54,6 +55,11 @@ export default function MarketingLayout({ children }: { children: ReactNode }) {
             label: 'Contact',
             href: contactPage(),
             active: isActive(contactPage.url()),
+        },
+        {
+            label: 'Blog',
+            href: blogIndex(),
+            active: currentPath.startsWith(blogIndex.url()),
         },
     ];
 

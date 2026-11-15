@@ -51,6 +51,7 @@ enum Permission: string
     case ManageLegal = 'legal.manage';
     case ViewSupport = 'support.view';
     case ManageSupport = 'support.manage';
+    case ManageBlog = 'blog.manage';
 
     public function label(): string
     {
@@ -99,6 +100,7 @@ enum Permission: string
             self::ManageLegal => 'Manage Legal & Compliance',
             self::ViewSupport => 'View Support Desk',
             self::ManageSupport => 'Manage Support Desk',
+            self::ManageBlog => 'Manage Blog Articles',
         };
     }
 

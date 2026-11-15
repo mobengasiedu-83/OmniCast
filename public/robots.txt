@@ -1,4 +1,19 @@
 User-agent: *
-Disallow:
+Allow: /
+
+# Public marketing and published content pages remain crawlable.
+Disallow: /dashboard
+Disallow: /campaigns
+Disallow: /contacts
+Disallow: /wallet
+Disallow: /settings
+Disallow: /reports
+Disallow: /admin
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /register-client
+Disallow: /user-manual
+Disallow: /api-docs
 
 Sitemap: https://omnicast.sysup360.com/sitemap.xml

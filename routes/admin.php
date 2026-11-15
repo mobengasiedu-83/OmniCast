@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AnnouncementController;
+use App\Http\Controllers\Admin\BlogPostController;
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\ClientDocumentController;
 use App\Http\Controllers\Admin\ClientEntitlementController;
@@ -62,6 +63,13 @@ Route::middleware(['auth', 'verified', 'platform'])
     ->name('admin.')
     ->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        Route::middleware('can:blog.manage')->group(function (): void {
+            Route::get('blog', [BlogPostController::class, 'index'])->name('blog.index');
+            Route::post('blog', [BlogPostController::class, 'store'])->name('blog.store');
+            Route::put('blog/{blogPost}', [BlogPostController::class, 'update'])->name('blog.update');
+            Route::delete('blog/{blogPost}', [BlogPostController::class, 'destroy'])->name('blog.destroy');
+        });
 
         Route::middleware('can:users.manage')->group(function (): void {
             Route::get('users', [UserController::class, 'index'])->name('users.index');

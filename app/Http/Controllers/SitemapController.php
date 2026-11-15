@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BlogPost;
 use App\Models\LegalDocument;
 use App\Models\SupportArticle;
 use App\Services\Legal\LegalLibrary;
@@ -17,9 +18,8 @@ class SitemapController extends Controller
         $urls = collect([
             route('home'),
             route('pricing'),
-            route('user-manual'),
-            route('api-docs'),
             route('contact.show'),
+            route('blog.index'),
             route('help.index'),
             route('legal.index'),
         ])->map(fn (string $url): array => ['loc' => $url])
@@ -27,6 +27,14 @@ class SitemapController extends Controller
 
         $urls = [
             ...$urls,
+            ...BlogPost::query()
+                ->published()
+                ->get(['slug', 'published_at', 'updated_at'])
+                ->map(fn (BlogPost $post): array => [
+                    'loc' => route('blog.show', $post->slug),
+                    'lastmod' => ($post->updated_at ?? $post->published_at)?->toAtomString(),
+                ])
+                ->all(),
             ...SupportArticle::query()
                 ->published()
                 ->orderBy('id')
