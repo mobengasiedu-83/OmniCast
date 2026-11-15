@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'canonical_url' => env('SEO_CANONICAL_URL', 'https://omnicast.sysup360.com'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Asset URL

@@ -19,9 +19,9 @@ cd /var/www/OmniCast
 pwd
 git status --short --branch
 git branch --show-current
-git fetch origin v1-merged
+git fetch origin v2
 git log -1 --oneline
-git log -1 --oneline origin/v1-merged
+git log -1 --oneline origin/v2
 /usr/bin/php8.3 -v
 node -v
 npm -v
@@ -104,7 +104,7 @@ Only after confirming a safe working tree and backups:
 ```bash
 cd /var/www/OmniCast
 git switch v1-merged
-git pull --ff-only origin v1-merged
+git pull --ff-only origin v2
 /usr/bin/php8.3 /usr/local/bin/composer --version
 ```
 
@@ -208,6 +208,12 @@ sudo -u www-data /usr/bin/php8.3 artisan about --only=environment
 ```
 
 Confirm `Environment: production` and `Debug Mode: DISABLED`. The attached runbook's privacy migration should remain applied if recorded as run; Laravel will not reapply it during normal `migrate --force`.
+
+The release includes five public blog articles. After migrations, seed only the blog content so the new posts are added without running the full `DatabaseSeeder` or changing built-in roles. `BlogPostSeeder` uses `firstOrCreate`, so it creates missing slugs and preserves any existing article records managed through the admin.
+
+```bash
+sudo -u www-data /usr/bin/php8.3 artisan db:seed --class=BlogPostSeeder --force
+```
 
 This release adds the `whatsapp_template_submissions` table; confirm its migration is recorded as run before opening the WhatsApp workspace. It also adds the `whatsapp.templates.approve` permission for Compliance reviewers. `RoleSeeder` synchronizes complete built-in role grants using `syncPermissions`, so review its effects on any manually adjusted built-in roles before running it in production. Run it only through the approved database change process, then confirm the Compliance Officer can access **Admin → WhatsApp → Template approvals** and client roles cannot.
 

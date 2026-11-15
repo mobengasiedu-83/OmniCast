@@ -19,11 +19,11 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="SMS, WhatsApp & Messaging for Ghana | Omnicast">
+            <Head title="OmniCast | SMS, Voice & Email Broadcasting Platform">
                 <meta
                     head-key="description"
                     name="description"
-                    content="Manage SMS, WhatsApp, voice and email campaigns in one workspace. Connect WhatsApp Business accounts, manage templates and consent, and track delivery when the service is enabled for your account."
+                    content="OmniCast by SysUp360 is a multi-channel communication platform for SMS, voice and email broadcasting, campaign automation, contact management and delivery analytics."
                 />
             </Head>
 

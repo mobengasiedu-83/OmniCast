@@ -22,13 +22,11 @@ it('serves a valid sitemap of public static pages', function (): void {
     expect($locations)->toContain(
         route('home'),
         route('pricing'),
-        route('user-manual'),
-        route('api-docs'),
         route('contact.show'),
         route('blog.index'),
         route('help.index'),
         route('legal.index'),
-    )->not->toContain(route('dashboard'));
+    )->not->toContain(route('dashboard'), route('user-manual'), route('api-docs'));
 });
 
 it('includes only published help and legal content', function (): void {
